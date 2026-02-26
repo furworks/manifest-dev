@@ -12,7 +12,13 @@
     "autonomous",
     "approach",
     "trade-offs",
-    "do"
+    "do",
+    "multi-cli",
+    "distribution",
+    "gemini-cli",
+    "opencode",
+    "codex-cli",
+    "sync-tools"
   ],
   "hooks": {
     "Stop": [
