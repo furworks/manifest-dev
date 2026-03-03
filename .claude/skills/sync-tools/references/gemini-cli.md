@@ -20,27 +20,38 @@ Reference for converting Claude Code plugin components to Gemini CLI format (v0.
 | Claude Code Tool | Gemini CLI Tool | Notes |
 |-----------------|-----------------|-------|
 | Bash / BashOutput | `run_shell_command` | Requires approval |
-| Read | `read_file` | 1-based offset (since v0.31.0) |
+| Read | `read_file` | 1-based lines (`start_line`/`end_line` params) |
 | Write | `write_file` | Requires approval |
 | Edit | `replace` | Uses `old_string`/`new_string` + `allow_multiple` |
-| Grep | `search_file_content` | Also aliased as `grep_search`. Use `search_file_content` |
+| Grep | `grep_search` | Canonical name from source code. Docs index may show stale `search_file_content` — ignore that |
 | Glob | `glob` | Same |
 | WebFetch | `web_fetch` | Rate-limited |
 | WebSearch | `google_web_search` | Google Search |
 | Skill | `activate_skill` | Agent-only, not manually invocable |
-| TodoWrite / TodoRead | `write_todos` | Single tool for both |
-| Agent / Task / TaskCreate | (subagent name as tool) | Subagents become tools by name |
+| TodoWrite / TodoRead | `write_todos` | Single tool for both read and write |
+| TaskCreate / TaskUpdate | `write_todos` | Task management maps to todos (single tool) |
+| TaskGet / TaskList | `write_todos` | Task reads also via `write_todos` |
+| TaskOutput | (no equivalent) | No background task output retrieval |
+| TaskStop | (no equivalent) | No background task management |
+| Agent | (subagent name as tool) | Subagents become tools by their registered name |
 | AskUserQuestion | `ask_user` | Interactive dialog |
+| EnterPlanMode | `enter_plan_mode` | Direct equivalent |
+| ExitPlanMode | `exit_plan_mode` | Direct equivalent |
+| EnterWorktree | (no equivalent) | No worktree support |
+| TeamCreate / TeamDelete / SendMessage | (no equivalent) | No team management |
+| ListMcpResourcesTool / ReadMcpResourceTool | (no equivalent) | MCP handled differently |
 
 Gemini-only tools (no Claude Code equivalent):
 - `list_directory` — directory listing with ignore/filter options
+- `read_many_files` — read/concatenate multiple files (user-triggered via @ syntax)
 - `save_memory` — saves facts to GEMINI.md
 - `get_internal_docs` — Gemini CLI's own docs
-- `enter_plan_mode` — structured planning mode
-- `browser_agent` — web browser automation (experimental, v0.31.0)
-- `codebase_investigator` — deep repo analysis subagent
-- `generalist_agent` — general-purpose subagent (preview)
-- `cli_help` — CLI help subagent
+
+Gemini built-in subagents (registered as tools by name):
+- `codebase_investigator` — deep repo analysis subagent (enabled by default)
+- `cli_help` — CLI help subagent (enabled by default)
+- `generalist` — general-purpose subagent (enabled by default). NOTE: tool name is `generalist`, NOT `generalist_agent`
+- `browser_agent` — web browser automation (experimental, disabled by default, requires Chrome 144+)
 
 ### Agent Frontmatter Conversion
 
@@ -62,11 +73,12 @@ kind: local
 tools:
   - run_shell_command
   - glob
-  - search_file_content
+  - grep_search
   - read_file
   - web_fetch
   - google_web_search
   - activate_skill
+  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15
@@ -92,7 +104,7 @@ timeout_mins: 5
 2. Keep `description` as-is
 3. Add `kind: local`
 4. Convert `tools` from comma-separated PascalCase string to YAML list of internal tool names
-5. Deduplicate: BashOutput → run_shell_command (listed once), TaskCreate → dropped (subagents are named tools)
+5. Deduplicate: BashOutput → run_shell_command (listed once). Map TaskCreate/TaskUpdate/TaskGet/TaskList → `write_todos`. Map Agent → (dropped — subagents are registered as named tools, not via a generic tool)
 6. Set `model: inherit` (or specific Gemini model if needed)
 7. Add `max_turns: 15` and `timeout_mins: 5` (defaults)
 8. Keep prompt body unchanged
@@ -245,7 +257,9 @@ Automated publishing: public GitHub repo + `gemini-cli-extension` topic + `gemin
 
 1. **Agents experimental** — Require enableAgents flag. API may change.
 2. **No SubagentStart/Stop hooks** — Cannot intercept subagent lifecycle.
-3. **TaskCreate incompatible** — Named subagent tools, not generic delegation.
+3. **Agent tool is name-based** — Each subagent becomes a tool by its registered name. No generic `delegate_to_agent` tool.
 4. **Commands are TOML** — Not markdown.
 5. **$ARGUMENTS not supported** — Claude Code extension only.
-6. **search_file_content canonical** — Use this, not grep_search alias.
+6. **`grep_search` is canonical** — Source code (`base-declarations.ts`) defines `GREP_TOOL_NAME = 'grep_search'`. The docs index page showing `search_file_content` is stale. Always use `grep_search`.
+7. **`generalist` not `generalist_agent`** — The built-in subagent tool name is `generalist`, not `generalist_agent`.
+8. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList are todo management tools (map to `write_todos`), NOT subagent tools. Only `Agent` maps to subagent names.

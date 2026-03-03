@@ -28,19 +28,29 @@ Reference for converting Claude Code plugin components to OpenCode format (anoma
 | Glob | `glob` | Direct equivalent |
 | WebFetch | `webfetch` | Lowercase, no space |
 | WebSearch | `websearch` | Lowercase, no space (requires Exa AI key) |
-| Agent / Task / TaskCreate | `task` | All map to task (subagent spawning) |
+| Agent | `task` | Subagent spawning |
+| TaskCreate / TaskUpdate | `todowrite` | Task/todo management (create and update) |
+| TaskGet / TaskList | `todoread` | Task/todo management (read) |
+| TaskOutput | `bash` | No direct equivalent — approximate via shell |
+| TaskStop | (no equivalent) | No background task management |
 | Skill | `skill` | Both load skills |
-| TodoWrite | `todowrite` | Direct equivalent |
-| TodoRead | `todoread` | Direct equivalent |
+| TodoWrite | `todowrite` | Direct equivalent (legacy name for TaskCreate) |
+| TodoRead | `todoread` | Direct equivalent (legacy name for TaskGet/TaskList) |
 | NotebookEdit | (no equivalent) | Not available in OpenCode |
-| AskUserQuestion | `question` | User interaction |
+| AskUserQuestion | `question` | User interaction (conditional — interactive clients only) |
+| EnterPlanMode / ExitPlanMode | (no equivalent) | `plan_exit` exists but experimental |
+| EnterWorktree | (no equivalent) | No worktree support |
+| TeamCreate / TeamDelete / SendMessage | (no equivalent) | No team management |
+| ListMcpResourcesTool / ReadMcpResourceTool | (no equivalent) | MCP handled differently |
 
 OpenCode-only tools (no Claude Code equivalent):
-- `list` — directory listing
-- `lsp` — Language Server Protocol (experimental)
-- `patch` — patch application
-- `multiedit` — batch multi-file editing
-- `codesearch` — semantic code search (requires Exa AI)
+- `list` — directory listing (file is ls.ts but tool name is `list`)
+- `lsp` — Language Server Protocol (experimental, requires `OPENCODE_EXPERIMENTAL_LSP_TOOL`)
+- `apply_patch` — unified diff application (conditional — GPT models only, replaces edit/write)
+- `multiedit` — batch multi-file editing (present in source, may be behind flag)
+- `codesearch` — semantic code search (requires Exa AI or OpenCode provider)
+- `batch` — parallel tool calls up to 25 (experimental, requires `config.experimental.batch_tool`)
+- `plan_exit` — exit plan mode (experimental, requires `OPENCODE_EXPERIMENTAL_PLAN_MODE`)
 
 Meta-permission keys (permission-only, not tool toggles):
 - `external_directory` — access outside project workspace
@@ -71,6 +81,8 @@ tools:
   read: true
   webfetch: true
   task: true
+  todowrite: true
+  todoread: true
   websearch: true
   skill: true
 ---
@@ -96,7 +108,7 @@ tools:
 **Phase 1 conversion rules** (deterministic):
 1. Keep `description` as-is
 2. Convert `tools` from comma-separated string to boolean object with lowercase keys
-3. Deduplicate: BashOutput → bash (just set `bash: true` once), TaskCreate → task
+3. Deduplicate: BashOutput → bash (just set `bash: true` once). Map TaskCreate/TaskUpdate → todowrite, TaskGet/TaskList → todoread, Agent → task
 4. Add `mode: subagent` for agents spawned by other agents, `mode: primary` for top-level
 5. Keep prompt body (everything below frontmatter) unchanged
 6. Write to `.opencode/agents/` (project) or `~/.config/opencode/agents/` (global)
@@ -366,3 +378,5 @@ OpenCode's `task` tool also supports subagent delegation, compatible with Claude
 7. **$ARGUMENTS not standardized** — Skills using `$ARGUMENTS` work in Claude Code but behavior undefined in OpenCode.
 8. **BashOutput deduplicated** — OpenCode uses `bash` for both; set `bash: true` once.
 9. **Agent mode field** — `all` (default) = everywhere; `subagent` = spawned only; `primary` = top-level only.
+10. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList are todo management tools (map to `todowrite`/`todoread`), NOT subagent tools. Only `Agent` maps to `task`.
+11. **apply_patch vs edit/write** — GPT models get `apply_patch` instead of `edit`/`write`. Non-GPT models (Anthropic, etc.) get `edit`/`write`. The swap is automatic in OpenCode's registry.

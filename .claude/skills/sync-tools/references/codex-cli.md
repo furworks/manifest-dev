@@ -19,9 +19,72 @@ Reference for converting Claude Code plugin components to Codex CLI format (v0.1
 | Component | Codex Support | Why |
 |-----------|--------------|-----|
 | Skills (SKILL.md) | YES — copy unchanged | Same open standard (agentskills.io) |
-| Agents (markdown) | TOML stubs only | Codex uses TOML config with 2 tools (shell, apply_patch). Fundamentally incompatible paradigm. |
-| Hooks (Python) | NO | Not shipped as of v0.107.0. Issue #2109 (434+ upvotes). OpenAI actively developing — expected mid-March 2026 experimental. |
+| Agents (markdown) | TOML stubs only | Codex uses TOML config. Default tools are broader than previously assumed (6 default + experimental), but agent paradigm differs. |
+| Hooks (Python) | NO | Not shipped as of v0.107.0. Issue #2109 (453+ upvotes). Multiple community PRs rejected ("by invitation only"). |
 | Commands | NO | Deprecated "custom prompts" replaced by skills. No command system. |
+
+## Codex CLI Tool Inventory
+
+Codex has significantly more tools than just `shell` + `apply_patch`. Tool availability depends on model and feature flags.
+
+### Tool Name Mapping (Claude Code → Codex)
+
+| Claude Code Tool | Codex Tool | Notes |
+|-----------------|------------|-------|
+| Bash / BashOutput | `shell_command` | Default for codex models. Alternatives: `shell` (execvp), `exec_command` (PTY) |
+| Read | `read_file` | Experimental — gated by model's `experimental_supported_tools` |
+| Write | `shell_command` | No dedicated write tool — use shell `cat > file` |
+| Edit | `apply_patch` | Freeform or JSON patch format |
+| Grep | `grep_files` | Experimental — gated by model's `experimental_supported_tools` |
+| Glob | `shell_command` | No dedicated glob — use shell `find`/`ls` |
+| WebFetch | `shell_command` | No dedicated fetch — use shell `curl` |
+| WebSearch | `web_search` | Default tool, cached or live mode |
+| Skill | (skill system) | `$skillname` syntax or implicit activation |
+| Agent | `spawn_agent` | Requires Feature::Collab flag |
+| TaskCreate / TaskUpdate | `update_plan` | Always-on planning tool (simpler than Claude Code tasks) |
+| TaskGet / TaskList | `update_plan` | Same tool — flat step list with status |
+| TaskOutput | `wait` | Blocks on agent completion (requires Collab) |
+| TaskStop | `close_agent` | Terminate agents (requires Collab) |
+| TodoWrite / TodoRead | `update_plan` | `update_plan` is Codex's todo equivalent |
+| AskUserQuestion | `request_user_input` | Always-on, structured user choice collection |
+| NotebookEdit | (no equivalent) | Not available |
+| EnterPlanMode / ExitPlanMode | (no equivalent) | No plan mode |
+| EnterWorktree | (no equivalent) | No worktree support |
+| TeamCreate / TeamDelete | (no equivalent) | Multi-agent uses spawn_agent, not teams |
+| SendMessage | `send_input` | Message agents (requires Collab) |
+
+### Default Tools (codex-optimized models: gpt-5-codex, gpt-5.1-codex)
+
+These 6 tools are available by default without any feature flags:
+1. **`shell_command`** — shell execution in user's default shell
+2. **`update_plan`** — task planning/todo (flat step list with pending/in_progress/completed)
+3. **`request_user_input`** — structured user interaction
+4. **`apply_patch`** — code patch application (freeform or JSON)
+5. **`web_search`** — web search (cached by default, configurable: disabled/cached/live)
+6. **`view_image`** — local filesystem image viewing
+
+### Experimental Tools (gated by model's `experimental_supported_tools`)
+
+- **`read_file`** — file reading with 1-indexed lines, slice/block modes
+- **`list_dir`** — directory listing with depth control
+- **`grep_files`** — regex pattern search with glob filtering
+
+These are NOT in the default tool set — availability controlled server-side per model config.
+
+### Feature-Gated Tools
+
+| Tool | Feature Flag | Purpose |
+|------|-------------|---------|
+| `spawn_agent` | Feature::Collab | Create sub-agent with optional role |
+| `send_input` | Feature::Collab | Message agents (with interrupt) |
+| `resume_agent` | Feature::Collab | Reactivate closed agents |
+| `wait` | Feature::Collab | Block on agent completion (up to 1hr) |
+| `close_agent` | Feature::Collab | Terminate agents |
+| `spawn_agents_on_csv` | Collab + Sqlite | CSV-based batch agent processing |
+| `report_agent_job_result` | Collab + Sqlite | Worker result reporting |
+| `js_repl` / `js_repl_reset` | Feature::JsRepl | Persistent Node.js REPL (experimental since v0.106) |
+| `get_memory` | Feature::MemoryTool | Memory read (under development, default disabled) |
+| `presentation_artifact` | Feature::Artifact | Interactive artifact management |
 
 ## Phase 1: Deterministic Conversions
 
@@ -121,7 +184,7 @@ Review the code changes and report findings with severity levels.
 
 **Phase 1** (deterministic): Generate skeleton TOML with name, description from Claude Code agent frontmatter. Set `sandbox_mode: "read-only"` for review agents.
 
-**Phase 2** (LLM): Generate `developer_instructions` content by summarizing the Claude Code agent's prompt body into Codex-appropriate instructions. Key differences: Codex has only `shell` and `apply_patch` tools — instructions must be reframed for this constraint.
+**Phase 2** (LLM): Generate `developer_instructions` content by summarizing the Claude Code agent's prompt body into Codex-appropriate instructions. Key differences: Codex default tools are `shell_command`, `apply_patch`, `update_plan`, `request_user_input`, `web_search`, `view_image` — instructions should leverage these. Experimental file tools (`read_file`, `list_dir`, `grep_files`) may also be available.
 
 ### AGENTS.md Generation
 
@@ -241,12 +304,16 @@ Cannot block, modify, or intercept. Observability only.
 
 ## Hook Status (Issue #2109)
 
-**NOT shipped** as of v0.107.0 (March 2, 2026).
-- Issue open with 54+ comments, 434+ upvotes
-- 4 community PRs submitted and closed (#2904, #4522, #9796, #11067)
-- OpenAI staff confirmed Feb 23: "actively working on it"
-- Community: scaffolding exists in codebase since ~v0.99
-- **Proposed events**: PreToolUse, PostToolUse/AfterToolUse, AfterAgent, SessionStart, Stop, Notification, PostCompact
+**NOT shipped** as of v0.107.0 (March 3, 2026).
+- Issue reopened Feb 27, 2026 — 453+ upvotes, 54+ comments
+- Multiple community PRs attempted and rejected:
+  - PR #2904 (Aug 2025) — closed
+  - PR #4522 (MVP prehook) — closed
+  - PR #9796 (comprehensive hooks, Jan 2026) — closed
+  - PR #11067 (lifecycle events + steering) — rejected: "code contributions are by invitation only"
+- **Proposed events** (from PR #11067): `pre_tool_use`, `post_tool_use`, `session_stop`, `user_prompt_submit`, `after_agent`
+- Issue #12208 also requests `PreCompact` hook event
+- **OpenAI appears to want to build this internally** based on the "by invitation only" rejection
 - **Workaround**: Session logging via `CODEX_TUI_RECORD_SESSION=1` + polling
 
 **When hooks ship**, the Codex distribution should expand to include adapted hooks. Monitor the issue.
@@ -320,10 +387,12 @@ Skills can reference other skills via `$skillname` syntax and implicit activatio
 
 1. **Skills only for full compatibility** — Agents are TOML stubs, hooks impossible.
 2. **No workflow enforcement** — Without hooks, the chain is advisory.
-3. **Only 2 tools** — `shell` and `apply_patch`. Agent instructions must be reframed.
-4. **No scoped subagents** — Multi-agent uses global sandbox. Per-agent tool restriction impossible.
+3. **6 default tools, more experimental** — Default: `shell_command`, `apply_patch`, `update_plan`, `request_user_input`, `web_search`, `view_image`. Experimental: `read_file`, `list_dir`, `grep_files` (gated by model config). Multi-agent: `spawn_agent` etc. (requires Feature::Collab).
+4. **Sandbox restrictions per role, not tool restrictions** — Roles can have different `sandbox_mode` (read-only/workspace-write/danger-full-access) and MCP tools, but base tool set is not configurable per role.
 5. **Skills may not chain reliably** — `$skillname` invocation less documented.
 6. **AGENTS.md is informational only** — Describes agents but doesn't execute them as scoped subagents.
-7. **Hooks expected soon** — Mid-March 2026 experimental release predicted. Will expand distribution significantly.
+7. **Hooks not shipped** — Issue #2109 still open. Community PRs rejected. No timeline.
 8. **$ARGUMENTS not supported** — Claude Code extension only.
 9. **Notify is fire-and-forget** — Cannot block or modify agent behavior.
+10. **Experimental tools availability** — `read_file`, `list_dir`, `grep_files` are gated server-side by model's `experimental_supported_tools`. Not all users may have access.
+11. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList map to `update_plan` (todo), NOT to `spawn_agent` (multi-agent).
