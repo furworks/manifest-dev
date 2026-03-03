@@ -231,43 +231,92 @@ Variable substitution: `{env:VARIABLE_NAME}` and `{file:path/to/file}`.
 
 ### Hook Porting (Python → TypeScript)
 
-Claude Code hooks are Python scripts using JSON stdin/stdout. OpenCode hooks are JS/TS modules using `@opencode-ai/plugin`.
+Claude Code hooks are Python scripts using JSON stdin/stdout. OpenCode hooks are TypeScript modules using `@opencode-ai/plugin`, run by Bun.
 
-**Plugin skeleton**:
+**Plugin skeleton** (CORRECTED — blocking via throw, not args.abort):
 ```typescript
 import type { Plugin } from "@opencode-ai/plugin"
 
 export const ManifestDevPlugin: Plugin = async (ctx) => {
-  // ctx.project, ctx.client, ctx.$, ctx.directory
+  // ctx.project — { id, worktree, vcs }
+  // ctx.client — SDK client (HTTP to localhost:4096)
+  // ctx.$ — Bun shell API
+  // ctx.directory — current working directory
+  // ctx.worktree — git worktree root
+  // ctx.serverUrl — server URL
   return {
     "tool.execute.before": async ({ tool, sessionID, callID }, { args }) => {
-      // Block: set args.abort = "reason"
-      // Modify args: mutate args object
+      // Block: throw new Error("reason") — error message becomes tool result seen by LLM
+      // Modify args: mutate output.args object
+      // LIMITATION: Does NOT fire for subagent tool calls (issue #5894)
     },
-    "tool.execute.after": async ({ tool, sessionID, callID }, { title, output, metadata }) => {
-      // React to tool result
+    "tool.execute.after": async ({ tool, sessionID, callID, args }, { title, output, metadata }) => {
+      // Mutate output.output to change what LLM sees as tool result
+      // Mutate output.title, output.metadata as needed
     },
-    "session.created": async (event) => {
-      // Session lifecycle
+    "experimental.chat.system.transform": async ({ sessionID, model }, output) => {
+      // Inject system-level context: output.system.push("your context here")
+      // Called before every LLM request
     },
-    "session.idle": async (event) => {
-      // Session went idle
+    "experimental.session.compacting": async ({ sessionID }, output) => {
+      // Inject context to preserve across compaction: output.context.push("context")
+      // Optionally replace compaction prompt: output.prompt = "custom prompt"
+    },
+    event: async ({ event }) => {
+      // Catch-all for bus events (session.idle, todo.updated, etc.)
+      // Fire-and-forget — cannot block anything
+      if (event.type === "session.idle") {
+        // Session stopped — CANNOT prevent stopping
+        // Workaround: ctx.client.session.prompt(sessionID, { parts: [...] }) — fragile, race condition
+      }
+      if (event.type === "todo.updated") {
+        // Track workflow progress via todo state changes
+        // event.properties.todos = [{id, content, status, priority}]
+      }
     },
   }
 }
 ```
 
+**Hook execution model**: `Plugin.trigger()` calls hooks sequentially across all loaded plugins. Each hook receives the SAME mutable `output` object — mutations accumulate (middleware chain pattern).
+
 **Event mapping (Claude Code → OpenCode)**:
 
-| Claude Code Event | OpenCode Event | Blocking | Notes |
-|-------------------|---------------|----------|-------|
-| PreToolUse | `tool.execute.before` | Yes (mutate args to abort) | Check `tool` name, modify `args` |
-| PostToolUse | `tool.execute.after` | No (react only) | Read `output`, `metadata` |
-| Stop | `session.idle` | No | Session completion |
-| SessionStart | `session.created` | No | Session lifecycle |
-| PreCompact | `experimental.session.compacting` | No | Experimental |
+| Claude Code Event | OpenCode Hook/Event | Blocking | Notes |
+|-------------------|-------------------|----------|-------|
+| PreToolUse | `tool.execute.before` (hook) | Yes — **throw Error** to block | Error message becomes tool result. Does NOT fire in subagents (issue #5894) |
+| PostToolUse | `tool.execute.after` (hook) | No (mutate output) | Mutate `output.output` to change what LLM sees |
+| Stop | `session.idle` (event) | **NO — fire-and-forget** | Cannot prevent stopping. Workaround: `client.session.prompt()` creates NEW turn (fragile, race condition in `run` mode — issue #15267) |
+| SessionStart | `session.created` (event) | No | Fire-and-forget bus event |
+| PreCompact | `experimental.session.compacting` (hook) | No — inject context only | Push to `output.context[]`, optionally replace `output.prompt` |
 | Notification | (no equivalent) | — | Gap |
-| SubagentStart/Stop | (no equivalent) | — | Gap |
+| SubagentStart/Stop | (no equivalent) | — | Gap — tool.execute.before also doesn't fire in subagents |
+
+**Context injection mechanisms (3 options):**
+
+| Mechanism | When | How | Best For |
+|-----------|------|-----|----------|
+| `experimental.chat.system.transform` | Before every LLM request | `output.system.push("context")` | Persistent context injection (closest to Claude Code's additionalContext) |
+| `experimental.session.compacting` | During compaction | `output.context.push("context")` | Preserving workflow state across compaction |
+| `chat.message` | Before user message is processed | Mutate `output.message` or `output.parts` | Modifying user input |
+
+**IMPORTANT**: `tui.prompt.append` only fills the TUI input field — it does NOT inject system messages. Use `experimental.chat.system.transform` for system context injection.
+
+**Session storage**: SQLite at `~/.local/share/opencode/opencode.db` (WAL mode, Drizzle ORM). **No JSONL transcript file.** Plugin access via SDK client API only:
+- `client.session.list()` — list sessions
+- `client.session.get(id)` — get session metadata
+- SSE event stream for real-time updates
+- POST `/session/{id}/message` — send message to session
+
+Tables: SessionTable, MessageTable (role, time_created, data), PartTable (type, content). Part types: TextPart, ToolPart, AgentPart, CompactionPart, etc.
+
+**Skill invocation detection**: Skills in OpenCode are NOT tools — they are agent definitions activated via the `task` tool. In `tool.execute.before`, `input.tool` = `"task"` when a subagent (skill) is spawned. However, due to the subagent bypass, tool calls WITHIN the subagent won't trigger hooks.
+
+**todo.updated event**: Fires through bus with full todo array:
+```typescript
+{ type: "todo.updated", properties: { sessionID: string, todos: Array<{id, content, status, priority}> } }
+```
+Useful for workflow tracking — monitor todo status transitions in the `event` handler.
 
 Additional OpenCode events (no Claude Code equivalent):
 - `command.executed`, `file.edited`, `file.watcher.updated`
@@ -277,9 +326,11 @@ Additional OpenCode events (no Claude Code equivalent):
 - `shell.env` — inject environment variables: `output.env.KEY = "value"`
 - `todo.updated`, `server.connected`, `installation.updated`
 - `lsp.client.diagnostics`, `lsp.updated`
-- `tui.prompt.append`, `tui.command.execute`, `tui.toast.show`
-- `chat.message`, `chat.params` — modify messages/model params
+- `tui.prompt.append` — fills TUI input field (NOT system messages)
+- `tui.command.execute`, `tui.toast.show`
+- `chat.message`, `chat.params`, `chat.headers` — modify messages/model params/headers
 - `tool.definition` — mutate tool descriptions/schemas
+- `permission.ask` — intercept permission prompts (`output.status = "deny" | "allow"`)
 
 **Plugin installation**:
 ```json
@@ -370,13 +421,18 @@ OpenCode's `task` tool also supports subagent delegation, compatible with Claude
 ## Known Limitations
 
 1. **Hooks require manual JS/TS rewrite** — Python hooks cannot run in Bun. Generated stubs provide structure; HOOK_SPEC.md provides behavioral intent.
-2. **No PreCompact equivalent** — `experimental.session.compacting` exists but is experimental.
-3. **No Notification hooks** — No equivalent to Claude Code's Notification event.
-4. **Plugin API may evolve** — v1.2.x is stable but plugin API could change.
-5. **Native .claude/ compat** — Users may not need dist/ for skills at all.
-6. **Block pattern** — Use `args.abort = "reason"` or mutate args to block tool calls (NOT throw).
-7. **$ARGUMENTS not standardized** — Skills using `$ARGUMENTS` work in Claude Code but behavior undefined in OpenCode.
-8. **BashOutput deduplicated** — OpenCode uses `bash` for both; set `bash: true` once.
-9. **Agent mode field** — `all` (default) = everywhere; `subagent` = spawned only; `primary` = top-level only.
-10. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList are todo management tools (map to `todowrite`/`todoread`), NOT subagent tools. Only `Agent` maps to `task`.
-11. **apply_patch vs edit/write** — GPT models get `apply_patch` instead of `edit`/`write`. Non-GPT models (Anthropic, etc.) get `edit`/`write`. The swap is automatic in OpenCode's registry.
+2. **Block pattern** — **Throw an Error** to block tool calls, NOT `args.abort`. Error message becomes tool result seen by LLM. Confirmed from source code and issue #5894.
+3. **No Stop hook** — `session.idle` is fire-and-forget. **Cannot prevent session stopping.** Workaround (`client.session.prompt()`) is fragile with race conditions in `run` mode (issue #15267). Feature request exists (issue #12472).
+4. **Subagent hook bypass** — `tool.execute.before`/`after` does NOT fire for tool calls within subagents (issue #5894). Security/guardrail gap.
+5. **No JSONL transcript** — Session data in SQLite (`~/.local/share/opencode/opencode.db`), not JSONL files. Access via SDK client API only. Cannot reuse Claude Code's transcript parsing logic directly.
+6. **Compaction hook is experimental** — `experimental.session.compacting` prefix means it may change without notice.
+7. **Context injection is experimental** — `experimental.chat.system.transform` is the recommended approach but is also experimental.
+8. **No Notification hooks** — No equivalent to Claude Code's Notification event.
+9. **Plugin API may evolve** — v1.2.x is stable but plugin API could change.
+10. **Native .claude/ compat** — Users may not need dist/ for skills at all.
+11. **$ARGUMENTS not standardized** — Skills using `$ARGUMENTS` work in Claude Code but behavior undefined in OpenCode.
+12. **BashOutput deduplicated** — OpenCode uses `bash` for both; set `bash: true` once.
+13. **Agent mode field** — `all` (default) = everywhere; `subagent` = spawned only; `primary` = top-level only.
+14. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList are todo management tools (map to `todowrite`/`todoread`), NOT subagent tools. Only `Agent` maps to `task`.
+15. **apply_patch vs edit/write** — GPT models get `apply_patch` instead of `edit`/`write`. Non-GPT models (Anthropic, etc.) get `edit`/`write`. The swap is automatic in OpenCode's registry.
+16. **tui.prompt.append is NOT context injection** — It fills the TUI input field, not system messages. Use `experimental.chat.system.transform` for system context.

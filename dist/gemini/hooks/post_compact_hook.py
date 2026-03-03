@@ -6,7 +6,7 @@ When the session is compacted during a /do workflow, the manifest and log
 may be lost from context. This hook detects active /do workflows and
 reminds Claude to re-read the manifest and log files.
 
-Registered as SessionStart hook with "compact" matcher.
+Registered as SessionStart hook with "resume" matcher (Gemini source=resume = post-compaction).
 """
 
 from __future__ import annotations

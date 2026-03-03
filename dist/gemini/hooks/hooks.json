@@ -31,6 +31,7 @@
     ],
     "SessionStart": [
       {
+        "matcher": "resume",
         "sequential": true,
         "hooks": [
           {
@@ -38,7 +39,7 @@
             "command": "python3 ${extensionPath}/hooks/gemini_adapter.py SessionStart",
             "name": "post-compact-recovery",
             "timeout": 60000,
-            "description": "Recovers /do context after compaction"
+            "description": "Recovers /do context after compaction (source=resume)"
           }
         ]
       }

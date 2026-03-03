@@ -61,14 +61,30 @@ Merge `hooks/hooks.json` into your settings.json hooks section for full workflow
 | Team management | TeamCreate/SendMessage | Not supported |
 | Worktrees | EnterWorktree | Not supported |
 
+## Hook Protocol Details
+
+The adapter translates between Claude Code and Gemini CLI hook protocols:
+
+| Hook | Claude Event | Gemini Event | Matcher | Exit Behavior |
+|------|-------------|-------------|---------|---------------|
+| pretool-verify | PreToolUse | BeforeTool | `activate_skill` (regex) | 0=allow, stdout=JSON with additionalContext |
+| stop-do-enforcement | Stop | AfterAgent | (all) | 0=allow, 2=block (stderr=reason becomes new prompt) |
+| post-compact-recovery | SessionStart | SessionStart | `resume` (exact match) | 0=allow, stdout=JSON with additionalContext |
+
+Key protocol differences handled by the adapter:
+- **Exit codes**: 0=allow (parse stdout), 1=warning, 2+=blocking (stderr=reason)
+- **AfterAgent deny**: reason becomes a new prompt; clearContext clears LLM memory; stop_hook_active flags retry
+- **Transcript format**: JSONL with "gemini" record type (patched to "assistant" for Claude hooks)
+- **additionalContext**: Plain text (system-reminder XML tags stripped by adapter)
+
 ## Workflow
 
 ```
-/define → produces manifest with acceptance criteria
+/define -> produces manifest with acceptance criteria
     |
-/do → executes against manifest, tracks progress
+/do -> executes against manifest, tracks progress
     |
-/verify → parallel verification with 12 specialized agents
+/verify -> parallel verification with 12 specialized agents
     |
 /done (all pass) or /escalate (blocked)
 ```

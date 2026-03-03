@@ -12,18 +12,33 @@ Usage:
 Events:
     BeforeTool   - maps to pretool_verify_hook (PreToolUse equivalent)
     AfterAgent   - maps to stop_do_hook (Stop equivalent)
-    SessionStart - maps to post_compact_hook (SessionStart equivalent)
+    SessionStart - maps to post_compact_hook (source=resume only)
 
-Protocol:
-    Input:  JSON on stdin (Gemini hook format)
-    Output: JSON on stdout (Gemini hook format)
-    Exit:   0 = success, 2 = system block
+Protocol (Gemini CLI):
+    Input:  JSON on stdin
+    Output: JSON on stdout (exit 0 only), debug/errors on stderr only
+    Exit codes:
+        0  = allow (parse stdout for output JSON)
+        1  = non-blocking warning (stderr = warning text)
+        2+ = blocking (stderr = reason for block)
+
+AfterAgent deny/retry protocol:
+    - decision: "deny" rejects the model's response
+    - reason field becomes a new prompt for the agent to correct
+    - hookSpecificOutput.clearContext: true clears LLM memory from rejected turn
+    - Next AfterAgent input will have stop_hook_active: true (retry sequence)
+    - Hooks must implement retry limits to avoid infinite loops
+
+Transcript format:
+    Gemini CLI uses JSONL at transcript_path with record types:
+        user, gemini (not "assistant"), message_update
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from typing import Any
 
@@ -54,6 +69,25 @@ CLAUDE_TO_GEMINI_TOOLS: dict[str, str] = {v: k for k, v in GEMINI_TO_CLAUDE_TOOL
 # Helpers
 # --------------------------------------------------------------------------- #
 
+# Regex to strip <system-reminder> wrappers.
+# Gemini additionalContext is plain text -- no XML tags needed.
+_SYSTEM_REMINDER_RE = re.compile(
+    r"<system-reminder>(.*?)</system-reminder>", re.DOTALL
+)
+
+
+def _strip_system_reminder(text: str) -> str:
+    """Remove <system-reminder> wrapper tags from context text.
+
+    Claude Code hooks use build_system_reminder() which wraps content in
+    <system-reminder> tags.  Gemini CLI additionalContext is plain text --
+    these tags would be passed literally and confuse the model.
+    """
+    match = _SYSTEM_REMINDER_RE.search(text)
+    if match:
+        return match.group(1).strip()
+    return text
+
 
 def _translate_input(gemini_input: dict[str, Any], event: str) -> dict[str, Any]:
     """Convert Gemini hook input to the format Claude Code hooks expect."""
@@ -74,6 +108,9 @@ def _translate_input(gemini_input: dict[str, Any], event: str) -> dict[str, Any]
         # Stop equivalent -- pass through prompt info
         claude_input["prompt"] = gemini_input.get("prompt", "")
         claude_input["prompt_response"] = gemini_input.get("prompt_response", "")
+        # Pass through stop_hook_active so hooks can detect retry sequences
+        if gemini_input.get("stop_hook_active"):
+            claude_input["stop_hook_active"] = True
 
     elif event == "SessionStart":
         claude_input["source"] = gemini_input.get("source", "startup")
@@ -82,7 +119,12 @@ def _translate_input(gemini_input: dict[str, Any], event: str) -> dict[str, Any]
 
 
 def _translate_output(claude_output: dict[str, Any], event: str) -> dict[str, Any]:
-    """Convert Claude Code hook output to Gemini hook format."""
+    """Convert Claude Code hook output to Gemini hook format.
+
+    Returns a tuple-like dict with a special '_exit_code' key for the caller
+    to know which exit code to use.  The caller must pop this key before
+    writing stdout.
+    """
     gemini_output: dict[str, Any] = {}
 
     # Map permission decision to Gemini's decision field
@@ -95,16 +137,34 @@ def _translate_output(claude_output: dict[str, Any], event: str) -> dict[str, An
             gemini_output["reason"] = hook_specific.get(
                 "permissionDecisionReason", "Blocked by hook"
             )
-        # Pass through additionalContext
+        # Pass through additionalContext (stripped of system-reminder wrappers)
         ctx = hook_specific.get("additionalContext", "")
         if ctx:
-            gemini_output["hookSpecificOutput"] = {"additionalContext": ctx}
+            ctx = _strip_system_reminder(ctx)
+            gemini_output.setdefault("hookSpecificOutput", {})
+            gemini_output["hookSpecificOutput"]["hookEventName"] = "BeforeTool"
+            gemini_output["hookSpecificOutput"]["additionalContext"] = ctx
+        # Support tool_input modification (BeforeTool can override model args)
+        tool_input_override = hook_specific.get("tool_input")
+        if tool_input_override:
+            gemini_output.setdefault("hookSpecificOutput", {})
+            gemini_output["hookSpecificOutput"]["hookEventName"] = "BeforeTool"
+            gemini_output["hookSpecificOutput"]["tool_input"] = tool_input_override
 
     elif event == "AfterAgent":
         decision = claude_output.get("decision", "")
         if decision == "block":
             gemini_output["decision"] = "deny"
-            gemini_output["reason"] = claude_output.get("reason", "")
+            reason = claude_output.get("reason", "")
+            gemini_output["reason"] = reason
+            # clearContext: force agent to reason from file state on retry
+            gemini_output["hookSpecificOutput"] = {
+                "hookEventName": "AfterAgent",
+                "clearContext": True,
+            }
+            # Signal to caller: use exit code 2 with reason on stderr
+            gemini_output["_block"] = True
+            gemini_output["_block_reason"] = reason
         elif decision == "allow":
             gemini_output["decision"] = "allow"
 
@@ -115,9 +175,72 @@ def _translate_output(claude_output: dict[str, Any], event: str) -> dict[str, An
     elif event == "SessionStart":
         ctx = hook_specific.get("additionalContext", "")
         if ctx:
-            gemini_output["hookSpecificOutput"] = {"additionalContext": ctx}
+            ctx = _strip_system_reminder(ctx)
+            gemini_output["hookSpecificOutput"] = {
+                "hookEventName": "SessionStart",
+                "additionalContext": ctx,
+            }
 
     return gemini_output
+
+
+def _patch_transcript_for_claude(transcript_path: str) -> str:
+    """Create a patched copy of the Gemini JSONL transcript for Claude hooks.
+
+    Gemini CLI uses record type "gemini" for assistant messages while
+    Claude Code hooks expect "assistant".  This creates a temp file with
+    the type field patched so hook_utils parsing works correctly.
+
+    Returns the path to the patched file (or the original if patching fails).
+    """
+    if not transcript_path or not os.path.isfile(transcript_path):
+        return transcript_path
+
+    import tempfile
+
+    try:
+        patched_lines: list[str] = []
+        with open(transcript_path, encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped:
+                    patched_lines.append(line)
+                    continue
+                try:
+                    record = json.loads(stripped)
+                except json.JSONDecodeError:
+                    patched_lines.append(line)
+                    continue
+
+                # Patch "gemini" -> "assistant" for Claude hook compatibility
+                if record.get("type") == "gemini":
+                    record["type"] = "assistant"
+                    patched_lines.append(json.dumps(record) + "\n")
+                else:
+                    patched_lines.append(line)
+
+        # Write to temp file in same directory for fast I/O
+        dir_name = os.path.dirname(transcript_path) or "/tmp"
+        fd, patched_path = tempfile.mkstemp(
+            suffix=".jsonl", prefix="patched_", dir=dir_name
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.writelines(patched_lines)
+
+        return patched_path
+
+    except (OSError, IOError):
+        # Fall back to original on any error
+        return transcript_path
+
+
+def _cleanup_patched(patched_path: str, original_path: str) -> None:
+    """Remove the patched transcript temp file if it differs from original."""
+    if patched_path != original_path:
+        try:
+            os.unlink(patched_path)
+        except OSError:
+            pass
 
 
 # --------------------------------------------------------------------------- #
@@ -132,6 +255,11 @@ def _run_before_tool(gemini_input: dict[str, Any]) -> None:
     # Only process activate_skill (Skill) calls
     if claude_input.get("tool_name") != "Skill":
         sys.exit(0)
+
+    # Patch transcript for Claude hook compatibility (gemini -> assistant)
+    original_transcript = claude_input.get("transcript_path", "")
+    patched_transcript = _patch_transcript_for_claude(original_transcript)
+    claude_input["transcript_path"] = patched_transcript
 
     # Import and delegate to the existing hook
     from pretool_verify_hook import main as _pretool_main
@@ -148,6 +276,8 @@ def _run_before_tool(gemini_input: dict[str, Any]) -> None:
             _pretool_main()
     except SystemExit:
         pass
+    finally:
+        _cleanup_patched(patched_transcript, original_transcript)
 
     claude_output_str = captured.getvalue().strip()
     if claude_output_str:
@@ -166,6 +296,11 @@ def _run_after_agent(gemini_input: dict[str, Any]) -> None:
     """Dispatch AfterAgent -> stop_do_hook."""
     claude_input = _translate_input(gemini_input, "AfterAgent")
 
+    # Patch transcript for Claude hook compatibility (gemini -> assistant)
+    original_transcript = claude_input.get("transcript_path", "")
+    patched_transcript = _patch_transcript_for_claude(original_transcript)
+    claude_input["transcript_path"] = patched_transcript
+
     from stop_do_hook import main as _stop_main
     from unittest.mock import patch
     import io
@@ -180,17 +315,28 @@ def _run_after_agent(gemini_input: dict[str, Any]) -> None:
             _stop_main()
     except SystemExit:
         pass
+    finally:
+        _cleanup_patched(patched_transcript, original_transcript)
 
     claude_output_str = captured.getvalue().strip()
     if claude_output_str:
         try:
             claude_output = json.loads(claude_output_str)
             gemini_output = _translate_output(claude_output, "AfterAgent")
+
             if gemini_output:
-                print(json.dumps(gemini_output))
-                # If blocking, exit 2 so Gemini retries
-                if gemini_output.get("decision") == "deny":
+                # AfterAgent blocking: exit 2 with reason on stderr
+                if gemini_output.pop("_block", False):
+                    block_reason = gemini_output.pop("_block_reason", "Blocked by hook")
+                    # Write allow/deny JSON to stdout for Gemini to parse
+                    print(json.dumps(gemini_output))
+                    # Write reason to stderr (Gemini uses this as feedback prompt)
+                    print(block_reason, file=sys.stderr)
                     sys.exit(2)
+                else:
+                    # Remove internal keys if somehow present
+                    gemini_output.pop("_block_reason", None)
+                    print(json.dumps(gemini_output))
         except json.JSONDecodeError:
             pass
 
@@ -198,8 +344,19 @@ def _run_after_agent(gemini_input: dict[str, Any]) -> None:
 
 
 def _run_session_start(gemini_input: dict[str, Any]) -> None:
-    """Dispatch SessionStart -> post_compact_hook."""
+    """Dispatch SessionStart (source=resume) -> post_compact_hook."""
+    # Only handle "resume" source (post-compaction recovery)
+    # "startup" and "clear" don't need compact recovery
+    source = gemini_input.get("source", "startup")
+    if source != "resume":
+        sys.exit(0)
+
     claude_input = _translate_input(gemini_input, "SessionStart")
+
+    # Patch transcript for Claude hook compatibility (gemini -> assistant)
+    original_transcript = claude_input.get("transcript_path", "")
+    patched_transcript = _patch_transcript_for_claude(original_transcript)
+    claude_input["transcript_path"] = patched_transcript
 
     from post_compact_hook import main as _compact_main
     from unittest.mock import patch
@@ -215,6 +372,8 @@ def _run_session_start(gemini_input: dict[str, Any]) -> None:
             _compact_main()
     except SystemExit:
         pass
+    finally:
+        _cleanup_patched(patched_transcript, original_transcript)
 
     claude_output_str = captured.getvalue().strip()
     if claude_output_str:
@@ -238,7 +397,7 @@ def main() -> None:
     """Entry point. First CLI arg is the Gemini event name."""
     if len(sys.argv) < 2:
         print("Usage: gemini_adapter.py <event>", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
     event = sys.argv[1]
 

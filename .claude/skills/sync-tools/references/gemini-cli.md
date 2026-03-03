@@ -118,7 +118,7 @@ timeout_mins: 5
 
 ### Hook Conversion
 
-Gemini CLI hooks use JSON stdin/stdout protocol similar to Claude Code.
+Gemini CLI hooks are external scripts communicating via JSON on stdin/stdout with exit code semantics.
 
 **Event mapping (Claude Code → Gemini CLI)**:
 
@@ -126,43 +126,107 @@ Gemini CLI hooks use JSON stdin/stdout protocol similar to Claude Code.
 |-------------------|-----------------|------------|-------|
 | PreToolUse | `BeforeTool` | Yes (decision: deny) | Matcher: regex on tool names |
 | PostToolUse | `AfterTool` | Yes (deny hides result) | Can chain tools via tailToolCallRequest |
-| Stop | `AfterAgent` | Yes (deny forces retry) | Exit code 2 triggers retry |
+| Stop | `AfterAgent` | Yes (deny forces retry) | reason becomes new prompt |
 | SessionStart | `SessionStart` | No (advisory) | source: startup/resume/clear |
 | PreCompact | `PreCompress` | No (advisory) | trigger: auto/manual |
 | Notification | `Notification` | No | notification_type, message, details |
 
 Additional Gemini events (no Claude Code equivalent):
-- `SessionEnd` — reason: exit/clear/logout
-- `BeforeAgent` — after user prompt, before planning. Can block or inject context.
-- `BeforeModel` — before LLM API request. Can mock LLM response.
-- `AfterModel` — after LLM response chunk. Can replace chunk.
-- `BeforeToolSelection` — filter available tools before model decides
+- `SessionEnd` — reason: exit/clear/logout/prompt_input_exit/other
+- `BeforeAgent` — after user prompt, before planning. Can block or inject context via additionalContext.
+- `BeforeModel` — before LLM API request. Can mock LLM response via hookSpecificOutput.llm_response.
+- `AfterModel` — after LLM response chunk. Can replace chunk via hookSpecificOutput.llm_response.
+- `BeforeToolSelection` — filter available tools via hookSpecificOutput.toolConfig.allowedFunctionNames.
 
 **Protocol**:
 - Input: JSON on `stdin`
 - Output: JSON on `stdout` (NOTHING else — debug on stderr only)
-- Exit code 0 = success, 2 = system block (stderr = reason), other = warning
+- Exit codes: 0 = success (parse stdout), 1 = non-blocking warning, 2+ = blocking (stderr = reason)
 
-**Universal input** (all events): `session_id`, `transcript_path`, `cwd`, `hook_event_name`, `timestamp`
+**Exit code 2+ behavior per event:**
 
-**Universal output**: `systemMessage`, `suppressOutput`, `continue`, `stopReason`, `decision` (allow/deny/block), `reason`, `hookSpecificOutput`
+| Event | Exit 2+ Behavior |
+|-------|-----------------|
+| BeforeTool | Blocks tool; stderr becomes deny reason sent to agent as tool error |
+| AfterTool | Hides real tool output; stderr becomes replacement content |
+| BeforeAgent | Blocks prompt; erases prompt from history |
+| AfterAgent | **Triggers automatic retry**; stderr becomes feedback prompt for correction |
+| BeforeModel | Aborts the turn; stderr used as error message |
+| AfterModel | Discards response chunk; blocks the turn |
 
-**Event-specific details**:
+**Universal input** (all events):
+```json
+{
+  "session_id": "string",
+  "transcript_path": "string (path to JSONL session file)",
+  "cwd": "string",
+  "hook_event_name": "string",
+  "timestamp": "string (ISO 8601)"
+}
+```
 
-`BeforeTool`: extra input `tool_name`, `tool_input`. Block: `decision: "deny"`. Modify args: `hookSpecificOutput.tool_input`.
+**Event-specific input fields:**
 
-`AfterTool`: extra input `tool_name`, `tool_response`. Hide result: `decision: "deny"`. Chain tool: `hookSpecificOutput.tailToolCallRequest: {name, args}`. Add context: `hookSpecificOutput.additionalContext`.
+| Event | Additional Input Fields |
+|-------|----------------------|
+| BeforeTool | `tool_name`, `tool_input`, `mcp_context?`, `original_request_name?` |
+| AfterTool | `tool_name`, `tool_input`, `tool_response: {llmContent, returnDisplay, error?}`, `mcp_context?` |
+| BeforeAgent | `prompt` |
+| AfterAgent | `prompt`, `prompt_response`, `stop_hook_active: boolean` |
+| SessionStart | `source: "startup" \| "resume" \| "clear"` |
+| SessionEnd | `reason: "exit" \| "clear" \| "logout" \| "prompt_input_exit" \| "other"` |
+| PreCompress | `trigger: "manual" \| "auto"` |
 
-`AfterAgent`: extra input `prompt`, `prompt_response`. Force retry: `decision: "deny"`, reason becomes new prompt. Exit code 2: automatic retry.
+**Universal output** (all optional):
+```json
+{
+  "decision": "allow | deny | block | ask | approve",
+  "reason": "string (feedback when denying — for AfterAgent, becomes new prompt)",
+  "systemMessage": "string (displayed to user in terminal, NOT injected into model)",
+  "continue": false,
+  "stopReason": "string",
+  "suppressOutput": true,
+  "hookSpecificOutput": {}
+}
+```
 
-`SessionStart`: extra input `source`. Inject context: `hookSpecificOutput.additionalContext`.
+**hookSpecificOutput by event:**
 
-**Adapter pattern**: Claude Code Python hooks can be wrapped with a thin adapter:
-- Claude `hookSpecificOutput.permissionDecision: "deny"` → Gemini `decision: "deny"`
-- Claude `hookSpecificOutput.permissionDecisionReason` → Gemini `reason`
-- Claude `hookSpecificOutput.additionalContext` → Gemini `hookSpecificOutput.additionalContext`
+| Event | hookSpecificOutput Fields |
+|-------|--------------------------|
+| BeforeTool | `{hookEventName: "BeforeTool", tool_input?: Record}` — tool_input merges with/overrides model args |
+| AfterTool | `{hookEventName: "AfterTool", additionalContext?: string, tailToolCallRequest?: {name, args}}` |
+| BeforeAgent | `{hookEventName: "BeforeAgent", additionalContext?: string}` — appended to prompt for this turn |
+| AfterAgent | `{hookEventName: "AfterAgent", clearContext?: boolean}` — clears LLM memory if true |
+| SessionStart | `{hookEventName: "SessionStart", additionalContext?: string}` |
 
-**Hook configuration** (`hooks/hooks.json`):
+**Context injection (additionalContext) behavior:**
+
+| Event | How additionalContext is injected |
+|-------|----------------------------------|
+| BeforeAgent | Appended to user's prompt for that turn only |
+| AfterTool | Appended to tool result (alongside llmContent) |
+| SessionStart | Interactive: injected as first turn in conversation history. Non-interactive: prepended to prompt |
+
+Plain text format — no special tags needed. HTML-escaped by Gemini internally.
+
+**AfterAgent deny/retry protocol:**
+1. `decision: "deny"` rejects the model's response for that turn
+2. `reason` field is sent as a **new prompt** to the agent for correction
+3. `hookSpecificOutput.clearContext: true` clears LLM memory from rejected turn (forces reasoning from file state)
+4. Next AfterAgent input will have `stop_hook_active: true` indicating retry sequence
+5. **No built-in retry limit** — hooks must implement their own counter to avoid infinite loops
+
+**Matcher syntax in hooks.json (settings.json):**
+
+| Event Type | Matcher Behavior |
+|------------|-----------------|
+| Tool events (BeforeTool, AfterTool) | **Regex** against `tool_name`. Falls back to exact match if regex invalid. Examples: `"activate_skill"`, `"write_file\|replace"`, `"mcp__.*"` |
+| Lifecycle events (SessionStart, etc.) | **Exact string equality** against trigger/source/reason field. Example: `"startup"` matches only source="startup" |
+| Empty or `"*"` | Matches ALL events of that type |
+| No matcher field | Matches ALL events of that type |
+
+**Hook configuration** (`hooks/hooks.json` or `settings.json`):
 ```json
 {
   "hooks": {
@@ -185,9 +249,28 @@ Additional Gemini events (no Claude Code equivalent):
 }
 ```
 
+**Transcript format (JSONL):**
+Path: `~/.gemini/tmp/<project_hash>/chats/session-*.jsonl`
+Record types (one JSON per line, append-only):
+```
+{"type":"session_metadata","sessionId":"...","projectHash":"...","startTime":"..."}
+{"type":"user","id":"msg1","content":[{"text":"Hello"}]}
+{"type":"gemini","id":"msg2","content":[{"text":"Hi there"}]}
+{"type":"message_update","id":"msg2","tokens":{"input":10,"output":5}}
+```
+Note: JSONL transition (issue #15292) may still be in progress. Older sessions may use monolithic JSON. Tool call records within messages not fully documented yet.
+
 **Env vars**: `GEMINI_PROJECT_DIR`, `GEMINI_SESSION_ID`, `GEMINI_CWD`, `CLAUDE_PROJECT_DIR` (compat).
 
 **Precedence**: Project > User > System > Extension hooks.
+
+**Adapter pattern for Claude Code hooks:**
+Claude Code hooks can be wrapped with a thin adapter that:
+- Translates Claude's `hookSpecificOutput.permissionDecision: "deny"` → Gemini's top-level `decision: "deny"`
+- Maps Claude's `hookSpecificOutput.permissionDecisionReason` → Gemini's `reason`
+- Passes Claude's `hookSpecificOutput.additionalContext` → Gemini's `hookSpecificOutput.additionalContext`
+- For AfterAgent (stop hook): translates Claude's `decision: "block"` → Gemini's `decision: "deny"` with reason
+- Maps Claude's `transcript_path` parsing to Gemini's JSONL format (message types: `user`/`gemini` instead of `user`/`assistant`)
 
 ### Skills Handling
 
