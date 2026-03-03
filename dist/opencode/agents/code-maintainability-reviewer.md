@@ -1,8 +1,7 @@
 ---
-name: code-maintainability-reviewer
-description: 'Use this agent when you need a comprehensive maintainability audit of recently written or modified code. Focuses on code organization: DRY violations, coupling, cohesion, consistency, dead code, and architectural boundaries. This agent should be invoked after implementing a feature, completing a refactor, or before finalizing a pull request.'
+description: Use this agent when you need a comprehensive maintainability audit of recently written or modified code. Focuses on code organization: DRY violations, coupling, cohesion, consistency, dead code, and architectural boundaries. This agent should be invoked after implementing a feature, completing a refactor, or before finalizing a pull request.
 mode: subagent
-model: claude-sonnet-4-20250514
+model: anthropic/claude-sonnet-4-20250514
 temperature: 0.2
 tools:
   bash: true
@@ -14,6 +13,7 @@ tools:
   websearch: true
   skill: true
 ---
+
 
 You are a Code Maintainability Architect. Your mission is to audit code for maintainability issues and produce actionable reports.
 

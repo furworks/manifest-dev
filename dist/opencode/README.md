@@ -1,74 +1,81 @@
 # manifest-dev for OpenCode
 
-Verification-first manifest workflows adapted for OpenCode CLI.
+Verification-first manifest workflows adapted for OpenCode. Define tasks, execute them, verify acceptance criteria, and complete with confidence.
 
-## Installation
+## What's Included
 
-For skills only (universal installer):
+| Component | Count | Status |
+|-----------|-------|--------|
+| Skills | 6 | Full compatibility (Agent Skills Open Standard) |
+| Agents | 12 | Converted (frontmatter adapted, prompts unchanged) |
+| Commands | 3 | From user-invoked skills (define, do, learn-define-patterns) |
+| Hooks | — | TypeScript stubs + behavioral spec (manual port needed) |
+| Context | AGENTS.md | Workflow overview + agent descriptions |
+
+### Skills (copied unchanged)
+- **define** — Manifest builder with interview-driven scoping
+- **do** — Manifest executor, iterates through deliverables
+- **verify** — Spawns parallel verification agents
+- **done** — Completion marker with execution summary
+- **escalate** — Structured escalation with evidence
+- **learn-define-patterns** — Extracts user preference patterns from /define sessions
+
+### Agents (converted frontmatter)
+All 12 agents converted with OpenCode tool boolean format. Review agents are read-only verification subagents spawned by `/verify`.
+
+### Hooks (stubs only)
+The `plugins/` directory contains:
+- **index.ts** — TypeScript plugin skeleton with correct event bindings and structure
+- **HOOK_SPEC.md** — Complete behavioral specification for all three hooks
+- **package.json** — Dependencies (`@opencode-ai/plugin`)
+
+The Python hook logic must be manually ported to TypeScript. The spec documents the exact decision logic, transcript parsing, and edge cases.
+
+## Install / Update
+
+### One Command (recommended)
 ```bash
-npx skills add https://github.com/doodledood/manifest-dev --all -a opencode
+# From the dist/opencode directory:
+bash install.sh
 ```
 
-For the full distribution (skills + agents + hook stubs):
+Installs skills, agents, commands, plugin stubs, and AGENTS.md. Idempotent — run again to update. Won't overwrite manually ported index.ts.
+
+### Skills Only (works natively)
+OpenCode reads `.claude/skills/` natively, so Claude Code skills already work without conversion:
 ```bash
-# Copy skills
+npx skills add <github-url> --all -a opencode
+```
+
+### Manual
+```bash
 cp -r dist/opencode/skills/* .opencode/skills/
-
-# Copy agents
 cp -r dist/opencode/agents/* .opencode/agents/
-
-# Hook stubs require manual JS/TS implementation
-# See hooks/HOOK_SPEC.md for behavioral specification
+cp -r dist/opencode/commands/* .opencode/commands/
+cp -r dist/opencode/plugins/* .opencode/plugins/
+cp dist/opencode/AGENTS.md ./AGENTS.md
+cd .opencode/plugins && bun install
 ```
 
 ## Feature Parity
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Skills (define, do, verify, done, escalate) | Full | SKILL.md copied unchanged — universal format |
-| Agents (11 reviewers + checkers) | Full | Frontmatter converted (boolean tools object, lowercase names) |
-| Hooks (stop, verify-gate, compact-recovery) | Stubs only | JS/TS rewrite required — Python hooks cannot run in Bun |
-| Skill chaining (define -> do -> verify -> done) | Full | OpenCode's skill tool has same semantics as Claude Code |
-
-## Components
-
-### Skills
-Copied unchanged. OpenCode reads `.claude/skills/` natively, so Claude Code skills already work without this distribution. The dist/ provides standalone copies for `.opencode/skills/` placement.
-
-### Agents
-11 agents with tool names converted to OpenCode lowercase format:
-
-| Claude Code Tool | OpenCode Tool |
-|-----------------|---------------|
-| Bash/BashOutput | bash |
-| Read | read |
-| Grep | grep |
-| Glob | glob |
-| WebFetch | webfetch |
-| WebSearch | websearch |
-| Task/TaskCreate | task |
-| Skill | skill |
-
-Agent mode set to `subagent` (spawned by other agents). Model set to `claude-sonnet-4-20250514`.
-
-### Hooks
-**Stubs only** — OpenCode plugins are JS/TS (Bun runtime). The Python hooks cannot be directly converted.
-
-Provided:
-- `hooks/index.ts` — Plugin skeleton with event bindings and behavioral comments
-- `hooks/HOOK_SPEC.md` — Complete behavioral specification for manual porting
-
-The spec covers: decision matrices, transcript parsing logic, state tracking, and OpenCode-specific implementation notes.
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Skills (define/do/verify/done/escalate) | Full | Agent Skills Open Standard |
+| Verification agents | Full | Frontmatter converted, prompts unchanged |
+| Stop enforcement hook | Stub only | `session.idle` is NOT blocking in OpenCode |
+| Verify context hook | Stub only | `tool.execute.before` binding correct |
+| Post-compact recovery | Stub only | `experimental.session.compacting` — experimental |
+| $ARGUMENTS in skills | Unknown | Behavior undefined in OpenCode |
+| Notification hooks | Missing | No equivalent OpenCode event |
 
 ## Known Limitations
 
-1. **Hooks require manual JS/TS rewrite** — The most significant limitation. Generated stubs provide structure but need implementation.
-2. **No PreCompact equivalent** — OpenCode has `experimental.session.compacting` but it's experimental.
-3. **No Notification hooks** — No equivalent to Claude Code's Notification event.
-4. **Plugin API may evolve** — Generated stubs target the current API.
-5. **Native .claude/ compat** — Users may not need this dist for skills at all (OpenCode reads .claude/ natively).
-6. **Block pattern** — Use `output.abort = "reason"` (not throw) to block tool calls.
+1. **Hooks require manual TypeScript port** — Python hooks can't run in Bun
+2. **Stop hook cannot block** — `session.idle` is non-blocking (known gap)
+3. **Native .claude/ compat** — Users may not need this dist for skills at all
+4. **Plugin API may evolve** — OpenCode plugin API could change in future versions
 
-## Keeping Up to Date
+## Source
 
-This distribution is generated from the Claude Code plugin source. When the source changes, regenerate by running `/sync-tools` in the Claude Code plugin, or manually copy updated files. Note: hook stubs will be overwritten — save manual implementations separately.
+This is a generated distribution from [manifest-dev](https://github.com/<org>/manifest-dev) for Claude Code. The Claude Code plugin is the source of truth.

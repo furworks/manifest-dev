@@ -65,7 +65,7 @@ def get_skill_call_args(line_data: dict[str, Any], skill_name: str) -> str | Non
             continue
         if block.get("type") != "tool_use":
             continue
-        if block.get("name") != "activate_skill":
+        if block.get("name") != "Skill":
             continue
 
         tool_input = block.get("input", {})
@@ -120,7 +120,7 @@ def _is_skill_tool_call(line_data: dict[str, Any], skill_name: str) -> bool:
             continue
         if block.get("type") != "tool_use":
             continue
-        if block.get("name") != "activate_skill":
+        if block.get("name") != "Skill":
             continue
 
         tool_input = block.get("input", {})
@@ -293,8 +293,8 @@ def count_consecutive_short_outputs(transcript_path: str) -> int:
                             elif block.get("type") == "tool_use":
                                 tool_name = block.get("name", "")
                                 # Skill invocations don't count as "meaningful" for loop detection
-                                # because /escalate attempts would be activate_skill calls
-                                if tool_name != "activate_skill":
+                                # because /escalate attempts would be Skill calls
+                                if tool_name != "Skill":
                                     has_meaningful_tool = True
 
                 # Classify this output

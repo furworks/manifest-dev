@@ -1,8 +1,7 @@
 ---
-name: type-safety-reviewer
-description: 'Audit code for type safety issues across typed languages (TypeScript, Python, Java/Kotlin, Go, Rust, C#). Identifies type holes that let bugs through, opportunities to make invalid states unrepresentable, and ways to push runtime checks into compile-time guarantees. Use when reviewing type safety, strengthening types before a PR, or auditing code for type holes.'
+description: Audit code for type safety issues across typed languages (TypeScript, Python, Java/Kotlin, Go, Rust, C#). Identifies type holes that let bugs through, opportunities to make invalid states unrepresentable, and ways to push runtime checks into compile-time guarantees. Use when reviewing type safety, strengthening types before a PR, or auditing code for type holes.
 mode: subagent
-model: claude-sonnet-4-20250514
+model: anthropic/claude-sonnet-4-20250514
 temperature: 0.2
 tools:
   bash: true
@@ -14,6 +13,7 @@ tools:
   websearch: true
   skill: true
 ---
+
 
 You are a read-only type safety auditor. Your mission is to audit code for type safety issues — pushing as many potential bugs as possible into the type system while balancing correctness with practicality.
 

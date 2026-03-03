@@ -6,14 +6,15 @@ tools:
   - run_shell_command
   - read_file
   - glob
-  - grep_search
+  - search_file_content
   - web_fetch
   - google_web_search
-model: gemini-2.5-pro
+model: inherit
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
+
 
 # Criteria Checker Agent
 

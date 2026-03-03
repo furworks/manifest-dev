@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Gemini CLI adaptation of pretool_verify_hook.
+PreToolUse hook that reminds Claude to read manifest/log for verification.
 
-Reminds the model to read manifest/log before running /verify.
-Registered as BeforeTool hook with "activate_skill" matcher.
+When /verify is about to be called, this hook adds a system reminder to ensure
+the manifest and execution log are in full context for accurate verification.
+This is especially important after long sessions where manifest details may have
+drifted from memory.
 
-Adapted from Claude Code version:
-- tool_name check: "Skill" -> "activate_skill"
-- Output format: top-level systemMessage (Gemini protocol)
+Registered as PreToolUse hook with "Skill" matcher.
 """
 
 from __future__ import annotations
@@ -23,28 +23,34 @@ Arguments: {verify_args}
 
 BEFORE spawning verifiers, read the manifest and execution log in FULL if not recently loaded. You need ALL acceptance criteria (AC-*) and global invariants (INV-G*) in context to spawn the correct verifiers."""
 
+
 VERIFY_CONTEXT_REMINDER_MINIMAL = """VERIFICATION CONTEXT CHECK: You are about to run /verify.
 
 BEFORE spawning verifiers, read the manifest and execution log in FULL if not recently loaded. You need ALL acceptance criteria (AC-*) and global invariants (INV-G*) in context to spawn the correct verifiers."""
 
 
 def main() -> None:
+    """Main hook entry point."""
+    # Read hook input from stdin
     try:
         stdin_data = sys.stdin.read()
         hook_input = json.loads(stdin_data)
     except (json.JSONDecodeError, OSError):
         sys.exit(0)
 
+    # Only apply to Skill tool calls
     tool_name = hook_input.get("tool_name", "")
-    if tool_name != "activate_skill":
+    if tool_name != "Skill":
         sys.exit(0)
 
     tool_input = hook_input.get("tool_input", {})
     skill = tool_input.get("skill", "")
 
+    # Only gate verify skill
     if skill != "verify" and not skill.endswith(":verify"):
         sys.exit(0)
 
+    # Get the raw arguments
     args = tool_input.get("args", "").strip()
 
     if args:
@@ -54,7 +60,12 @@ def main() -> None:
 
     context = build_system_reminder(reminder)
 
-    output = {"systemMessage": context}
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": context,
+        }
+    }
     print(json.dumps(output))
     sys.exit(0)
 

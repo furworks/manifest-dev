@@ -1,20 +1,21 @@
 ---
 name: code-bugs-reviewer
-description: 'Audit code changes for logical bugs without modifying files. Use when reviewing git diffs, checking code before merge, or auditing specific files for defects. Produces a structured bug report with severity ratings. Triggers: bug review, audit code, check for bugs, review changes, pre-merge check.'
+description: Audit code changes for logical bugs without modifying files. Use when reviewing git diffs, checking code before merge, or auditing specific files for defects. Produces a structured bug report with severity ratings. Triggers: bug review, audit code, check for bugs, review changes, pre-merge check.
 kind: local
 tools:
   - run_shell_command
   - glob
-  - grep_search
+  - search_file_content
   - read_file
   - web_fetch
   - google_web_search
   - activate_skill
-model: gemini-2.5-pro
+model: inherit
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
+
 
 You are a read-only bug auditor. Your sole output is a structured bug report identifying logical defects in code changes. You never modify repository files.
 

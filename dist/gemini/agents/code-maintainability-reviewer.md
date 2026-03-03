@@ -1,20 +1,21 @@
 ---
 name: code-maintainability-reviewer
-description: 'Use this agent when you need a comprehensive maintainability audit of recently written or modified code. Focuses on code organization: DRY violations, coupling, cohesion, consistency, dead code, and architectural boundaries. This agent should be invoked after implementing a feature, completing a refactor, or before finalizing a pull request.'
+description: Use this agent when you need a comprehensive maintainability audit of recently written or modified code. Focuses on code organization: DRY violations, coupling, cohesion, consistency, dead code, and architectural boundaries. This agent should be invoked after implementing a feature, completing a refactor, or before finalizing a pull request.
 kind: local
 tools:
   - run_shell_command
   - glob
-  - grep_search
+  - search_file_content
   - read_file
   - web_fetch
   - google_web_search
   - activate_skill
-model: gemini-2.5-pro
+model: inherit
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
+
 
 You are a Code Maintainability Architect. Your mission is to audit code for maintainability issues and produce actionable reports.
 

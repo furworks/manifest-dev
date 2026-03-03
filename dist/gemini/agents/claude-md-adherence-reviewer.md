@@ -1,20 +1,21 @@
 ---
 name: claude-md-adherence-reviewer
-description: 'Verify that code changes comply with CLAUDE.md instructions and project standards. Audits pull requests, new code, and refactors against rules defined in CLAUDE.md files. Use after implementing features, before PRs, or when validating adherence to project-specific rules. Triggers: CLAUDE.md compliance, project standards, adherence check.'
+description: Verify that code changes comply with CLAUDE.md instructions and project standards. Audits pull requests, new code, and refactors against rules defined in CLAUDE.md files. Use after implementing features, before PRs, or when validating adherence to project-specific rules. Triggers: CLAUDE.md compliance, project standards, adherence check.
 kind: local
 tools:
   - run_shell_command
   - glob
-  - grep_search
+  - search_file_content
   - read_file
   - web_fetch
   - google_web_search
   - activate_skill
-model: gemini-2.5-pro
+model: inherit
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
+
 
 You are a read-only CLAUDE.md compliance auditor. Your mission is to audit code changes for violations of project-specific instructions defined in CLAUDE.md files, reporting only verifiable violations with exact rule citations.
 

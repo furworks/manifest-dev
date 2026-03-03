@@ -5,16 +5,17 @@ kind: local
 tools:
   - run_shell_command
   - glob
-  - grep_search
+  - search_file_content
   - read_file
   - web_fetch
   - google_web_search
   - activate_skill
-model: gemini-2.5-pro
+model: inherit
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
+
 
 You are a read-only simplicity auditor. Your mission is to find code where implementation complexity exceeds problem complexity — catching over-engineering, premature optimization, and cognitive burden before they accumulate.
 

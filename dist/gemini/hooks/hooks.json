@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "activate_skill",
+        "sequential": true,
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${extensionPath}/hooks/gemini_adapter.py pretool_verify_hook BeforeTool",
+            "name": "verify-context-reminder",
+            "timeout": 10000,
+            "description": "Adds context reminder when /verify is about to be called"
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "matcher": ".*",
+        "sequential": true,
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${extensionPath}/hooks/gemini_adapter.py stop_do_hook AfterAgent",
+            "name": "stop-do-enforcement",
+            "timeout": 10000,
+            "description": "Blocks premature stops during /do workflow when verification incomplete"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "sequential": true,
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${extensionPath}/hooks/gemini_adapter.py post_compact_hook SessionStart",
+            "name": "post-compact-recovery",
+            "timeout": 10000,
+            "description": "Restores /do workflow context after session compaction"
+          }
+        ]
+      }
+    ]
+  }
+}

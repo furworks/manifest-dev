@@ -1,0 +1,61 @@
+# manifest-dev execution policy rules for Codex CLI
+# Safe defaults for verification-focused workflows
+
+# Allow read operations
+prefix_rule(
+    pattern = ["cat"],
+    decision = "allow",
+    justification = "File reading is safe",
+)
+
+prefix_rule(
+    pattern = ["grep"],
+    decision = "allow",
+    justification = "Search operations are safe",
+)
+
+prefix_rule(
+    pattern = ["find"],
+    decision = "allow",
+    justification = "File discovery is safe",
+)
+
+# Allow git read operations
+prefix_rule(
+    pattern = ["git", ["status", "log", "diff", "show", "branch"]],
+    decision = "allow",
+    justification = "Git read operations are safe",
+)
+
+# Prompt for git write operations
+prefix_rule(
+    pattern = ["git", ["push", "commit", "reset", "rebase"]],
+    decision = "prompt",
+    justification = "Git write operations need confirmation",
+)
+
+# Prompt for file modifications
+prefix_rule(
+    pattern = ["rm"],
+    decision = "prompt",
+    justification = "File deletion requires confirmation",
+)
+
+# Allow Python for running tests and linting
+prefix_rule(
+    pattern = ["python3"],
+    decision = "allow",
+    justification = "Python execution for tests and scripts",
+)
+
+prefix_rule(
+    pattern = ["pytest"],
+    decision = "allow",
+    justification = "Test execution is safe",
+)
+
+prefix_rule(
+    pattern = ["ruff"],
+    decision = "allow",
+    justification = "Linting is safe",
+)

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Gemini CLI adaptation of post_compact_hook.
+Post-compact hook that restores /do workflow context after compaction.
 
-Restores /do workflow context after session compaction.
-Registered as SessionStart hook.
+When the session is compacted during a /do workflow, the manifest and log
+may be lost from context. This hook detects active /do workflows and
+reminds Claude to re-read the manifest and log files.
 
-Adapted from Claude Code version:
-- Output format: top-level systemMessage (Gemini protocol)
+Registered as SessionStart hook with "compact" matcher.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ The /do was invoked with: {do_args}
 
 Do not restart completed work. Resume from where you left off."""
 
+
 DO_WORKFLOW_RECOVERY_FALLBACK = """This session was compacted during an active /do workflow. Context may have been lost.
 
 CRITICAL: Before continuing, recover your workflow context:
@@ -41,6 +42,8 @@ Do not restart completed work. Resume from where you left off."""
 
 
 def main() -> None:
+    """Main hook entry point."""
+    # Read hook input from stdin
     try:
         stdin_data = sys.stdin.read()
         hook_input = json.loads(stdin_data)
@@ -49,17 +52,21 @@ def main() -> None:
 
     transcript_path = hook_input.get("transcript_path", "")
 
+    # If no transcript, we can't detect /do workflow
     if not transcript_path:
         sys.exit(0)
 
     state = parse_do_flow(transcript_path)
 
+    # Not in /do workflow - nothing to do
     if not state.has_do:
         sys.exit(0)
 
+    # /do workflow completed - no need to recover
     if state.has_done or state.has_escalate:
         sys.exit(0)
 
+    # Active /do workflow - build recovery reminder
     if state.do_args:
         reminder = DO_WORKFLOW_RECOVERY_REMINDER.format(do_args=state.do_args)
     else:
@@ -67,7 +74,12 @@ def main() -> None:
 
     context = build_system_reminder(reminder)
 
-    output = {"systemMessage": context}
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": context,
+        }
+    }
     print(json.dumps(output))
     sys.exit(0)
 

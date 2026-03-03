@@ -1,51 +1,84 @@
 # manifest-dev for Codex CLI
 
-Verification-first manifest workflow skills for OpenAI's Codex CLI.
+Verification-first manifest workflows adapted for Codex CLI. Define tasks, execute them, verify acceptance criteria, and complete with confidence.
 
-**Important**: This is a skills-only distribution. Codex CLI does not support markdown agents or event hooks.
+## What's Included
 
-## Installation
+| Component | Count | Status |
+|-----------|-------|--------|
+| Skills | 6 | Full compatibility (Agent Skills Open Standard) |
+| Agents | AGENTS.md + 12 TOML stubs | Informational + multi-agent config |
+| Hooks | 0 | Not available (Codex has no hook system yet) |
+| Execution rules | 1 | Starlark .rules file |
+| Config | 1 | Multi-agent TOML config snippet |
 
-Using npx skills (universal installer):
+### Skills (copied unchanged)
+- **define** — Manifest builder with interview-driven scoping
+- **do** — Manifest executor, iterates through deliverables
+- **verify** — Spawns parallel verification agents
+- **done** — Completion marker with execution summary
+- **escalate** — Structured escalation with evidence
+- **learn-define-patterns** — Extracts user preference patterns from /define sessions
+
+### AGENTS.md
+Describes all 12 agents, their purposes, and how to approximate their behavior using Codex's multi-agent system.
+
+### TOML Agent Stubs
+Per-agent TOML configuration files for Codex's multi-agent system. These approximate the Claude Code agents' roles but are limited to Codex's two tools (`shell` and `apply_patch`).
+
+### Execution Rules
+`rules/default.rules` provides safe defaults: allows read operations and tests, prompts for writes and git pushes.
+
+## Install / Update
+
+### One Command (recommended)
 ```bash
-npx skills add https://github.com/doodledood/manifest-dev --all
+# From the dist/codex directory:
+bash install.sh
 ```
 
-Using Codex's $skill-installer (within Codex session):
-```
-$skill-installer --repo https://github.com/doodledood/manifest-dev --path skills/<skill-name>
+Installs skills, AGENTS.md, agent TOML stubs, execution rules, and config. Idempotent — run again to update. Won't overwrite existing config.toml.
+
+### Skills Only
+```bash
+npx skills add <github-url> --all
+
+# Or Codex skill-installer (within session)
+$skill-installer --repo <url> --path skills/<name>
 ```
 
-Manual installation:
+### Manual
 ```bash
 cp -r dist/codex/skills/* .agents/skills/
+cp dist/codex/AGENTS.md ./AGENTS.md
+mkdir -p .codex/agents && cp dist/codex/agents/*.toml .codex/agents/
+mkdir -p .codex/rules && cp dist/codex/rules/default.rules .codex/rules/
+# Merge dist/codex/config.toml into .codex/config.toml
 ```
 
 ## Feature Parity
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Skills (define, do, verify, done, escalate) | Full | SKILL.md copied unchanged — universal format |
-| Agents (11 reviewers + checkers) | Descriptions only | See AGENTS.md — Codex agents are TOML, incompatible with markdown |
-| Hooks | Not available | Codex has no hook system (GitHub Issue #2109, 434 upvotes) |
-| Skill chaining (define -> do -> verify -> done) | Advisory only | Works via skill invocation but not enforced without hooks |
-
-## Components
-
-### Skills
-Copied unchanged from Claude Code plugin. The Agent Skills Open Standard (agentskills.io) ensures universal compatibility. Skills are enabled by default since Codex v0.97.0 with live detection.
-
-### AGENTS.md
-Human-readable descriptions of all 11 manifest-dev agents. These cannot run as scoped subagents on Codex (incompatible paradigms) but understanding them helps when using the manifest workflow.
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Skills (define/do/verify/done/escalate) | Full | Agent Skills Open Standard |
+| Verification agents | TOML stubs | Limited to shell + apply_patch tools |
+| Stop enforcement hook | Missing | No hook system in Codex (Issue #2109) |
+| Verify context hook | Missing | No hook system |
+| Post-compact recovery | Missing | No hook system |
+| Workflow enforcement | Advisory | Without hooks, chain is not enforced |
+| $ARGUMENTS in skills | Missing | Not supported by Codex CLI |
+| Scoped subagents | Missing | Multi-agent uses global sandbox |
 
 ## Known Limitations
 
-1. **Skills only** — No agents, no hooks. Most restricted distribution target.
-2. **No workflow enforcement** — Without hooks, the define->do->verify->done chain is advisory only. Nothing prevents premature stops or skipping verification.
-3. **No scoped subagents** — Codex has only 2 tools (shell, apply_patch). Agent conversion is impossible.
-4. **Skill chaining may be unreliable** — Codex skill-to-skill invocation is less documented than Claude Code's.
-5. **Hooks may come eventually** — GitHub Issue #2109 is highly upvoted. If hooks ship, this distribution could expand significantly.
+1. **Skills are the only fully compatible component** — agents are TOML stubs, hooks impossible
+2. **No workflow enforcement** — without hooks, the define→do→verify→done chain is advisory
+3. **Only 2 tools** — Codex agents have `shell` and `apply_patch` only
+4. **No scoped subagents** — multi-agent uses global sandbox, no per-agent tool restriction
+5. **Hooks expected soon** — Mid-March 2026 experimental release predicted (Issue #2109, 434+ upvotes)
 
-## Keeping Up to Date
+When Codex ships hooks, this distribution should expand significantly.
 
-This distribution is generated from the Claude Code plugin source. When the source changes, regenerate by running `/sync-tools` in the Claude Code plugin, or manually copy updated files.
+## Source
+
+This is a generated distribution from [manifest-dev](https://github.com/<org>/manifest-dev) for Claude Code. The Claude Code plugin is the source of truth.

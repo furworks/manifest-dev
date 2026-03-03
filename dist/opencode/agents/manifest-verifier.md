@@ -1,14 +1,14 @@
 ---
-name: manifest-verifier
 description: 'Reviews /define manifests for gaps and outputs actionable continuation steps. Returns specific questions to ask and areas to probe so interview can continue.'
 mode: subagent
-model: claude-sonnet-4-20250514
+model: anthropic/claude-sonnet-4-20250514
 temperature: 0.2
 tools:
   read: true
   grep: true
   glob: true
 ---
+
 
 # Manifest Verifier Agent
 

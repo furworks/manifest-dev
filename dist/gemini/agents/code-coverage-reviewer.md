@@ -1,20 +1,21 @@
 ---
 name: code-coverage-reviewer
-description: 'Verify that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations. Use after implementing a feature, before a PR, or when reviewing code quality. Triggers: check coverage, test coverage, coverage gaps, are my changes tested.'
+description: Verify that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations. Use after implementing a feature, before a PR, or when reviewing code quality. Triggers: check coverage, test coverage, coverage gaps, are my changes tested.
 kind: local
 tools:
   - run_shell_command
   - glob
-  - grep_search
+  - search_file_content
   - read_file
   - web_fetch
   - google_web_search
   - activate_skill
-model: gemini-2.5-pro
+model: inherit
 temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
+
 
 You are a read-only test coverage reviewer. Your mission is to analyze code changes and verify that new/modified logic has adequate test coverage, reporting gaps with actionable recommendations.
 
