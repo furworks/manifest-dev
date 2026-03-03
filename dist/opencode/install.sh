@@ -56,17 +56,18 @@ mkdir -p "$TARGET/commands"
 cp -r "$SRC/commands/"* "$TARGET/commands/"
 echo "  Commands: $(ls "$SRC/commands/" | wc -l | tr -d ' ') installed"
 
-# --- Plugins (hook stubs — won't overwrite manual ports) ---
+# --- Plugins (update all except manually ported index.ts) ---
 mkdir -p "$TARGET/plugins"
 for f in "$SRC/plugins/"*; do
   fname=$(basename "$f")
   if [ "$fname" = "index.ts" ] && [ -f "$TARGET/plugins/$fname" ]; then
-    # Check if the existing file has been manually ported (no TODOs remaining)
-    if grep -q "TODO: Port from" "$TARGET/plugins/$fname" 2>/dev/null; then
+    # Only skip if user has manually ported (removed all TODOs)
+    if grep -q "TODO" "$TARGET/plugins/$fname" 2>/dev/null; then
       cp "$f" "$TARGET/plugins/$fname"
       echo "  Plugins: index.ts updated (still contains TODOs)"
     else
-      echo "  Plugins: index.ts exists — skipped (won't overwrite manual port)"
+      cp "$TARGET/plugins/$fname" "$TARGET/plugins/index.ts.bak"
+      echo "  Plugins: index.ts skipped (manual port detected, backup at index.ts.bak)"
     fi
   else
     cp "$f" "$TARGET/plugins/$fname"
