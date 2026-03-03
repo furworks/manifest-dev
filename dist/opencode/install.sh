@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # manifest-dev installer for OpenCode CLI
 # Idempotent — safe to re-run. Downloads from GitHub, copies components.
+# All components are namespaced with -manifest-dev suffix to avoid collisions.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/opencode/install.sh | bash
@@ -38,21 +39,25 @@ else
   echo "Installing globally: ~/.config/opencode/"
 fi
 
-# --- Skills (clean + copy — removes stale skills from previous installs) ---
-rm -rf "$TARGET/skills"
-mkdir -p "$TARGET/skills"
-cp -r "$SRC/skills/"* "$TARGET/skills/"
-echo "  Skills: $(ls "$SRC/skills/" | wc -l | tr -d ' ') installed"
+# --- Namespace components in source before installing ---
+echo "Namespacing components..."
+python3 "$SRC/install_helpers.py" namespace "$SRC" opencode
 
-# --- Agents (clean + copy — removes renamed/deleted agents) ---
-rm -rf "$TARGET/agents"
+# --- Skills (selective cleanup: remove only our namespaced dirs) ---
+mkdir -p "$TARGET/skills"
+find "$TARGET/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+cp -r "$SRC/skills/"* "$TARGET/skills/"
+echo "  Skills: $(ls -d "$SRC/skills/"*/ 2>/dev/null | wc -l | tr -d ' ') installed"
+
+# --- Agents (selective cleanup: remove only our namespaced files) ---
 mkdir -p "$TARGET/agents"
+find "$TARGET/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
 cp -r "$SRC/agents/"* "$TARGET/agents/"
 echo "  Agents: $(ls "$SRC/agents/" | wc -l | tr -d ' ') installed"
 
-# --- Commands (clean + copy — removes renamed/deleted commands) ---
-rm -rf "$TARGET/commands"
+# --- Commands (selective cleanup: remove only our namespaced files) ---
 mkdir -p "$TARGET/commands"
+find "$TARGET/commands" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
 cp -r "$SRC/commands/"* "$TARGET/commands/"
 echo "  Commands: $(ls "$SRC/commands/" | wc -l | tr -d ' ') installed"
 
@@ -93,10 +98,10 @@ echo "  Context: AGENTS.md installed"
 echo ""
 echo "Done! Restart OpenCode to activate."
 echo ""
-echo "Components installed to $TARGET/:"
-echo "  skills/    - 6 skills (define, do, done, escalate, learn-define-patterns, verify)"
-echo "  agents/    - 12 agents (code reviewers, criteria-checker, manifest-verifier, etc.)"
-echo "  commands/  - 3 commands (/define, /do, /learn-define-patterns)"
+echo "Components installed to $TARGET/ (all suffixed with -manifest-dev):"
+echo "  skills/    - 6 skills (define-manifest-dev, do-manifest-dev, etc.)"
+echo "  agents/    - 12 agents (code-bugs-reviewer-manifest-dev, etc.)"
+echo "  commands/  - 3 commands (/define-manifest-dev, /do-manifest-dev, /learn-define-patterns-manifest-dev)"
 echo "  plugins/   - Hook stubs (require manual TS porting — see HOOK_SPEC.md)"
 echo "  AGENTS.md  - Workflow overview and agent descriptions"
 echo ""

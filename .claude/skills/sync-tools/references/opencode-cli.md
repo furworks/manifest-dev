@@ -418,6 +418,26 @@ Claude Code's define → do → verify → done chain uses the Skill tool. OpenC
 
 OpenCode's `task` tool also supports subagent delegation, compatible with Claude Code's Task-based spawning.
 
+## Namespacing
+
+Install scripts handle all component renaming at install time via `install_helpers.py`. The `dist/opencode/` directory keeps original names — sync-tools writes originals, install scripts namespace.
+
+**Pattern**: All components get `-manifest-dev` suffix:
+- Skill dirs: `skills/define/` → `skills/define-manifest-dev/`
+- Agent files: `code-bugs-reviewer.md` → `code-bugs-reviewer-manifest-dev.md`
+- Command files: `define.md` → `define-manifest-dev.md`
+- SKILL.md `name:` field patched to match directory name
+- Content cross-references patched (slash commands, quoted strings, paths, agent names)
+
+**Selective cleanup** (replaces `rm -rf` of shared dirs):
+```bash
+find "$TARGET/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+find "$TARGET/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+find "$TARGET/commands" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+```
+
+Component names on disk will have `-manifest-dev` suffix after install.
+
 ## Known Limitations
 
 1. **Hooks require manual JS/TS rewrite** — Python hooks cannot run in Bun. Generated stubs provide structure; HOOK_SPEC.md provides behavioral intent.

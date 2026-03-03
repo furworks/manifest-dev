@@ -160,7 +160,7 @@ config_file = "agents/code-reviewer.toml"
 **Per-role TOML** (`agents/code-reviewer.toml`):
 ```toml
 model = "gpt-5.3-codex"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 You are a code reviewer focused on correctness, security, and test coverage.
@@ -382,6 +382,25 @@ cp dist/codex/AGENTS.md ./AGENTS.md
 ## Skill Chaining
 
 Skills can reference other skills via `$skillname` syntax and implicit activation. The define→do→verify→done chain is advisory without hooks — nothing enforces completion.
+
+## Namespacing
+
+Install scripts handle all component renaming at install time via `install_helpers.py`. The `dist/codex/` directory keeps original names — sync-tools writes originals, install scripts namespace.
+
+**Pattern**: All components get `-manifest-dev` suffix:
+- Skill dirs: `skills/define/` → `skills/define-manifest-dev/`
+- Agent TOML files: `code-bugs-reviewer.toml` → `code-bugs-reviewer-manifest-dev.toml`
+- SKILL.md `name:` field patched to match directory name
+- Content cross-references patched (slash commands, quoted strings, paths, agent names)
+- `config.toml` section headers and `config_file` paths patched automatically
+
+**Selective cleanup** (replaces `rm -rf` of shared dirs):
+```bash
+find ".agents/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+find ".codex/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+```
+
+Component names on disk will have `-manifest-dev` suffix after install.
 
 ## Known Limitations
 

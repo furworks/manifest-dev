@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # manifest-dev for Codex CLI -- idempotent installer
+# All components are namespaced with -manifest-dev suffix to avoid collisions.
 #
 # Remote:  curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/codex/install.sh | bash
 # Local:   bash dist/codex/install.sh
@@ -28,11 +29,16 @@ if [ ! -d "$SRC" ]; then
   exit 1
 fi
 
-# --- Skills (clean + copy — removes stale skills from previous installs) ---
+# --- Namespace components in source before installing ---
+echo ""
+echo "Namespacing components..."
+python3 "$SRC/install_helpers.py" namespace "$SRC" codex
+
+# --- Skills (selective cleanup: remove only our namespaced dirs) ---
 echo ""
 echo "Installing skills..."
-rm -rf ".agents/skills"
 mkdir -p ".agents/skills"
+find ".agents/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
 for skill_dir in "$SRC/skills/"*/; do
   skill_name=$(basename "$skill_dir")
   cp -r "$skill_dir" ".agents/skills/$skill_name"
@@ -46,11 +52,11 @@ echo "Installing AGENTS.md..."
 cp "$SRC/AGENTS.md" "./AGENTS.md"
 echo "  AGENTS.md installed to project root"
 
-# --- Agent TOML stubs (clean + copy — removes renamed/deleted agents) ---
+# --- Agent TOML stubs (selective cleanup: remove only our namespaced files) ---
 echo ""
 echo "Installing agent TOML stubs..."
-rm -rf ".codex/agents"
 mkdir -p ".codex/agents"
+find ".codex/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
 for toml_file in "$SRC/agents/"*.toml; do
   toml_name=$(basename "$toml_file")
   cp "$toml_file" ".codex/agents/$toml_name"
@@ -82,8 +88,8 @@ echo ""
 echo "======================================"
 echo "Done!"
 echo ""
-echo "What's installed:"
-echo "  - 6 skills in .agents/skills/ (define, do, verify, done, escalate, learn-define-patterns)"
+echo "What's installed (all suffixed with -manifest-dev):"
+echo "  - 6 skills in .agents/skills/ (define-manifest-dev, do-manifest-dev, etc.)"
 echo "  - AGENTS.md in project root (describes all 12 agents)"
 echo "  - 12 TOML agent stubs in .codex/agents/ (multi-agent config)"
 echo "  - Execution rules in .codex/rules/default.rules"
@@ -93,4 +99,4 @@ echo "Skills are ready to use. Agents use 6 default tools:"
 echo "  shell_command, apply_patch, update_plan, request_user_input, web_search, view_image"
 echo ""
 echo "Hooks are not available -- Codex has no hook system yet (Issue #2109)."
-echo "Run this script again to update. Existing config.toml will not be overwritten."
+echo "Run this script again to update. Existing config.toml will be backed up."

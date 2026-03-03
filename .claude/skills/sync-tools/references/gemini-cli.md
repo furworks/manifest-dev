@@ -336,6 +336,24 @@ Setup: `"experimental": { "enableAgents": true }` in settings.json. Merge hooks.
 
 Automated publishing: public GitHub repo + `gemini-cli-extension` topic + `gemini-extension.json` at root → daily crawler → gallery at geminicli.com/extensions/browse/.
 
+## Namespacing
+
+Install scripts handle all component renaming at install time via `install_helpers.py`. The `dist/gemini/` directory keeps original names — sync-tools writes originals, install scripts namespace.
+
+**Pattern**: All components get `-manifest-dev` suffix:
+- Skill dirs: `skills/define/` → `skills/define-manifest-dev/`
+- Agent files: `code-bugs-reviewer.md` → `code-bugs-reviewer-manifest-dev.md`
+- SKILL.md `name:` field patched to match directory name
+- Content cross-references patched (slash commands, quoted strings, paths, agent names)
+
+**Selective cleanup** (replaces `rm -rf` of shared dirs):
+```bash
+find "$DIR/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+find "$DIR/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+```
+
+Component names on disk will have `-manifest-dev` suffix after install. The hooks directory is extension-private and doesn't need selective cleanup.
+
 ## Known Limitations
 
 1. **Agents experimental** — Require enableAgents flag. API may change.

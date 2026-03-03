@@ -10,8 +10,9 @@
 #
 # What it does:
 #   1. Downloads the latest dist/gemini from the repo
-#   2. Installs to ~/.gemini/extensions/manifest-dev/
-#   3. Never overwrites user customizations in GEMINI.md
+#   2. Namespaces all components with -manifest-dev suffix (avoids collisions)
+#   3. Installs to ~/.gemini/extensions/manifest-dev/
+#   4. Never overwrites user customizations in GEMINI.md
 #
 set -euo pipefail
 
@@ -47,26 +48,32 @@ if [ ! -d "$SOURCE_DIR" ]; then
     exit 1
 fi
 
+# Namespace all components in source before installing
+echo "==> Namespacing components..."
+python3 "${SOURCE_DIR}/install_helpers.py" namespace "$SOURCE_DIR" gemini
+
 # Create install directory
 mkdir -p "$INSTALL_DIR"
 
 echo "==> Installing to ${INSTALL_DIR}..."
 
-# Copy agents (always overwrite -- these are managed by the extension)
+# Agents (selective cleanup: remove only our namespaced files, preserve others)
 if [ -d "${SOURCE_DIR}/agents" ]; then
-    rm -rf "${INSTALL_DIR}/agents"
-    cp -r "${SOURCE_DIR}/agents" "${INSTALL_DIR}/agents"
+    mkdir -p "${INSTALL_DIR}/agents"
+    find "${INSTALL_DIR}/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+    cp -r "${SOURCE_DIR}/agents/"* "${INSTALL_DIR}/agents/"
     echo "    agents/ ($(ls "${INSTALL_DIR}/agents" | wc -l | tr -d ' ') files)"
 fi
 
-# Copy skills (always overwrite)
+# Skills (selective cleanup: remove only our namespaced dirs)
 if [ -d "${SOURCE_DIR}/skills" ]; then
-    rm -rf "${INSTALL_DIR}/skills"
-    cp -r "${SOURCE_DIR}/skills" "${INSTALL_DIR}/skills"
+    mkdir -p "${INSTALL_DIR}/skills"
+    find "${INSTALL_DIR}/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+    cp -r "${SOURCE_DIR}/skills/"* "${INSTALL_DIR}/skills/"
     echo "    skills/ ($(ls "${INSTALL_DIR}/skills" | wc -l | tr -d ' ') dirs)"
 fi
 
-# Copy hooks (always overwrite)
+# Hooks (extension-private dir, safe to overwrite entirely)
 if [ -d "${SOURCE_DIR}/hooks" ]; then
     rm -rf "${INSTALL_DIR}/hooks"
     cp -r "${SOURCE_DIR}/hooks" "${INSTALL_DIR}/hooks"
@@ -107,6 +114,6 @@ echo '     { "experimental": { "enableAgents": true } }'
 echo ""
 echo "  2. Merge hooks into your settings.json (see hooks/hooks.json)"
 echo ""
-echo "  3. Start using: gemini> /define my task"
+echo "  3. Start using: gemini> /define-manifest-dev my task"
 echo ""
 echo "Installed to: ${INSTALL_DIR}"
