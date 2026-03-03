@@ -28,9 +28,10 @@ if [ ! -d "$SRC" ]; then
   exit 1
 fi
 
-# --- Skills ---
+# --- Skills (clean + copy — removes stale skills from previous installs) ---
 echo ""
 echo "Installing skills..."
+rm -rf ".agents/skills"
 mkdir -p ".agents/skills"
 for skill_dir in "$SRC/skills/"*/; do
   skill_name=$(basename "$skill_dir")
@@ -45,9 +46,10 @@ echo "Installing AGENTS.md..."
 cp "$SRC/AGENTS.md" "./AGENTS.md"
 echo "  AGENTS.md installed to project root"
 
-# --- Agent TOML stubs ---
+# --- Agent TOML stubs (clean + copy — removes renamed/deleted agents) ---
 echo ""
 echo "Installing agent TOML stubs..."
+rm -rf ".codex/agents"
 mkdir -p ".codex/agents"
 for toml_file in "$SRC/agents/"*.toml; do
   toml_name=$(basename "$toml_file")
@@ -63,16 +65,15 @@ mkdir -p ".codex/rules"
 cp "$SRC/rules/default.rules" ".codex/rules/"
 echo "  Rules: default.rules installed to .codex/rules/"
 
-# --- Config (don't overwrite existing) ---
+# --- Config (always update — backs up existing first) ---
 echo ""
+mkdir -p ".codex"
 if [ -f ".codex/config.toml" ]; then
-  echo "Config: .codex/config.toml already exists -- skipping"
-  echo "  To see the recommended config, run:"
-  echo "  curl -fsSL https://raw.githubusercontent.com/$REPO/$BRANCH/$DIST_PATH/config.toml"
-  echo ""
-  echo "  Merge manually: agent definitions, features.multi_agent, project_doc_fallback_filenames"
+  cp ".codex/config.toml" ".codex/config.toml.bak"
+  cp "$SRC/config.toml" ".codex/config.toml"
+  echo "Config: config.toml updated (backup at .codex/config.toml.bak)"
+  echo "  If you had custom settings, merge from the backup."
 else
-  mkdir -p ".codex"
   cp "$SRC/config.toml" ".codex/config.toml"
   echo "Config: config.toml installed to .codex/"
 fi

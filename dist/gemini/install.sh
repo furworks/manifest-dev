@@ -80,13 +80,15 @@ if [ -f "${SOURCE_DIR}/gemini-extension.json" ]; then
     echo "    gemini-extension.json"
 fi
 
-# Copy GEMINI.md only if it doesn't exist (preserve user customizations)
+# Copy GEMINI.md (always update -- backup existing first)
 if [ -f "${SOURCE_DIR}/GEMINI.md" ]; then
-    if [ ! -f "${INSTALL_DIR}/GEMINI.md" ]; then
+    if [ -f "${INSTALL_DIR}/GEMINI.md" ]; then
+        cp "${INSTALL_DIR}/GEMINI.md" "${INSTALL_DIR}/GEMINI.md.bak"
+        cp "${SOURCE_DIR}/GEMINI.md" "${INSTALL_DIR}/GEMINI.md"
+        echo "    GEMINI.md (updated, backup at GEMINI.md.bak)"
+    else
         cp "${SOURCE_DIR}/GEMINI.md" "${INSTALL_DIR}/GEMINI.md"
         echo "    GEMINI.md (new)"
-    else
-        echo "    GEMINI.md (skipped -- preserving existing)"
     fi
 fi
 

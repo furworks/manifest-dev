@@ -38,17 +38,20 @@ else
   echo "Installing globally: ~/.config/opencode/"
 fi
 
-# --- Skills ---
+# --- Skills (clean + copy — removes stale skills from previous installs) ---
+rm -rf "$TARGET/skills"
 mkdir -p "$TARGET/skills"
 cp -r "$SRC/skills/"* "$TARGET/skills/"
 echo "  Skills: $(ls "$SRC/skills/" | wc -l | tr -d ' ') installed"
 
-# --- Agents ---
+# --- Agents (clean + copy — removes renamed/deleted agents) ---
+rm -rf "$TARGET/agents"
 mkdir -p "$TARGET/agents"
 cp -r "$SRC/agents/"* "$TARGET/agents/"
 echo "  Agents: $(ls "$SRC/agents/" | wc -l | tr -d ' ') installed"
 
-# --- Commands ---
+# --- Commands (clean + copy — removes renamed/deleted commands) ---
+rm -rf "$TARGET/commands"
 mkdir -p "$TARGET/commands"
 cp -r "$SRC/commands/"* "$TARGET/commands/"
 echo "  Commands: $(ls "$SRC/commands/" | wc -l | tr -d ' ') installed"
