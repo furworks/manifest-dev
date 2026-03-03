@@ -48,34 +48,94 @@ Merge `hooks/hooks.json` into your settings.json hooks section for full workflow
 
 ## Feature Parity
 
-| Feature | Claude Code | Gemini CLI |
-|---------|------------|------------|
-| Skills (6) | Full | Full (copy unchanged) |
-| Agents (12) | Full | Full (frontmatter converted) |
-| Hooks (3) | Full | Full (adapter layer) |
-| Subagent spawning | Agent tool | Named tool per agent |
-| Todo management | TaskCreate/Update | write_todos |
-| File search | Grep | grep_search |
-| Web search | WebSearch | google_web_search |
-| Skill invocation | Skill | activate_skill |
-| Team management | TeamCreate/SendMessage | Not supported |
-| Worktrees | EnterWorktree | Not supported |
+| Feature | Claude Code | Gemini CLI | Notes |
+|---------|------------|------------|-------|
+| Skills (6) | Full | Full | Copied unchanged; `name` + `description` frontmatter only |
+| Agents (12) | Full | Full | Frontmatter converted (tool mapping, added kind/temperature/max_turns/timeout_mins) |
+| Hooks (3) | Full | Full | Adapter translates protocol; exit codes, matchers, transcript format handled |
+| Subagent spawning | `Agent` tool | Named tool per agent | Each agent becomes a callable tool by its registered name |
+| Todo management | TaskCreate/Update/Get/List | `write_todos` | Single tool for all todo operations |
+| File search | `Grep` | `grep_search` | Canonical name from source code (NOT `search_file_content`) |
+| Web search | `WebSearch` | `google_web_search` | Google Search integration |
+| Skill invocation | `Skill` | `activate_skill` | Agent-only; not manually invocable |
+| Team management | TeamCreate/SendMessage | Not supported | No equivalent in Gemini CLI |
+| Worktrees | EnterWorktree | Not supported | No equivalent in Gemini CLI |
 
 ## Hook Protocol Details
 
-The adapter translates between Claude Code and Gemini CLI hook protocols:
+The adapter (`hooks/gemini_adapter.py`) translates between Claude Code and Gemini CLI hook protocols.
 
-| Hook | Claude Event | Gemini Event | Matcher | Exit Behavior |
-|------|-------------|-------------|---------|---------------|
-| pretool-verify | PreToolUse | BeforeTool | `activate_skill` (regex) | 0=allow, stdout=JSON with additionalContext |
-| stop-do-enforcement | Stop | AfterAgent | (all) | 0=allow, 2=block (stderr=reason becomes new prompt) |
-| post-compact-recovery | SessionStart | SessionStart | `resume` (exact match) | 0=allow, stdout=JSON with additionalContext |
+### Event Mapping
 
-Key protocol differences handled by the adapter:
-- **Exit codes**: 0=allow (parse stdout), 1=warning, 2+=blocking (stderr=reason)
-- **AfterAgent deny**: reason becomes a new prompt; clearContext clears LLM memory; stop_hook_active flags retry
-- **Transcript format**: JSONL with "gemini" record type (patched to "assistant" for Claude hooks)
-- **additionalContext**: Plain text (system-reminder XML tags stripped by adapter)
+| Hook | Claude Event | Gemini Event | Matcher | Blocking |
+|------|-------------|-------------|---------|----------|
+| pretool-verify | PreToolUse | BeforeTool | `activate_skill` (regex) | Exit 0 always; injects additionalContext |
+| stop-do-enforcement | Stop | AfterAgent | (all -- no matcher) | Exit 0=allow, Exit 2=block with retry |
+| post-compact-recovery | SessionStart | SessionStart | `resume` (exact match on source field) | Exit 0 always; injects additionalContext |
+
+### Exit Code Semantics
+
+| Exit Code | Meaning | Behavior |
+|-----------|---------|----------|
+| 0 | Allow | Parse stdout for JSON output |
+| 1 | Non-blocking warning | stderr = warning text, execution continues |
+| 2+ | Blocking | stderr = reason; behavior depends on event type |
+
+### AfterAgent Deny/Retry Protocol
+
+When `stop-do-enforcement` blocks a premature stop:
+
+1. Exit code 2 with JSON on stdout (`decision: "deny"`, `hookSpecificOutput.clearContext: true`)
+2. stderr contains the reason, which Gemini uses as a new prompt for the agent to correct
+3. `clearContext: true` clears LLM memory from the rejected turn (forces re-reading file state)
+4. Next AfterAgent input has `stop_hook_active: true` indicating a retry sequence
+5. The hook implements loop detection (3+ consecutive short outputs) to avoid infinite retries
+
+### Matcher Syntax
+
+| Event Type | Matcher Behavior |
+|------------|-----------------|
+| Tool events (BeforeTool, AfterTool) | Regex against `tool_name`; falls back to exact match if regex invalid |
+| Lifecycle events (SessionStart) | Exact string equality against source/reason field |
+| Empty or `"*"` | Matches all events of that type |
+| No matcher field | Matches all events of that type |
+
+### Transcript Format
+
+Gemini CLI uses JSONL at `transcript_path`:
+
+```
+{"type":"session_metadata","sessionId":"...","startTime":"..."}
+{"type":"user","id":"msg1","content":[{"text":"Hello"}]}
+{"type":"gemini","id":"msg2","content":[{"text":"Response"}]}
+{"type":"message_update","id":"msg2","tokens":{"input":10,"output":5}}
+```
+
+The adapter patches `"gemini"` record types to `"assistant"` for Claude hook compatibility.
+
+### Context Injection
+
+- `additionalContext` is plain text (no XML tags needed)
+- The adapter strips `<system-reminder>` wrappers that Claude hooks produce
+- For SessionStart: injected as first turn in conversation history
+- For BeforeTool: appended to tool context
+
+## Agent Tool Mapping
+
+Tools converted from Claude Code names to Gemini CLI equivalents:
+
+| Claude Code | Gemini CLI | Notes |
+|------------|------------|-------|
+| Bash / BashOutput | `run_shell_command` | Deduplicated to single tool |
+| Read | `read_file` | 1-based lines (start_line/end_line) |
+| Write | `write_file` | Requires approval |
+| Edit | `replace` | old_string/new_string + allow_multiple |
+| Grep | `grep_search` | Canonical name (not search_file_content) |
+| Glob | `glob` | Same |
+| WebFetch | `web_fetch` | Rate-limited |
+| WebSearch | `google_web_search` | Google Search |
+| Skill | `activate_skill` | Agent-only |
+| TaskCreate/Update/Get/List | `write_todos` | Single tool for all todo ops |
 
 ## Workflow
 
@@ -89,22 +149,15 @@ Key protocol differences handled by the adapter:
 /done (all pass) or /escalate (blocked)
 ```
 
-## Agent Tool Mapping
+## Known Limitations
 
-Tools were converted from Claude Code names to Gemini CLI equivalents:
-
-| Claude Code | Gemini CLI |
-|------------|------------|
-| Bash / BashOutput | run_shell_command |
-| Read | read_file |
-| Write | write_file |
-| Edit | replace |
-| Grep | grep_search |
-| Glob | glob |
-| WebFetch | web_fetch |
-| WebSearch | google_web_search |
-| Skill | activate_skill |
-| TaskCreate | write_todos |
+1. **Agents are experimental** -- Require `enableAgents` flag. API may change.
+2. **No SubagentStart/Stop hooks** -- Cannot intercept subagent lifecycle.
+3. **Agent tool is name-based** -- Each subagent becomes a tool by its registered name. No generic `delegate_to_agent`.
+4. **$ARGUMENTS not supported** -- Claude Code skill extension only.
+5. **`grep_search` is canonical** -- Source code defines `GREP_TOOL_NAME = 'grep_search'`. Docs showing `search_file_content` are stale.
+6. **`generalist` not `generalist_agent`** -- Built-in subagent tool name is `generalist`.
+7. **JSONL transition** -- Older sessions may use monolithic JSON format.
 
 ## Repository
 

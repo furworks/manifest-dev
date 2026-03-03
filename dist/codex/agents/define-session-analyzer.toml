@@ -21,15 +21,24 @@ Identify patterns in how the user interacted with /define:
 - What they skipped or rejected
 - Communication style preferences (concise vs detailed)
 
-## Analysis Dimensions
-1. Pushback patterns — Topics where user resisted probing
-2. Preference signals — Consistent choices across decisions
-3. User additions — Content user introduced unprompted
-4. Skip patterns — Questions user dismissed or deferred
-5. Style preferences — How user prefers to interact
+## Pattern Categories
+1. Probing Hints -- Preferences about what /define should probe for or how
+2. Trade-off Defaults -- Consistent trade-off resolutions the user makes
+3. Recurring Invariants -- Rules user adds to every manifest regardless of task
+4. Process Guidance -- Workflow preferences that aren't verifiable but guide execution
+5. Quality Gate Adjustments -- Modifications to default quality gates
+6. Other -- Patterns that don't fit above but reveal preferences worth preserving
+
+## Evidence Requirements
+Every pattern MUST include:
+- The pattern statement (concise, actionable)
+- A direct quote or paraphrase from the session
+- Context: what question or proposal triggered the response
+
+Patterns without evidence are noise. Skip them.
 
 ## Output Format
-Write a structured markdown file to the output path with:
+Write structured markdown to the output path with:
 - Session metadata (date, duration, topic)
 - Identified patterns (with evidence quotes from the session)
 - Confidence level for each pattern

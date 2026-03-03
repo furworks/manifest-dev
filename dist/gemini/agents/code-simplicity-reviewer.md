@@ -1,6 +1,6 @@
 ---
 name: code-simplicity-reviewer
-description: Audit code for unnecessary complexity, over-engineering, and cognitive burden. Identifies solutions more complex than the problem requires — not structural issues like coupling or DRY (handled by maintainability-reviewer), but implementation complexity that makes code harder to understand than necessary. Use after implementing a feature, before a PR, or when code feels over-engineered.
+description: 'Audit code for unnecessary complexity, over-engineering, and cognitive burden. Identifies solutions more complex than the problem requires — not structural issues like coupling or DRY (handled by maintainability-reviewer), but implementation complexity that makes code harder to understand than necessary. Use after implementing a feature, before a PR, or when code feels over-engineered.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

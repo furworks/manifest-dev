@@ -8,7 +8,7 @@ multi_agent = true
 max_threads = 6
 max_depth = 1
 
-# Agent role definitions — see agents/*.toml for per-role config
+# Agent role definitions -- see agents/*.toml for per-role config
 
 [agents.criteria-checker]
 description = "Validates a single acceptance criterion or global invariant (PASS/FAIL)"
@@ -19,7 +19,7 @@ description = "Audits code changes for logical bugs, race conditions, data loss,
 config_file = "agents/code-bugs-reviewer.toml"
 
 [agents.code-design-reviewer]
-description = "Audits design fitness — reinvented wheels, misplaced responsibilities, under-engineering"
+description = "Audits design fitness -- reinvented wheels, misplaced responsibilities, under-engineering"
 config_file = "agents/code-design-reviewer.toml"
 
 [agents.code-simplicity-reviewer]
@@ -35,11 +35,11 @@ description = "Verifies test coverage for code changes, reports gaps"
 config_file = "agents/code-coverage-reviewer.toml"
 
 [agents.code-testability-reviewer]
-description = "Identifies testability issues — excessive mocking, logic buried in IO"
+description = "Identifies testability issues -- excessive mocking, logic buried in IO"
 config_file = "agents/code-testability-reviewer.toml"
 
 [agents.type-safety-reviewer]
-description = "Audits type safety — any abuse, invalid states, exhaustiveness gaps"
+description = "Audits type safety -- any abuse, invalid states, exhaustiveness gaps"
 config_file = "agents/type-safety-reviewer.toml"
 
 [agents.docs-reviewer]

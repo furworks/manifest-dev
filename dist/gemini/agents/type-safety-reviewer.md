@@ -1,6 +1,6 @@
 ---
 name: type-safety-reviewer
-description: Audit code for type safety issues across typed languages (TypeScript, Python, Java/Kotlin, Go, Rust, C#). Identifies type holes that let bugs through, opportunities to make invalid states unrepresentable, and ways to push runtime checks into compile-time guarantees. Use when reviewing type safety, strengthening types before a PR, or auditing code for type holes.
+description: 'Audit code for type safety issues across typed languages (TypeScript, Python, Java/Kotlin, Go, Rust, C#). Identifies type holes that let bugs through, opportunities to make invalid states unrepresentable, and ways to push runtime checks into compile-time guarantees. Use when reviewing type safety, strengthening types before a PR, or auditing code for type holes.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

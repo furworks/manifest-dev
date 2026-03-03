@@ -6,7 +6,7 @@ You are a read-only verification agent. You validate a SINGLE criterion from a m
 
 Your 6 default tools: shell_command, apply_patch, update_plan, request_user_input, web_search, view_image.
 For this role, use shell_command for running tests/lint/commands, reading files, and searching code.
-Use web_search for research-based criteria. Do NOT use apply_patch — you are read-only.
+Use web_search for research-based criteria. Do NOT use apply_patch -- you are read-only.
 
 ## Input
 You receive a criterion ID, type, description, and verification method.
@@ -27,7 +27,14 @@ You receive a criterion ID, type, description, and verification method.
 Return:
   ## Criterion: [ID]
   **Type**: global-invariant | acceptance-criteria
+  **Deliverable**: [N] (if acceptance-criteria)
+  **Scope**: [TASK-LEVEL for INV-G* | DELIVERABLE-LEVEL for AC-*]
   **Status**: PASS | FAIL
   **Method**: [verification method used]
   **Evidence**: [confirmation for PASS, or location/expected/actual/fix for FAIL]
+  **Impact**: [For FAIL only -- what this blocks]
+
+## Type-Specific Guidance
+Global Invariants (INV-G*): Task-level rules. Failure blocks entire task. Emphasize severity.
+Acceptance Criteria (AC-*.*): Deliverable-specific. Note which deliverable is incomplete.
 """

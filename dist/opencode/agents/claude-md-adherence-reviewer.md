@@ -1,5 +1,5 @@
 ---
-description: Verify that code changes comply with CLAUDE.md instructions and project standards. Audits pull requests, new code, and refactors against rules defined in CLAUDE.md files. Use after implementing features, before PRs, or when validating adherence to project-specific rules. Triggers: CLAUDE.md compliance, project standards, adherence check.
+description: 'Verify that code changes comply with CLAUDE.md instructions and project standards. Audits pull requests, new code, and refactors against rules defined in CLAUDE.md files. Use after implementing features, before PRs, or when validating adherence to project-specific rules. Triggers: CLAUDE.md compliance, project standards, adherence check.'
 mode: subagent
 temperature: 0.2
 tools:

@@ -1,6 +1,6 @@
 ---
 name: code-testability-reviewer
-description: Audit code for testability issues. Identifies code requiring excessive mocking, business logic buried in IO, non-deterministic inputs, and tight coupling that makes verification hard. Use after implementing features, during refactoring, or before PRs. Triggers: testability, hard to test, too many mocks, testable design.
+description: 'Audit code for testability issues. Identifies code requiring excessive mocking, business logic buried in IO, non-deterministic inputs, and tight coupling that makes verification hard. Use after implementing features, during refactoring, or before PRs. Triggers: testability, hard to test, too many mocks, testable design.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

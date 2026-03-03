@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# manifest-dev for Codex CLI — idempotent installer
+# manifest-dev for Codex CLI -- idempotent installer
 #
 # Remote:  curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/codex/install.sh | bash
 # Local:   bash dist/codex/install.sh

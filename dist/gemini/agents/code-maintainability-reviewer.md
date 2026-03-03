@@ -1,6 +1,6 @@
 ---
 name: code-maintainability-reviewer
-description: Use this agent when you need a comprehensive maintainability audit of recently written or modified code. Focuses on code organization: DRY violations, coupling, cohesion, consistency, dead code, and architectural boundaries. This agent should be invoked after implementing a feature, completing a refactor, or before finalizing a pull request.
+description: 'Use this agent when you need a comprehensive maintainability audit of recently written or modified code. Focuses on code organization: DRY violations, coupling, cohesion, consistency, dead code, and architectural boundaries. This agent should be invoked after implementing a feature, completing a refactor, or before finalizing a pull request.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

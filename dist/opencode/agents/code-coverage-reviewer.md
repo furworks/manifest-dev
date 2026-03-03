@@ -1,5 +1,5 @@
 ---
-description: Verify that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations. Use after implementing a feature, before a PR, or when reviewing code quality. Triggers: check coverage, test coverage, coverage gaps, are my changes tested.
+description: 'Verify that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations. Use after implementing a feature, before a PR, or when reviewing code quality. Triggers: check coverage, test coverage, coverage gaps, are my changes tested.'
 mode: subagent
 temperature: 0.2
 tools:

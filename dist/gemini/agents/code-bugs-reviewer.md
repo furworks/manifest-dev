@@ -1,6 +1,6 @@
 ---
 name: code-bugs-reviewer
-description: Audit code changes for logical bugs without modifying files. Use when reviewing git diffs, checking code before merge, or auditing specific files for defects. Produces a structured bug report with severity ratings. Triggers: bug review, audit code, check for bugs, review changes, pre-merge check.
+description: 'Audit code changes for logical bugs without modifying files. Use when reviewing git diffs, checking code before merge, or auditing specific files for defects. Produces a structured bug report with severity ratings. Triggers: bug review, audit code, check for bugs, review changes, pre-merge check.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

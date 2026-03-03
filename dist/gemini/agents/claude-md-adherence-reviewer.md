@@ -1,6 +1,6 @@
 ---
 name: claude-md-adherence-reviewer
-description: Verify that code changes comply with CLAUDE.md instructions and project standards. Audits pull requests, new code, and refactors against rules defined in CLAUDE.md files. Use after implementing features, before PRs, or when validating adherence to project-specific rules. Triggers: CLAUDE.md compliance, project standards, adherence check.
+description: 'Verify that code changes comply with CLAUDE.md instructions and project standards. Audits pull requests, new code, and refactors against rules defined in CLAUDE.md files. Use after implementing features, before PRs, or when validating adherence to project-specific rules. Triggers: CLAUDE.md compliance, project standards, adherence check.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

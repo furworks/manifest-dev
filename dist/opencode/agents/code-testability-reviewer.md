@@ -1,5 +1,5 @@
 ---
-description: Audit code for testability issues. Identifies code requiring excessive mocking, business logic buried in IO, non-deterministic inputs, and tight coupling that makes verification hard. Use after implementing features, during refactoring, or before PRs. Triggers: testability, hard to test, too many mocks, testable design.
+description: 'Audit code for testability issues. Identifies code requiring excessive mocking, business logic buried in IO, non-deterministic inputs, and tight coupling that makes verification hard. Use after implementing features, during refactoring, or before PRs. Triggers: testability, hard to test, too many mocks, testable design.'
 mode: subagent
 temperature: 0.2
 tools:
@@ -31,7 +31,7 @@ Code becomes hard to test when you can't verify its behavior without complex set
 | Test Friction | Consequence |
 |---------------|-------------|
 | High mock count | Tests break on refactors, edge case testing requires repetitive setup |
-| Logic buried in IO | Edge cases don't get tested -> bugs ship |
+| Logic buried in IO | Edge cases don't get tested → bugs ship |
 | Non-deterministic | Tests are flaky or require complex freezing/seeding |
 | Tight coupling | Tests are slow, brittle, and test more than they should |
 
@@ -118,6 +118,23 @@ Do NOT report on (handled by other agents):
 - **CLAUDE.md compliance** → claude-md-adherence-reviewer
 
 Focus exclusively on whether code is **designed** to be testable, not whether tests exist.
+
+## Example Issue Report
+
+```
+#### [HIGH] Discount calculation requires many mocks to test
+**Location**: `src/services/order-service.ts:45-78`
+**Test friction**: 3 mocks (db.orders, db.customers, db.promotions)
+**Logic at risk**: Discount stacking rules (premium tier + promo + bulk discount)
+
+**Why this matters**: Discount edge cases (premium customer with promo code on large order)
+are important to verify but require setting up all 3 mocks correctly for each test case.
+This makes thorough testing tedious, so edge cases likely won't be covered.
+
+**Suggestion**: Extract the discount calculation into a pure function that takes the
+data it needs as parameters. The pure function can be tested exhaustively with simple
+inputs. The shell function fetches data and calls the pure function.
+```
 
 ## Output Format
 

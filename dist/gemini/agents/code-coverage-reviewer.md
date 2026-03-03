@@ -1,6 +1,6 @@
 ---
 name: code-coverage-reviewer
-description: Verify that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations. Use after implementing a feature, before a PR, or when reviewing code quality. Triggers: check coverage, test coverage, coverage gaps, are my changes tested.
+description: 'Verify that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations. Use after implementing a feature, before a PR, or when reviewing code quality. Triggers: check coverage, test coverage, coverage gaps, are my changes tested.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15

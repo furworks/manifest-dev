@@ -1,5 +1,5 @@
 ---
-description: Audit code changes for logical bugs without modifying files. Use when reviewing git diffs, checking code before merge, or auditing specific files for defects. Produces a structured bug report with severity ratings. Triggers: bug review, audit code, check for bugs, review changes, pre-merge check.
+description: 'Audit code changes for logical bugs without modifying files. Use when reviewing git diffs, checking code before merge, or auditing specific files for defects. Produces a structured bug report with severity ratings. Triggers: bug review, audit code, check for bugs, review changes, pre-merge check.'
 mode: subagent
 temperature: 0.2
 tools:

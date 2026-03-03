@@ -1,6 +1,6 @@
 ---
 name: code-design-reviewer
-description: Audit code for design fitness issues — whether code is the right approach given what already exists in the framework, codebase, and configuration systems. Identifies reinvented wheels, misplaced responsibilities, under-engineering, short-sighted interfaces, concept misuse, and incoherent changes. Use after implementing a feature, before a PR, or when code feels like the wrong approach despite being correct.
+description: 'Audit code for design fitness issues — whether code is the right approach given what already exists in the framework, codebase, and configuration systems. Identifies reinvented wheels, misplaced responsibilities, under-engineering, short-sighted interfaces, concept misuse, and incoherent changes. Use after implementing a feature, before a PR, or when code feels like the wrong approach despite being correct.'
 kind: local
 tools:
   - run_shell_command
@@ -8,9 +8,9 @@ tools:
   - grep_search
   - read_file
   - web_fetch
+  - write_todos
   - google_web_search
   - activate_skill
-  - write_todos
 model: inherit
 temperature: 0.2
 max_turns: 15
