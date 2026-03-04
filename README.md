@@ -107,7 +107,7 @@ This is spec-driven development adapted for LLM execution. The manifest is a spe
 
 ## What /define Produces
 
-The interview classifies your task (Code, Writing, Document, Blog, Research) and loads task-specific guidance. It probes for your latent criteria, the standards you hold but wouldn't think to spell out. A `manifest-verifier` agent validates the manifest for gaps before output.
+The interview classifies your task (Code, Writing, Document, Blog, Skill, Research) and loads task-specific guidance. It probes for your latent criteria, the standards you hold but wouldn't think to spell out. A `manifest-verifier` agent validates the manifest for gaps before output.
 
 <details>
 <summary><strong>Example manifest</strong></summary>
@@ -291,6 +291,7 @@ Hooks enforce workflow integrity. The AI can't skip steps:
 | **Bug** | `tasks/BUG.md` + `CODING.md` | Bug fix verification, regression prevention, root cause analysis |
 | **Refactor** | `tasks/REFACTOR.md` + `CODING.md` | Behavior preservation, maintainability, simplicity |
 | **Prompting** | `tasks/PROMPTING.md` | Prompt quality criteria |
+| **Skill** | `tasks/SKILL.md` + `PROMPTING.md` | Progressive disclosure, instruction transparency, eval-driven iteration (base: Prompting) |
 | **Writing** | `tasks/WRITING.md` | Prose quality, AI tells, vocabulary, anti-patterns, craft fundamentals (base for Blog, Document) |
 | **Document** | `tasks/DOCUMENT.md` + `WRITING.md` | Structure completeness, consistency |
 | **Blog** | `tasks/BLOG.md` + `WRITING.md` | Engagement, SEO |

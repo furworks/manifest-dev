@@ -113,6 +113,7 @@ The manifest has three moving parts:
 | Task Type | File | When Loaded |
 |-----------|------|-------------|
 | Code | `skills/define/tasks/CODING.md` | APIs, features, fixes, refactors, tests |
+| Skill | `skills/define/tasks/SKILL.md` | Skill creation, improvement, iteration (+ PROMPTING.md base) |
 | Writing | `skills/define/tasks/WRITING.md` | Prose, articles, marketing copy (base for Blog, Document) |
 | Document | `skills/define/tasks/DOCUMENT.md` | Specs, proposals, formal docs (+ WRITING.md base) |
 | Blog | `skills/define/tasks/BLOG.md` | Blog posts, tutorials (+ WRITING.md base) |
