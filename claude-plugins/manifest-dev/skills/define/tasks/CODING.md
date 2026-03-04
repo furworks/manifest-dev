@@ -8,15 +8,15 @@ CLAUDE.md may specify project-specific preferences.
 
 | Aspect | Agent | Threshold |
 |--------|-------|-----------|
-| Bug detection | code-bugs-reviewer | no HIGH/CRITICAL |
-| Type safety | type-safety-reviewer | no HIGH/CRITICAL |
-| Maintainability | code-maintainability-reviewer | no HIGH/CRITICAL |
-| Simplicity | code-simplicity-reviewer | no HIGH/CRITICAL |
-| Test coverage | code-coverage-reviewer | no HIGH/CRITICAL |
-| Testability | code-testability-reviewer | no HIGH/CRITICAL |
+| Bug detection | code-bugs-reviewer | no MEDIUM+ |
+| Type safety | type-safety-reviewer | no MEDIUM+ |
+| Maintainability | code-maintainability-reviewer | no MEDIUM+ |
+| Simplicity | code-simplicity-reviewer | no MEDIUM+ |
+| Test coverage | code-coverage-reviewer | no MEDIUM+ |
+| Testability | code-testability-reviewer | no MEDIUM+ |
 | Documentation | docs-reviewer | no MEDIUM+ |
-| Design fitness | code-design-reviewer | no HIGH/CRITICAL |
-| CLAUDE.md adherence | claude-md-adherence-reviewer | no HIGH/CRITICAL |
+| Design fitness | code-design-reviewer | no MEDIUM+ |
+| CLAUDE.md adherence | claude-md-adherence-reviewer | no MEDIUM+ |
 
 ## Project Gates
 

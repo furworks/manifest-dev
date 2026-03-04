@@ -10,12 +10,12 @@ AI text is measurably more predictable, less varied, and narrower in vocabulary 
 
 | Aspect | Agent | Fallback | Threshold |
 |--------|-------|----------|-----------|
-| Vocabulary | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no HIGH/CRITICAL |
-| Structure | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no HIGH/CRITICAL |
-| Tone | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no HIGH/CRITICAL |
-| Rhetoric | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no HIGH/CRITICAL |
-| Craft | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no HIGH/CRITICAL |
-| Negative space | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no HIGH/CRITICAL |
+| Vocabulary | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no MEDIUM+ |
+| Structure | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no MEDIUM+ |
+| Tone | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no MEDIUM+ |
+| Rhetoric | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no MEDIUM+ |
+| Craft | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no MEDIUM+ |
+| Negative space | writing-reviewer | general-purpose + `references/WRITING-REFERENCE.md` | no MEDIUM+ |
 | Voice compliance | general-purpose | — | Matches AUTHOR_VOICE.md (conditional: only when doc exists) |
 | Readability | general-purpose | — | Accessible to target audience, scannable structure |
 | Anti-slop | general-purpose | — | No kill-list vocabulary, hedge words, filler phrases, generic phrasing |
