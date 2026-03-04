@@ -47,11 +47,13 @@ Domain-specific guidance available in:
 **Task file structures are presumed relevant.** Task files contain quality gates, reviewer agents, risks, scenarios, and trade-offs. These are angles you won't think to check on your own — they exist precisely because they're easy to miss. Quality gates are auto-included; Resolvable structures (risks, scenarios, trade-offs) must be **resolved**: either presented to the user for selection, or explicitly skipped with logged reasoning (e.g., "CODING.md concurrency risk skipped: single-threaded CLI tool"). Silent drops are the failure mode — not over-asking.
 
 **Task file content types.** Five categories, each handled differently:
-- **Quality gates** (tables with Agent + Threshold) — auto-include as INV-G*/AC-*, omit clearly inapplicable with logged reasoning. User reviews manifest.
+- **Quality gates** (structured items under `## Quality Gates` — tables, bullet lists, or any format with thresholds/criteria) — auto-include as INV-G*, omit clearly inapplicable with logged reasoning. User reviews manifest.
 - **Resolvable** (tables/checklists: risks, scenarios, trade-offs) — resolve via interview, encode as INV/AC or explicitly skip.
 - **Compressed awareness** (bold-labeled one-line domain summaries, not tables/checklists) — informs your probing; no resolution needed.
 - **Process guidance hints** (counter-instinctive practices) — practices LLMs would get wrong without explicit guidance. Two modes: **candidates** (labeled as PG candidates, presented as batch after scenarios, user selects) and **defaults** (`## Defaults` section, included in manifest without probing, user reviews manifest and removes if not applicable). Both become PG-* in the manifest.
 - **Reference files** (`references/*.md`) — detailed lookup data for `/verify` agents. Do not load during the interview.
+
+**Encode quality gates and Defaults immediately after reading task files — before the interview.** Log each as `- [x]` RESOLVED.
 
 Probing beyond task files is adaptive — driven by the specific task, user responses, and what you discover. Task files don't cap what to ask; they set a floor.
 
@@ -87,7 +89,7 @@ Scope deliverables and verification to repo context. Cross-repo invariants get e
 
 **All questions use AskUserQuestion** - Every user question goes through AskUserQuestion (tool limit: 2-4 options), one marked "(Recommended)". Never ask open-ended questions—they're cognitively demanding. Present concrete options the user can accept, reject, or adjust.
 
-**Resolve all Resolvable task file structures** — After reading task files, extract every Resolvable table and checklist (risk lists, scenario prompts, trade-offs) and log each as a pending item. Quality gates and `## Defaults` are not Resolvable — auto-include them (quality gates as INV-G*/AC-*, Defaults as PG-*), omitting clearly inapplicable ones with logged reasoning. Resolve each Resolvable item by either:
+**Resolve all Resolvable task file structures** — After reading task files, extract every Resolvable table and checklist (risk lists, scenario prompts, trade-offs) and log each as a pending item. Quality gates and `## Defaults` are not Resolvable — auto-include them (quality gates as INV-G*, Defaults as PG-*), omitting clearly inapplicable ones with logged reasoning. Resolve each Resolvable item by either:
 1. **Present to user** for selection via AskUserQuestion — selected items encoded as INV-G* or AC-*, unselected items explicitly scoped out
 2. **Skip with logged justification** — when a structure genuinely doesn't apply to this task, log why (e.g., "CODING.md concurrency risk: single-threaded CLI tool, no concurrent access")
 
@@ -129,7 +131,7 @@ Read full log before synthesis. Unresolved `- [ ]` items must be addressed first
 
 **Batch related questions** - Group related questions into a single turn rather than asking one at a time. Batching keeps momentum and reduces round-trips without sacrificing depth. Each batch should cover a coherent topic area—don't mix unrelated concerns in one batch.
 
-**Stop when converged** - Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
+**Stop when converged** - Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
 
 **Insights become criteria** - Domain grounding findings, outside view findings, pre-mortem risks, non-obvious discoveries → convert to INV-G* or AC-*. Don't include insights that aren't encoded as criteria. This applies equally to Resolvable task file content — risks and scenario dispositions must be traceable to manifest criteria or they're aspirational, not enforced.
 

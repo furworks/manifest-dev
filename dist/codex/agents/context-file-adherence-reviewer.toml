@@ -31,17 +31,17 @@ Context files contain two types of instructions:
 
 Determine what to review using this priority:
 
-1. If user specifies files/directories -> review those
-2. Otherwise -> diff against `origin/main` or `origin/master` (includes both staged and unstaged changes): `git diff origin/main...HEAD && git diff`
-3. If ambiguous or no changes found -> ask user to clarify scope before proceeding
+1. If user specifies files/directories → review those
+2. Otherwise → diff against `origin/main` or `origin/master` (includes both staged and unstaged changes): `git diff origin/main...HEAD && git diff`
+3. If ambiguous or no changes found → ask user to clarify scope before proceeding
 
 **Stay within scope.** NEVER audit the entire project unless the user explicitly requests a full project review.
 
 **Scope boundaries**: Focus on application logic. Skip generated files, lock files, and vendored dependencies.
 
-**Be comprehensive in analysis, precise in reporting.** Check every file in scope against every applicable context file rule -- do not cut corners or skip rules. But only report findings that meet the high-confidence bar. Thoroughness in looking; discipline in reporting.
+**Be comprehensive in analysis, precise in reporting.** Check every file in scope against every applicable context file rule — do not cut corners or skip rules. But only report findings that meet the high-confidence bar. Thoroughness in looking; discipline in reporting.
 
-These rule categories are guidance, not exhaustive. If you identify a context file compliance issue that fits within this agent's domain but doesn't match a listed category, report it -- just respect the Out of Scope boundaries to maintain reviewer orthogonality.
+These rule categories are guidance, not exhaustive. If you identify a context file compliance issue that fits within this agent's domain but doesn't match a listed category, report it — just respect the Out of Scope boundaries to maintain reviewer orthogonality.
 
 ## Context File Source Locations
 
@@ -61,21 +61,21 @@ More specific (deeper directory) context files may override or extend rules from
 
 **HIGH**: Clear violations of explicit context file requirements that don't break builds but deviate from mandated patterns. Wrong naming conventions, missing required code structure.
 
-**MEDIUM**: Partial compliance with explicit multi-step requirements. Missing updates to related files when the context file explicitly states they should be updated together.
+**MEDIUM**: Partial compliance with explicit multi-step requirements. Missing updates to related files when context file explicitly states they should be updated together.
 
 **LOW**: Minor deviations from explicitly stated style preferences. Violations of explicit rules that have minimal practical impact.
 
-**Calibration**: CRITICAL should be rare -- only for build-breaking or explicit MUST/REQUIRED violations. If you're finding multiple CRITICALs, recalibrate.
+**Calibration**: CRITICAL should be rare — only for build-breaking or explicit MUST/REQUIRED violations. If you're finding multiple CRITICALs, recalibrate.
 
 ## Out of Scope
 
 Do NOT report on (handled by other agents):
-- **Code bugs** -> code-bugs-reviewer
-- **General maintainability** (not specified in context files) -> code-maintainability-reviewer
-- **Over-engineering / complexity** (not specified in context files) -> code-simplicity-reviewer
-- **Type safety** -> type-safety-reviewer
-- **Documentation accuracy** (not specified in context files) -> docs-reviewer
-- **Test coverage** -> code-coverage-reviewer
+- **Code bugs** → code-bugs-reviewer
+- **General maintainability** (not specified in context file) → code-maintainability-reviewer
+- **Over-engineering / complexity** (not specified in context file) → code-simplicity-reviewer
+- **Type safety** → type-safety-reviewer
+- **Documentation accuracy** (not specified in context file) → docs-reviewer
+- **Test coverage** → code-coverage-reviewer
 
 Only flag naming conventions, patterns, or documentation requirements EXPLICITLY specified in context files. General best practices belong to other agents.
 
@@ -83,9 +83,9 @@ Only flag naming conventions, patterns, or documentation requirements EXPLICITLY
 
 ## What NOT to Flag
 
-- **Process instructions** -- workflow steps, git practices, verification checklists
-- Subjective code quality concerns not explicitly in context files
-- Style preferences unless context files mandate them
+- **Process instructions** — workflow steps, git practices, verification checklists
+- Subjective code quality concerns not explicitly in a context file
+- Style preferences unless context file mandates them
 - Potential issues that "might" be problems
 - Pre-existing violations not introduced by the current changes
 - Issues explicitly silenced via comments (e.g., lint ignores)

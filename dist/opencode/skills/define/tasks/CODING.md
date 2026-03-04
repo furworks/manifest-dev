@@ -4,23 +4,23 @@ Base guidance for all code-change tasks (features, bugs, refactors).
 
 ## Quality Gates
 
-AGENTS.md may specify project-specific preferences.
+CLAUDE.md may specify project-specific preferences.
 
 | Aspect | Agent | Threshold |
 |--------|-------|-----------|
-| Bug detection | code-bugs-reviewer | no HIGH/CRITICAL |
-| Type safety | type-safety-reviewer | no HIGH/CRITICAL |
-| Maintainability | code-maintainability-reviewer | no HIGH/CRITICAL |
-| Simplicity | code-simplicity-reviewer | no HIGH/CRITICAL |
-| Test coverage | code-coverage-reviewer | no HIGH/CRITICAL |
-| Testability | code-testability-reviewer | no HIGH/CRITICAL |
+| Bug detection | code-bugs-reviewer | no MEDIUM+ |
+| Type safety | type-safety-reviewer | no MEDIUM+ |
+| Maintainability | code-maintainability-reviewer | no MEDIUM+ |
+| Simplicity | code-simplicity-reviewer | no MEDIUM+ |
+| Test coverage | code-coverage-reviewer | no MEDIUM+ |
+| Testability | code-testability-reviewer | no MEDIUM+ |
 | Documentation | docs-reviewer | no MEDIUM+ |
-| Design fitness | code-design-reviewer | no HIGH/CRITICAL |
-| AGENTS.md adherence | context-file-adherence-reviewer | no HIGH/CRITICAL |
+| Design fitness | code-design-reviewer | no MEDIUM+ |
+| CLAUDE.md adherence | context-file-adherence-reviewer | no MEDIUM+ |
 
 ## Project Gates
 
-AGENTS.md specifies project gates (typecheck, lint, test, format). These become Global Invariants.
+CLAUDE.md specifies project gates (typecheck, lint, test, format). These become Global Invariants.
 
 ## E2E Verification
 
