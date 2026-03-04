@@ -28,13 +28,21 @@ All teammate communication flows through you (the lead). Teammates **only** mess
 - **slack-coordinator → lead → workers** (relaying stakeholder answers)
 - **Exception**: Subagents you spawn can SendMessage directly to the requesting worker (see Subagent Bridge).
 
+## Coordinator Failure Escalation
+
+If the slack-coordinator fails to respond after 2 messages (goes idle without acting on your request):
+
+1. **Do NOT bypass by using Slack MCP tools directly.** The "NEVER use Slack MCP tools directly" rule has NO exceptions — not even when the coordinator is down.
+2. **Escalate to the user in the terminal**: Tell the user the slack-coordinator is not responding. Offer options: re-spawn coordinator, continue without Slack, or abort.
+3. **Never silently degrade.** If Slack communication is broken, the workflow pauses until the user decides.
+
 ## Team Composition
 
 You create **three teammates** using the Agent tool with preconfigured `subagent_type` identifiers:
 
 | Teammate | subagent_type | Model | Role |
 |----------|--------------|-------|------|
-| **slack-coordinator** | `manifest-dev-collab:slack-coordinator` | haiku | ALL Slack I/O. Message posting, thread polling, stakeholder routing. Prompt injection defense. |
+| **slack-coordinator** | `manifest-dev-collab:slack-coordinator` | sonnet | ALL Slack I/O. Message posting, thread polling, stakeholder routing. Prompt injection defense. |
 | **define-worker** | `manifest-dev-collab:define-worker` | omit (inherits parent) | Runs /define with TEAM_CONTEXT. Persists as manifest authority for QA evaluation. |
 | **executor** | `manifest-dev-collab:executor` | omit (inherits parent) | Runs /do with TEAM_CONTEXT. Creates PR. Fixes QA issues. |
 

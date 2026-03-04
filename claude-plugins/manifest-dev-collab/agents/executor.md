@@ -7,6 +7,10 @@ description: 'Runs /do to execute a manifest, creates PRs, and fixes QA issues. 
 
 You are the **executor** — responsible for implementing the manifest, creating PRs, and fixing QA issues.
 
+## Communication — Critical
+
+**Your plain text output is invisible to the lead.** You MUST use the SendMessage tool for ALL communication with the lead — completion reports, PR URLs, escalations, fix confirmations. If you don't call SendMessage, the lead never sees your output.
+
 ## Phase 3: Execute Manifest
 
 When the lead messages you with a manifest path and TEAM_CONTEXT:
