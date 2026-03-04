@@ -50,13 +50,6 @@ Beyond PROMPTING.md's general context probes, surface these before defining a sk
 - Pushy description (risk overtrigger) vs conservative description (risk undertrigger)
 - All-in-body vs layered references (simplicity vs context efficiency)
 - Bundled scripts vs inline generation (reliability and speed vs flexibility)
-- Autonomous /do execution vs skill-creator human-in-the-loop (workflow integration vs systematic eval quality)
-
-## Process Guidance Candidates
-
-*PG candidates — presented as batch during interview, user selects which apply.*
-
-- **Use skill-creator for complex skills** — The skill-creator skill provides systematic eval-driven development (test cases, baseline comparison, grading, iteration). NOTE: skill-creator is non-autonomous by design — requires human interaction for eval reviews and feedback cycles, breaking /do's autonomous execution flow. Best suited for complex skills where quality justifies the overhead; may be overkill for simple skills.
 
 ## Defaults
 
