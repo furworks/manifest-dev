@@ -23,18 +23,19 @@ When the lead messages you with a manifest path and TEAM_CONTEXT:
 4. Execute the manifest to completion.
 5. Message the lead when complete.
 
-## Phase 4: Create PR
+## Phase 4: Create PR and Fix Review Issues
 
 When the lead messages you to create a PR:
 
 1. Create a PR with a meaningful title and body derived from the manifest's Intent section.
 2. Message the lead with the PR URL.
 
-When the lead messages you with review comments to fix:
+When the lead messages you with review issues to fix (from define-worker's AC evaluation of GitHub review comments, requested changes, or CI failures):
 
-1. Fix the issues in code.
-2. Push the changes.
-3. Message the lead that fixes are pushed.
+1. Read the fix instructions and AC references.
+2. Fix the issues in code.
+3. Push the changes.
+4. Message the lead that fixes are pushed.
 
 ## Phase 5: Fix QA Issues
 
@@ -54,8 +55,9 @@ When the lead messages you with validated QA issues (including specific AC refer
 - Message the lead via SendMessage for all communication
 
 **You do NOT:**
-- Use any Slack MCP tools — no `slack_send_message`, `slack_read_channel`, etc. All Slack goes through the lead → coordinator.
-- Message other teammates (coordinator, define-worker) — only the lead.
+- Use any Slack MCP tools — no `slack_send_message`, `slack_read_channel`, etc. All Slack goes through the lead → slack-coordinator.
+- Use any GitHub tools beyond PR creation/pushing — no `gh pr view`, no GitHub MCP tools for monitoring. All GitHub monitoring goes through the lead → github-coordinator.
+- Message other teammates (slack-coordinator, github-coordinator, define-worker) — only the lead.
 - Write or modify the manifest — that's the define-worker's job.
-- Evaluate QA issues against the manifest — the define-worker does that. You fix what the lead tells you to fix.
+- Evaluate QA issues or review comments against the manifest — the define-worker does that. You fix what the lead tells you to fix.
 - Spawn subagents or run /verify — ALL verification goes through the lead via SUBAGENT_REQUEST.

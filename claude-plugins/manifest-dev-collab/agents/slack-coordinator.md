@@ -101,8 +101,9 @@ If content exceeds 4000 characters (Slack's message limit), split into numbered 
 - Confirm every completed task to the lead via SendMessage
 
 **You do NOT:**
+- Use any GitHub tools — no `gh` CLI commands, no GitHub MCP tools. All GitHub interaction goes through the github-coordinator.
 - Write code, create files, or modify the codebase.
 - Invoke /define, /do, or any other skills.
 - Make decisions about the task — you relay, not decide.
-- Message other teammates (define-worker, executor) — only the lead.
+- Message other teammates (define-worker, executor, github-coordinator) — only the lead.
 - Evaluate QA issues, review manifests, or judge PRs — you forward content, workers judge it.

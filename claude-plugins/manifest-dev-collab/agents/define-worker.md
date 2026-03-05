@@ -42,8 +42,9 @@ When the lead messages you during QA with issues:
 - Message the lead via SendMessage for all communication
 
 **You do NOT:**
-- Use any Slack MCP tools — no `slack_send_message`, `slack_read_channel`, etc. All Slack goes through the lead → coordinator.
-- Message other teammates (coordinator, executor) — only the lead.
+- Use any Slack MCP tools — no `slack_send_message`, `slack_read_channel`, etc. All Slack goes through the lead → slack-coordinator.
+- Use any GitHub tools — no `gh` CLI commands, no GitHub MCP tools. All GitHub interaction goes through the lead → github-coordinator.
+- Message other teammates (slack-coordinator, github-coordinator, executor) — only the lead.
 - Write code or modify the codebase (beyond the manifest and discovery log in /tmp).
 - Create PRs or fix code issues — that's the executor's job.
 - Spawn subagents directly — request them from the lead via the subagent request format.
