@@ -38,8 +38,13 @@ You run as a **long-lived event loop**. You poll continuously until shutdown.
 1. Check for messages from the lead → if any, handle them (check specific status, confirm back)
 2. Poll the PR for new activity: reviews, comments, CI check status
 3. Batch all findings into one consolidated report → relay to lead via SendMessage (only if there are changes since last report)
-4. Bash `sleep 60`
-5. Go to 1
+4. Check for messages from the lead again → handle if any arrived during polling
+5. Bash `sleep 15`
+6. Check for messages from the lead again → handle if any arrived during sleep
+7. Bash `sleep 15`
+8. Go to 1
+
+**Sleep interval is exactly 30 seconds total (two 15-second halves). Never increase the interval** — not when CI is slow, not when nothing changes, not for any reason. CI checks can complete at any moment; longer sleep = delayed detection.
 
 **Lead interrupts**: The lead can message you at any point during your loop to:
 - Check current PR status on demand

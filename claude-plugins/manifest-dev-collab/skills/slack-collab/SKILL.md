@@ -34,6 +34,12 @@ Message the appropriate coordinator and let it handle the external system.
 - **github-coordinator → lead → workers** (relaying PR review feedback)
 - **Exception**: Subagents you spawn can SendMessage directly to the requesting worker (see Subagent Bridge).
 
+## User Communication After Phase 0
+
+Once the team is spawned and the slack-coordinator is running, ALL communication with the user goes through the slack-coordinator → Slack channel. Do NOT output messages to the terminal or use AskUserQuestion during the workflow — even to request the user take an action (run a command, approve something, etc.). Route it through the slack-coordinator.
+
+**Only exception**: Critical system errors where coordinators have failed and the user must make a recovery decision (see Coordinator Failure Escalation).
+
 ## How You Interact with the Coordinators
 
 Each coordinator runs a **continuous event loop** — once kicked off, it polls its external system and relays responses as they arrive.
@@ -90,7 +96,10 @@ This tells the skill to message the lead (you) instead of using AskUserQuestion.
 
 ## Subagent Bridge Protocol
 
-Workers cannot spawn subagents (no Agent tool access). When they need verification (manifest-verifier, criteria-checkers), they message you with a structured request:
+Workers message you when they need subagents spawned. The bridge applies to the define-worker's manifest-verifier requests and other non-verification subagent needs. **Executor verification** is handled separately: the executor sends a VERIFICATION_REQUEST message (not a SUBAGENT_REQUEST) — see Phase 3 step 3 for the verification relay flow.
+
+**Worker → Lead request format:**
+When a worker needs a subagent it can't spawn locally, it messages you with a structured request:
 
 **Worker → Lead request format:**
 ```
@@ -201,7 +210,10 @@ If `$ARGUMENTS` starts with `--resume`:
 
 1. Message executor: "Run /do for manifest at [manifest_path]\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: execute"
 2. When executor messages you with escalations, route them to slack-coordinator. Relay responses back.
-3. When executor requests verification subagents, follow the Subagent Bridge Protocol.
+3. **Verification relay**: When executor messages you with a VERIFICATION_REQUEST (containing all criteria with IDs, methods, commands/prompts):
+   - Spawn one verification teammate per criterion in parallel using the Agent tool. Each teammate verifies its assigned criterion and reports back.
+   - Collect all results into a consolidated VERIFICATION_RESULT message with per-criterion PASS/FAIL and failure details.
+   - Send VERIFICATION_RESULT to executor. The executor processes results (fixes failures and re-requests verification, or calls /done if all pass).
 4. When executor completes, update state file.
 
 ### Phase 4: PR Review (GitHub-based)
