@@ -120,13 +120,14 @@ If no arguments are present, use a minimal version without the Arguments line.
 1. **No /do in workflow state** -> No action (not in workflow)
 2. **Has /do AND has /done** -> No action (verified complete)
 3. **Has /do AND has /escalate** -> No action (properly escalated)
-4. **Has /do, 3+ consecutive short outputs** -> Log warning:
+4. **Has /do AND has TEAM_CONTEXT AND has /verify** -> Allow (team mode: verification delegated to lead). System message: "Verification delegated to the team lead. The lead will spawn verification teammates and relay results. You will receive a message with VERIFICATION_RESULT when complete."
+5. **Has /do, 3+ consecutive short outputs** -> Log warning:
    ```
    WARNING: Stop allowed to break infinite loop. The /do workflow
    was NOT properly completed. Next time, call /escalate when blocked
    instead of minimal outputs.
    ```
-5. **Has /do but no /done or /escalate** -> Best-effort: attempt to inject follow-up prompt (fragile):
+6. **Has /do but no /done or /escalate** -> Best-effort: attempt to inject follow-up prompt (fragile):
    ```
    Stop blocked: /do workflow requires formal exit.
    Options: (1) Run /verify to check criteria - if all pass, /verify calls /done.
@@ -222,6 +223,7 @@ Tracked via `tool.execute.before` handler:
 - `hasEscalate: boolean` — Whether /escalate was called after last /do
 - `hasVerify: boolean` — Whether /verify was called after last /do
 - `doArgs: string | null` — Arguments passed to /do
+- `hasTeamContext: boolean` — Whether /do args contain a TEAM_CONTEXT block
 
 ### `consecutiveShortOutputs` (in-memory counter)
 Tracked via `tool.execute.after` handler. Counts consecutive tool outputs under 100 characters. Reset on any substantial output.

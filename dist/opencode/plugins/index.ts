@@ -38,6 +38,7 @@ interface DoFlowState {
   hasEscalate: boolean
   hasVerify: boolean
   doArgs: string | null
+  hasTeamContext: boolean
 }
 
 const VERIFY_CONTEXT_REMINDER = `VERIFICATION CONTEXT CHECK: You are about to run /verify.
@@ -74,6 +75,8 @@ const STOP_BLOCKED_MESSAGE = `Stop blocked: /do workflow requires formal exit. O
 
 const LOOP_WARNING_MESSAGE = `WARNING: Stop allowed to break infinite loop. The /do workflow was NOT properly completed. Next time, call /escalate when blocked instead of minimal outputs.`
 
+const TEAM_MODE_VERIFY_MESSAGE = `Verification delegated to the team lead. The lead will spawn verification teammates and relay results. You will receive a message with VERIFICATION_RESULT when complete.`
+
 export const ManifestDevPlugin: Plugin = async (ctx) => {
   // Session-scoped workflow state. Reset on each new /do invocation.
   const flowState: DoFlowState = {
@@ -82,6 +85,7 @@ export const ManifestDevPlugin: Plugin = async (ctx) => {
     hasEscalate: false,
     hasVerify: false,
     doArgs: null,
+    hasTeamContext: false,
   }
 
   // Track consecutive short outputs for loop detection
@@ -120,7 +124,9 @@ export const ManifestDevPlugin: Plugin = async (ctx) => {
         flowState.hasDone = false
         flowState.hasEscalate = false
         flowState.hasVerify = false
-        flowState.doArgs = args?.args?.trim() || null
+        const doArgs = args?.args?.trim() || null
+        flowState.doArgs = doArgs
+        flowState.hasTeamContext = doArgs ? doArgs.includes("TEAM_CONTEXT") : false
         consecutiveShortOutputs = 0
       }
 
@@ -233,6 +239,11 @@ export const ManifestDevPlugin: Plugin = async (ctx) => {
         // where the session may have already exited before the prompt
         // is processed (issue #15267).
         if (flowState.hasDo && !flowState.hasDone && !flowState.hasEscalate) {
+          // Team mode: /verify was called and verification is delegated to the lead.
+          if (flowState.hasTeamContext && flowState.hasVerify) {
+            console.info(TEAM_MODE_VERIFY_MESSAGE)
+            return
+          }
           if (consecutiveShortOutputs >= 3) {
             // Loop detected — allow stop but log warning.
             // In Claude Code this would be decision: "allow" with systemMessage.
