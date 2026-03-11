@@ -172,6 +172,7 @@ The interview classifies your task (Code, Writing, Document, Blog, Research) and
   verify:
     method: subagent
     agent: general-purpose
+    model: inherit
     prompt: "Verify rate limiting exists on /login and /register endpoints"
   ```
 - [INV-G3] JWT secrets from environment, never hardcoded
@@ -211,6 +212,7 @@ The interview classifies your task (Code, Writing, Document, Blog, Research) and
   verify:
     method: subagent
     agent: code-bugs-reviewer
+    model: inherit
     prompt: "Check auth routes return 401 for auth failures, not 500"
   ```
 ````
@@ -252,6 +254,7 @@ verify:
 verify:
   method: subagent
   agent: code-maintainability-reviewer
+  model: inherit
   prompt: "Review for DRY violations and coupling issues"
 
 # Manual verification

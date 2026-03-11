@@ -153,7 +153,7 @@ Beyond WHAT to build, HOW constraints need probing. Flag when:
 Automated verification is preferred; manual is last resort. Flag when:
 - Criterion has manual verification without justification
 - Verification method could be automated but isn't (suggest how)
-- Subagent verification doesn't specify opus model for general-purpose judgment tasks
+- Subagent verification doesn't specify `model: inherit` for general-purpose judgment tasks
 
 ### Summary for approval
 

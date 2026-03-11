@@ -135,7 +135,7 @@ Read full log before synthesis. Unresolved `- [ ]` items must be addressed first
 
 **Insights become criteria** - Domain grounding findings, outside view findings, pre-mortem risks, non-obvious discoveries → convert to INV-G* or AC-*. Don't include insights that aren't encoded as criteria. This applies equally to Resolvable task file content — risks and scenario dispositions must be traceable to manifest criteria or they're aspirational, not enforced.
 
-**Automate verification** - Use automated methods (commands, subagent review). When using general-purpose subagent, default to opus model (verification requires nuanced judgment). When a criterion seems to require manual verification, probe the user: suggest how it could be made automatable, or ask if they have ideas. Manual only as a last resort or when the user explicitly requests it.
+**Automate verification** - Use automated methods (commands, subagent review). When using general-purpose subagent, default to `inherit`. When a criterion seems to require manual verification, probe the user: suggest how it could be made automatable, or ask if they have ideas. Manual only as a last resort or when the user explicitly requests it.
 
 ## Approach Section (Complex Tasks)
 
@@ -346,7 +346,7 @@ Three categories, each covering **output** or **process**:
     method: bash | codebase | subagent | research | manual
     command: "[if bash]"
     agent: "[if subagent]"
-    model: "[if subagent, default opus for general-purpose]"
+    model: "[if subagent, default inherit]"
     prompt: "[if subagent or research]"
   ```
 

@@ -7,7 +7,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).parent.parent
 DIST = ROOT / "dist"
 def namespace_dist(tmp_path: Path, cli: str) -> Path:
@@ -162,6 +161,32 @@ def test_sync_tools_docs_require_complete_additive_installs() -> None:
     assert "do not ship stubs or require manual post-install wiring" in sync_text
     assert "Generate complete plugin module placed in the local plugin directory" in opencode_ref
     assert "install.sh` must merge" in gemini_ref
+
+
+def test_verification_model_defaults_to_inherit_across_source_and_dist() -> None:
+    define_paths = [
+        ROOT / "claude-plugins" / "manifest-dev" / "skills" / "define" / "SKILL.md",
+        ROOT / "dist" / "codex" / "skills" / "define" / "SKILL.md",
+        ROOT / "dist" / "gemini" / "skills" / "define" / "SKILL.md",
+        ROOT / "dist" / "opencode" / "skills" / "define" / "SKILL.md",
+    ]
+    verifier_paths = [
+        ROOT / "claude-plugins" / "manifest-dev" / "agents" / "manifest-verifier.md",
+        ROOT / "dist" / "codex" / "agents" / "manifest-verifier.toml",
+        ROOT / "dist" / "gemini" / "agents" / "manifest-verifier.md",
+        ROOT / "dist" / "opencode" / "agents" / "manifest-verifier.md",
+    ]
+
+    for path in define_paths:
+        text = path.read_text()
+        assert "default to `inherit`." in text
+        assert 'model: "[if subagent, default inherit]"' in text
+        assert "default opus for general-purpose" not in text
+
+    for path in verifier_paths:
+        text = path.read_text()
+        assert "doesn't specify `model: inherit` for general-purpose judgment tasks" in text
+        assert "opus model for general-purpose judgment tasks" not in text
 
 
 def test_opencode_installer_preserves_root_plugin_and_config(
