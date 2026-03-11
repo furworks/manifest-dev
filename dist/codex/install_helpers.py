@@ -64,8 +64,8 @@ CONFIG_HEADER = (
 STATE_VERSION = 2
 DEFAULT_SHARED_VALUES = {
     "features.multi_agent": "true",
-    "agents.max_threads": "6",
-    "agents.max_depth": "1",
+    "max_threads": "6",
+    "max_depth": "1",
 }
 
 
@@ -243,6 +243,28 @@ def _parse_quoted_list(raw_value: str | None) -> list[str] | None:
     return re.findall(r'"([^"]*)"', raw_value)
 
 
+def _split_root_prefix(text: str) -> tuple[str, str]:
+    match = re.search(r"(?m)^\[", text)
+    if not match:
+        return text, ""
+    return text[: match.start()], text[match.start() :]
+
+
+def _get_root_key_value(text: str, key: str) -> str | None:
+    root, _rest = _split_root_prefix(text)
+    match = re.search(rf"(?m)^{re.escape(key)}\s*=\s*(.*)$", root)
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
+def _get_shared_key_value(text: str, key: str) -> str | None:
+    root_value = _get_root_key_value(text, key)
+    if root_value is not None:
+        return root_value
+    return _get_table_key_value(text, "agents", key)
+
+
 def _strip_managed_config_block(text: str) -> str:
     pattern = re.compile(
         rf"\n?{re.escape(MANAGED_CONFIG_START)}\n.*?\n{re.escape(MANAGED_CONFIG_END)}\n?",
@@ -344,6 +366,40 @@ def _ensure_list_value_in_table(
     return text[: match.start()] + header + body + text[match.end() :]
 
 
+def _upsert_root_key(text: str, key: str, value: str) -> str:
+    root, rest = _split_root_prefix(text)
+    line = f"{key} = {value}"
+    pattern = re.compile(rf"(?m)^{re.escape(key)}\s*=.*$")
+    if pattern.search(root):
+        root = pattern.sub(line, root, count=1)
+    else:
+        if root and not root.endswith("\n"):
+            root += "\n"
+        root += line + "\n"
+    return root + rest
+
+
+def _ensure_missing_root_keys(text: str, keys: list[tuple[str, str]]) -> str:
+    for key, value in keys:
+        if _get_root_key_value(text, key) is None:
+            text = _upsert_root_key(text, key, value)
+    return text
+
+
+def _ensure_root_list_value(text: str, key: str, value: str) -> str:
+    current_value = _get_root_key_value(text, key)
+    if current_value is None:
+        return _upsert_root_key(text, key, f'["{value}"]')
+
+    items = _parse_quoted_list(current_value) or []
+    if value in items:
+        return text
+
+    items.append(value)
+    rendered = "[" + ", ".join(f'"{item}"' for item in items) + "]"
+    return _upsert_root_key(text, key, rendered)
+
+
 def _remove_key_from_table(
     text: str,
     table_name: str,
@@ -367,6 +423,22 @@ def _remove_key_from_table(
     body = key_pattern.sub("", body, count=1)
     body = re.sub(r"\n{3,}", "\n\n", body).lstrip("\n")
     return text[: match.start()] + header + body + text[match.end() :]
+
+
+def _remove_root_key(text: str, key: str, expected_value: str | None = None) -> str:
+    root, rest = _split_root_prefix(text)
+    pattern = re.compile(rf"(?m)^({re.escape(key)}\s*=\s*)(.*)$")
+    match = pattern.search(root)
+    if not match:
+        return text
+
+    current_value = match.group(2).strip()
+    if expected_value is not None and current_value != expected_value:
+        return text
+
+    root = pattern.sub("", root, count=1)
+    root = re.sub(r"\n{3,}", "\n\n", root).lstrip("\n")
+    return root + rest
 
 
 def _remove_list_value_from_table(text: str, table_name: str, key: str, value: str) -> str:
@@ -395,6 +467,22 @@ def _remove_list_value_from_table(text: str, table_name: str, key: str, value: s
     return text[: match.start()] + header + body + text[match.end() :]
 
 
+def _remove_root_list_value(text: str, key: str, value: str) -> str:
+    current_value = _get_root_key_value(text, key)
+    if current_value is None:
+        return text
+
+    items = _parse_quoted_list(current_value) or []
+    if value not in items:
+        return text
+
+    items = [item for item in items if item != value]
+    if items:
+        rendered = "[" + ", ".join(f'"{item}"' for item in items) + "]"
+        return _upsert_root_key(text, key, rendered)
+    return _remove_root_key(text, key)
+
+
 def _remove_empty_table(text: str, table_name: str) -> str:
     match = _table_match(text, table_name)
     if not match:
@@ -402,6 +490,17 @@ def _remove_empty_table(text: str, table_name: str) -> str:
     if match.group(2).strip():
         return text
     return text[: match.start()] + text[match.end() :]
+
+
+def _migrate_legacy_agent_shared_settings(text: str) -> str:
+    for key in ("max_threads", "max_depth", "project_doc_fallback_filenames"):
+        legacy_value = _get_table_key_value(text, "agents", key)
+        if legacy_value is None:
+            continue
+        if _get_root_key_value(text, key) is None:
+            text = _upsert_root_key(text, key, legacy_value)
+        text = _remove_key_from_table(text, "agents", key)
+    return _remove_empty_table(text, "agents")
 
 
 def _normalize_config_text(text: str) -> str:
@@ -434,14 +533,13 @@ def _build_config_state(existing_text: str, config_existed: bool) -> dict[str, o
         "config_existed": config_existed,
         "original_keys": {
             "features.multi_agent": _get_table_key_value(existing_text, "features", "multi_agent"),
-            "agents.max_threads": _get_table_key_value(existing_text, "agents", "max_threads"),
-            "agents.max_depth": _get_table_key_value(existing_text, "agents", "max_depth"),
+            "max_threads": _get_shared_key_value(existing_text, "max_threads"),
+            "max_depth": _get_shared_key_value(existing_text, "max_depth"),
         },
         "original_lists": {
-            "agents.project_doc_fallback_filenames": _parse_quoted_list(
-                _get_table_key_value(
+            "project_doc_fallback_filenames": _parse_quoted_list(
+                _get_shared_key_value(
                     existing_text,
-                    "agents",
                     "project_doc_fallback_filenames",
                 )
             ),
@@ -453,11 +551,27 @@ def _normalize_state(existing_text: str, state: dict[str, object], config_existe
     if not isinstance(state.get("original_keys"), dict) or not isinstance(state.get("original_lists"), dict):
         return _build_config_state(existing_text, config_existed)
 
+    original_keys = dict(state["original_keys"])
+    if "max_threads" not in original_keys and "agents.max_threads" in original_keys:
+        original_keys["max_threads"] = original_keys.pop("agents.max_threads")
+    if "max_depth" not in original_keys and "agents.max_depth" in original_keys:
+        original_keys["max_depth"] = original_keys.pop("agents.max_depth")
+
+    original_lists = dict(state["original_lists"])
+    legacy_fallback_key = "agents.project_doc_fallback_filenames"
+    if (
+        "project_doc_fallback_filenames" not in original_lists
+        and legacy_fallback_key in original_lists
+    ):
+        original_lists["project_doc_fallback_filenames"] = original_lists.pop(
+            legacy_fallback_key
+        )
+
     return {
         "version": STATE_VERSION,
         "config_existed": bool(state.get("config_existed", config_existed)),
-        "original_keys": dict(state["original_keys"]),
-        "original_lists": dict(state["original_lists"]),
+        "original_keys": original_keys,
+        "original_lists": original_lists,
     }
 
 
@@ -472,6 +586,7 @@ def merge_config(
     dest_path = Path(dest_config_path)
     config_existed = dest_path.exists()
     existing_text = dest_path.read_text(encoding="utf-8") if config_existed else ""
+    existing_text = _migrate_legacy_agent_shared_settings(existing_text)
     merged_text = existing_text if config_existed else CONFIG_HEADER
     state = _normalize_state(existing_text, _load_state(state_path), config_existed)
     managed_block = (
@@ -488,17 +603,15 @@ def merge_config(
         "features",
         [("multi_agent", "true")],
     )
-    merged_text = _ensure_missing_table_keys(
+    merged_text = _ensure_missing_root_keys(
         merged_text,
-        "agents",
         [
             ("max_threads", "6"),
             ("max_depth", "1"),
         ],
     )
-    merged_text = _ensure_list_value_in_table(
+    merged_text = _ensure_root_list_value(
         merged_text,
-        "agents",
         "project_doc_fallback_filenames",
         "CLAUDE.md",
     )
@@ -513,7 +626,9 @@ def unmerge_config(dest_config_path: str, state_path: str | None = None) -> None
     if not dest_path.exists():
         return
 
-    current_text = dest_path.read_text(encoding="utf-8")
+    current_text = _migrate_legacy_agent_shared_settings(
+        dest_path.read_text(encoding="utf-8")
+    )
     loaded_state = _load_state(state_path)
     if not loaded_state:
         loaded_state = _extract_embedded_state(current_text)
@@ -526,41 +641,47 @@ def unmerge_config(dest_config_path: str, state_path: str | None = None) -> None
     if not isinstance(original_keys, dict):
         original_keys = {}
     for dotted_key, default_value in DEFAULT_SHARED_VALUES.items():
-        table_name, key = dotted_key.split(".", 1)
-        current_value = _get_table_key_value(merged_text, table_name, key)
-        if original_keys.get(dotted_key) is None and current_value == default_value:
-            merged_text = _remove_key_from_table(
-                merged_text,
-                table_name,
-                key,
-                default_value,
-            )
+        if "." in dotted_key:
+            table_name, key = dotted_key.split(".", 1)
+            current_value = _get_table_key_value(merged_text, table_name, key)
+            if original_keys.get(dotted_key) is None and current_value == default_value:
+                merged_text = _remove_key_from_table(
+                    merged_text,
+                    table_name,
+                    key,
+                    default_value,
+                )
+        else:
+            current_value = _get_root_key_value(merged_text, dotted_key)
+            if original_keys.get(dotted_key) is None and current_value == default_value:
+                merged_text = _remove_root_key(
+                    merged_text,
+                    dotted_key,
+                    default_value,
+                )
 
     original_lists = state.get("original_lists", {})
     if not isinstance(original_lists, dict):
         original_lists = {}
     current_list = _parse_quoted_list(
-        _get_table_key_value(
+        _get_root_key_value(
             merged_text,
-            "agents",
             "project_doc_fallback_filenames",
         )
     )
-    original_list = original_lists.get("agents.project_doc_fallback_filenames")
+    original_list = original_lists.get("project_doc_fallback_filenames")
     if isinstance(current_list, list) and "CLAUDE.md" in current_list:
         if original_list is None:
             if current_list == ["CLAUDE.md"]:
-                merged_text = _remove_list_value_from_table(
+                merged_text = _remove_root_list_value(
                     merged_text,
-                    "agents",
                     "project_doc_fallback_filenames",
                     "CLAUDE.md",
                 )
         elif isinstance(original_list, list):
             if [item for item in current_list if item != "CLAUDE.md"] == original_list:
-                merged_text = _remove_list_value_from_table(
+                merged_text = _remove_root_list_value(
                     merged_text,
-                    "agents",
                     "project_doc_fallback_filenames",
                     "CLAUDE.md",
                 )

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).parent.parent
@@ -36,10 +39,9 @@ def test_codex_uninstall_removes_only_manifest_dev_and_reverts_added_config(
     config_path.write_text(
         (
             'preferred_auth_method = "chatgpt"\n\n'
+            'project_doc_fallback_filenames = ["AGENTS.md"]\n\n'
             "[features]\n"
             "preview_feature = true\n\n"
-            "[agents]\n"
-            'project_doc_fallback_filenames = ["AGENTS.md"]\n\n'
             "[mcp_servers.custom]\n"
             'command = ["echo", "hi"]\n'
         ),
@@ -170,6 +172,92 @@ def test_codex_uninstall_preserves_user_kept_fallback_list_changes(tmp_path: Pat
     assert 'project_doc_fallback_filenames = ["CLAUDE.md", "AGENTS.md"]' in final_config
 
 
+def test_codex_install_migrates_legacy_agents_table_to_runtime_valid_config(
+    tmp_path: Path,
+) -> None:
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path / "home")
+
+    codex_dir = Path(env["HOME"]) / ".codex"
+    config_path = codex_dir / "config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        (
+            '[features]\n'
+            'multi_agent = true\n\n'
+            '[agents]\n'
+            'max_threads = 6\n'
+            'max_depth = 1\n'
+            'project_doc_fallback_filenames = ["CLAUDE.md"]\n\n'
+            '[agents.criteria-checker-manifest-dev]\n'
+            'description = "x"\n'
+            'config_file = "agents/criteria-checker-manifest-dev.toml"\n'
+        ),
+        encoding="utf-8",
+    )
+    state_path = codex_dir / "manifest-dev-install-state.json"
+    state_path.write_text(
+        json.dumps(
+            {
+                "version": 2,
+                "config_existed": True,
+                "original_keys": {
+                    "features.multi_agent": "true",
+                    "agents.max_threads": "6",
+                    "agents.max_depth": "1",
+                },
+                "original_lists": {
+                    "agents.project_doc_fallback_filenames": ["CLAUDE.md"],
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    run_installer("codex", env)
+
+    migrated = config_path.read_text(encoding="utf-8")
+    assert "\n[agents]\n" not in f"\n{migrated}"
+    assert 'max_threads = 6' in migrated
+    assert 'max_depth = 1' in migrated
+    assert 'project_doc_fallback_filenames = ["CLAUDE.md"]' in migrated
+
+    result = subprocess.run(
+        ["codex", "features", "list"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "fast_mode" in result.stdout
+
+
+def test_codex_cli_boots_after_clean_install(tmp_path: Path) -> None:
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path / "home")
+
+    run_installer("codex", env)
+
+    result = subprocess.run(
+        ["codex", "features", "list"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "multi_agent" in result.stdout
+
+
 def test_opencode_uninstall_removes_only_manifest_dev_files(tmp_path: Path) -> None:
     env = os.environ.copy()
     env["HOME"] = str(tmp_path / "home")
@@ -254,6 +342,26 @@ def test_opencode_install_leaves_user_root_plugin_and_config_untouched(
     assert not (plugins_dir / "index.ts.manifest-dev-legacy.bak").exists()
     assert (plugins_dir / "manifest-dev.ts").is_file()
     assert (plugins_dir / "manifest-dev.HOOK_SPEC.md").is_file()
+
+
+def test_opencode_cli_loads_installed_manifest_agent(tmp_path: Path) -> None:
+    if shutil.which("opencode") is None:
+        pytest.skip("OpenCode CLI not installed")
+
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path / "home")
+
+    run_installer("opencode", env)
+
+    result = subprocess.run(
+        ["opencode", "debug", "agent", "criteria-checker-manifest-dev"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert '"name": "criteria-checker-manifest-dev"' in result.stdout
 
 
 def test_gemini_uninstall_removes_extension_and_manifest_hooks_only(
