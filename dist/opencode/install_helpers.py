@@ -10,11 +10,13 @@ vs /done) and idempotency (won't double-suffix on re-run).
 
 Usage:
     python3 install_helpers.py namespace <dir> [codex|gemini|opencode]
+    python3 install_helpers.py cleanup-config <dest-config>
 """
 
 from __future__ import annotations
 
 import os
+import json
 import re
 import sys
 from pathlib import Path
@@ -189,6 +191,28 @@ def patch_files(base: Path) -> None:
                 fpath.write_text(patched, encoding="utf-8")
 
 
+def cleanup_config(dest_config_path: str) -> None:
+    """Remove the legacy manifest-dev plugin registration from opencode.json."""
+    dest_path = Path(dest_config_path)
+    if not dest_path.exists():
+        return
+
+    config = json.loads(dest_path.read_text(encoding="utf-8"))
+    plugins = config.get("plugin")
+    legacy_entry = "./plugins/manifest-dev/index.ts"
+
+    if isinstance(plugins, list):
+        cleaned = [item for item in plugins if item != legacy_entry]
+        if cleaned:
+            config["plugin"] = cleaned
+        else:
+            config.pop("plugin", None)
+    elif plugins == legacy_entry:
+        config.pop("plugin", None)
+
+    dest_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+
+
 # ── Main entry point ──────────────────────────────────────────────────
 
 
@@ -210,10 +234,14 @@ def namespace(base_dir: str, cli_type: str = "gemini") -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] != "namespace":
+    if len(sys.argv) >= 3 and sys.argv[1] == "namespace":
+        namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")
+    elif len(sys.argv) == 3 and sys.argv[1] == "cleanup-config":
+        cleanup_config(sys.argv[2])
+    else:
         print(
-            f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]",
+            f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]\n"
+            f"       {sys.argv[0]} cleanup-config <dest-config>",
             file=sys.stderr,
         )
         sys.exit(1)
-    namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")

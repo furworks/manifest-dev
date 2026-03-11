@@ -1,9 +1,12 @@
 /**
  * manifest-dev plugin for OpenCode CLI
  *
- * Hook stubs — behavioral logic must be ported manually from the Python
- * originals in claude-plugins/manifest-dev/hooks/. See HOOK_SPEC.md for
- * the full behavioral specification.
+ * Complete OpenCode hook implementation adapted from the Claude Code
+ * workflow hooks in claude-plugins/manifest-dev/hooks/.
+ *
+ * The plugin is self-contained so install.sh can register it
+ * deterministically without touching a user's shared plugins/index.ts or
+ * root package.json.
  *
  * Source hooks:
  *   pretool_verify_hook.py  -> tool.execute.before (Skill tool, verify skill)
@@ -26,8 +29,6 @@
  *   ctx.$          — Bun shell API
  */
 
-import type { Plugin } from "@opencode-ai/plugin"
-
 /**
  * Workflow state tracked across the session.
  * Updated by tool.execute.before (skill invocations) and todo.updated events.
@@ -41,28 +42,28 @@ interface DoFlowState {
   hasTeamContext: boolean
 }
 
-const VERIFY_CONTEXT_REMINDER = `VERIFICATION CONTEXT CHECK: You are about to run /verify.
+const VERIFY_CONTEXT_REMINDER = `VERIFICATION CONTEXT CHECK: You are about to invoke the verify skill.
 
 Arguments: {verify_args}
 
 BEFORE spawning verifiers, read the manifest and execution log in FULL if not recently loaded. You need ALL acceptance criteria (AC-*) and global invariants (INV-G*) in context to spawn the correct verifiers.`
 
-const VERIFY_CONTEXT_REMINDER_MINIMAL = `VERIFICATION CONTEXT CHECK: You are about to run /verify.
+const VERIFY_CONTEXT_REMINDER_MINIMAL = `VERIFICATION CONTEXT CHECK: You are about to invoke the verify skill.
 
 BEFORE spawning verifiers, read the manifest and execution log in FULL if not recently loaded. You need ALL acceptance criteria (AC-*) and global invariants (INV-G*) in context to spawn the correct verifiers.`
 
-const DO_WORKFLOW_RECOVERY_REMINDER = `This session was compacted during an active /do workflow. Context may have been lost.
+const DO_WORKFLOW_RECOVERY_REMINDER = `This session was compacted during an active do workflow. Context may have been lost.
 
 CRITICAL: Before continuing, read the manifest and execution log in FULL.
 
-The /do was invoked with: {do_args}
+The do skill was invoked with: {do_args}
 
 1. Read the manifest file - contains deliverables, acceptance criteria, and approach
 2. Check /tmp/ for your execution log (do-log-*.md) and read it to recover progress
 
 Do not restart completed work. Resume from where you left off.`
 
-const DO_WORKFLOW_RECOVERY_FALLBACK = `This session was compacted during an active /do workflow. Context may have been lost.
+const DO_WORKFLOW_RECOVERY_FALLBACK = `This session was compacted during an active do workflow. Context may have been lost.
 
 CRITICAL: Before continuing, recover your workflow context:
 
@@ -71,13 +72,13 @@ CRITICAL: Before continuing, recover your workflow context:
 
 Do not restart completed work. Resume from where you left off.`
 
-const STOP_BLOCKED_MESSAGE = `Stop blocked: /do workflow requires formal exit. Options: (1) Run /verify to check criteria - if all pass, /verify calls /done. (2) Call /escalate - for blocking issues OR user-requested pauses. Short outputs will be blocked. Choose one.`
+const STOP_BLOCKED_MESSAGE = `Stop blocked: the do workflow requires a formal exit. Options: (1) Invoke the verify skill to check criteria - if all pass, transition to the done skill. (2) Invoke the escalate skill for blocking issues or user-requested pauses. Short outputs will be blocked. Choose one.`
 
-const LOOP_WARNING_MESSAGE = `WARNING: Stop allowed to break infinite loop. The /do workflow was NOT properly completed. Next time, call /escalate when blocked instead of minimal outputs.`
+const LOOP_WARNING_MESSAGE = `WARNING: Stop allowed to break an infinite loop. The do workflow was NOT properly completed. Next time, invoke the escalate skill when blocked instead of producing minimal outputs.`
 
 const TEAM_MODE_VERIFY_MESSAGE = `Verification delegated to the team lead. The lead will spawn verification teammates and relay results. You will receive a message with VERIFICATION_RESULT when complete.`
 
-export const ManifestDevPlugin: Plugin = async (ctx) => {
+export const ManifestDevPlugin = async (ctx) => {
   // Session-scoped workflow state. Reset on each new /do invocation.
   const flowState: DoFlowState = {
     hasDo: false,
@@ -182,8 +183,8 @@ export const ManifestDevPlugin: Plugin = async (ctx) => {
       // Inject stop-do enforcement context if in active /do workflow
       if (flowState.hasDo && !flowState.hasDone && !flowState.hasEscalate) {
         output.system.push(
-          "ACTIVE /do WORKFLOW: You must complete this workflow with /verify " +
-          "(which calls /done on success) or /escalate before stopping. " +
+          "ACTIVE DO WORKFLOW: You must complete this workflow by invoking the verify skill " +
+          "(which transitions to the done skill on success) or the escalate skill before stopping. " +
           "Do not attempt to end the session without one of these."
         )
       }
@@ -257,7 +258,7 @@ export const ManifestDevPlugin: Plugin = async (ctx) => {
               //   parts: [{ type: "text", text: STOP_BLOCKED_MESSAGE }]
               // })
               console.warn(
-                "STOP-DO: Session idle during active /do workflow. " +
+                "STOP-DO: Session idle during an active do workflow. " +
                 "Cannot block — session.idle is fire-and-forget. " +
                 "Uncomment ctx.client.session.prompt() call to attempt fragile workaround."
               )

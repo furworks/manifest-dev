@@ -1,6 +1,6 @@
 # manifest-dev for Gemini CLI
 
-Verification-first manifest workflows for Gemini CLI. Define tasks with acceptance criteria, execute against them, verify with parallel agents.
+Verification-first manifest workflows for Gemini CLI, delivered as extension-managed skills, agents, and hooks.
 
 ## Components
 
@@ -18,6 +18,9 @@ Verification-first manifest workflows for Gemini CLI. Define tasks with acceptan
 curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/gemini/install.sh | bash
 ```
 
+Re-running the installer updates the extension in `~/.gemini/extensions/manifest-dev/`. If `GEMINI.md` already exists in that extension directory, it is backed up to `GEMINI.md.bak` and replaced with the current bundled version.
+The installer also merges `experimental.enableAgents = true` and the manifest-dev hook registrations into `~/.gemini/settings.json` additively, backing up the file first when it already exists. No post-install edits are required.
+
 ### Option 2: Skills only (via npx)
 
 ```bash
@@ -32,19 +35,14 @@ gemini extensions install https://github.com/doodledood/manifest-dev/dist/gemini
 gemini extensions link ./dist/gemini
 ```
 
-## Required Configuration
+Gemini uses these as extension-managed skills via `activate_skill`; this distribution does not document them as user slash commands.
+When using Gemini's native extension commands directly, you must still enable agents and merge the hook registrations yourself, or run `dist/gemini/install.sh` afterward to do that additively.
 
-Enable agents in your `~/.gemini/settings.json`:
+## Configuration
 
-```json
-{
-  "experimental": {
-    "enableAgents": true
-  }
-}
-```
+`install.sh` handles Gemini settings automatically: it enables agents and merges the manifest-dev hooks into `~/.gemini/settings.json` without removing any existing settings or hook registrations.
 
-Merge `hooks/hooks.json` into your settings.json hooks section for full workflow enforcement.
+If you install via `gemini extensions install` or `gemini extensions link` instead of `install.sh`, you still need the equivalent settings changes manually.
 
 ## Feature Parity
 
@@ -140,13 +138,13 @@ Tools converted from Claude Code names to Gemini CLI equivalents:
 ## Workflow
 
 ```
-/define -> produces manifest with acceptance criteria
+`define` -> produces a manifest with acceptance criteria
     |
-/do -> executes against manifest, tracks progress
+`do` -> executes against the manifest and tracks progress
     |
-/verify -> parallel verification with 12 specialized agents
+`verify` -> parallel verification with 12 specialized agents
     |
-/done (all pass) or /escalate (blocked)
+`done` (all pass) or `escalate` (blocked)
 ```
 
 ## Known Limitations

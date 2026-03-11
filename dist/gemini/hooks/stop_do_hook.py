@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Stop hook that enforces definition completion workflow for /do.
+Stop hook that enforces definition completion workflow for the do skill.
 
-Blocks stop attempts unless /done or /escalate was called after /do.
+Blocks stop attempts unless the `done` or `escalate` skill was called after `do`.
 This prevents the LLM from declaring "done" without verification.
 
 Decision matrix:
 - API error: ALLOW (system failure, not voluntary stop)
-- No /do: ALLOW (not in flow)
-- /do + /done: ALLOW (verified complete)
-- /do + /escalate: ALLOW (properly escalated)
-- /do + /verify + TEAM_CONTEXT: ALLOW (verification delegated to lead)
-- /do only: BLOCK (must verify first)
-- /do + /verify only: BLOCK (verify returned failures, keep working)
+- No `do`: ALLOW (not in flow)
+- `do` + `done`: ALLOW (verified complete)
+- `do` + `escalate`: ALLOW (properly escalated)
+- `do` + `verify` + TEAM_CONTEXT: ALLOW (verification delegated to lead)
+- `do` only: BLOCK (must verify first)
+- `do` + `verify` only: BLOCK (verify returned failures, keep working)
 """
 
 from __future__ import annotations
@@ -46,19 +46,19 @@ def main() -> None:
 
     state = parse_do_flow(transcript_path)
 
-    # Not in /do flow - allow stop
+    # Not in do flow - allow stop
     if not state.has_do:
         sys.exit(0)
 
-    # /done was called - verified complete, allow stop
+    # done was called - verified complete, allow stop
     if state.has_done:
         sys.exit(0)
 
-    # /escalate was called - properly escalated, allow stop
+    # escalate was called - properly escalated, allow stop
     if state.has_escalate:
         sys.exit(0)
 
-    # Team mode: /verify was called and verification is delegated to the lead.
+    # Team mode: verify was called and verification is delegated to the lead.
     # The executor goes idle (not terminates) while the lead spawns verification
     # teammates. The lead will wake the executor with results.
     if state.has_team_context and state.has_verify:
@@ -74,7 +74,7 @@ def main() -> None:
         print(json.dumps(output))
         sys.exit(0)
 
-    # /do was called but neither /done nor /escalate
+    # do was called but neither done nor escalate
     # Check for infinite loop pattern before blocking
     consecutive_short = count_consecutive_short_outputs(transcript_path)
 
@@ -84,20 +84,20 @@ def main() -> None:
             "decision": "allow",
             "reason": "Loop detected - allowing stop to prevent infinite loop",
             "systemMessage": (
-                "WARNING: Stop allowed to break infinite loop. "
-                "The /do workflow was NOT properly completed. "
-                "Next time, call /escalate when blocked instead of minimal outputs."
+                "WARNING: Stop allowed to break an infinite loop. "
+                "The do workflow was NOT properly completed. "
+                "Next time, invoke the escalate skill when blocked instead of minimal outputs."
             ),
         }
         print(json.dumps(output))
         sys.exit(0)
 
     # Provide guidance - same message regardless of attempt count
-    # Clear directive: /verify or /escalate, nothing else
+    # Clear directive: verify or escalate, nothing else
     system_message = (
-        "Stop blocked: /do workflow requires formal exit. "
-        "Options: (1) Run /verify to check criteria - if all pass, /verify calls /done. "
-        "(2) Call /escalate - for blocking issues OR user-requested pauses. "
+        "Stop blocked: the do workflow requires a formal exit. "
+        "Options: (1) Invoke the verify skill to check criteria - if all pass, transition to the done skill. "
+        "(2) Invoke the escalate skill for blocking issues or user-requested pauses. "
         "Short outputs will be blocked. Choose one."
     )
 

@@ -330,7 +330,7 @@ gemini extensions link ./dist/gemini
 
 Skills only: `npx skills add <url> --all -a gemini-cli`
 
-Setup: `"experimental": { "enableAgents": true }` in settings.json. Merge hooks.json into settings.json hooks.
+`install.sh` must merge `"experimental": { "enableAgents": true }` and the generated `hooks.json` entries into `~/.gemini/settings.json` additively. If users install via Gemini's native extension command instead of `install.sh`, document the equivalent manual settings changes separately.
 
 ## Extensions Gallery
 
@@ -353,6 +353,7 @@ find "$DIR/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/
 ```
 
 Component names on disk will have `-manifest-dev` suffix after install. The hooks directory is extension-private and doesn't need selective cleanup.
+The installer must also merge Gemini settings additively: preserve existing settings, set `experimental.enableAgents = true`, and add manifest-dev hook registrations without duplicating existing user hooks.
 
 ## Context File Adaptation
 

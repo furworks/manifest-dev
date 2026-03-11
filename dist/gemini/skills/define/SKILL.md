@@ -51,7 +51,7 @@ Domain-specific guidance available in:
 - **Resolvable** (tables/checklists: risks, scenarios, trade-offs) — resolve via interview, encode as INV/AC or explicitly skip.
 - **Compressed awareness** (bold-labeled one-line domain summaries, not tables/checklists) — informs your probing; no resolution needed.
 - **Process guidance hints** (counter-instinctive practices) — practices LLMs would get wrong without explicit guidance. Two modes: **candidates** (labeled as PG candidates, presented as batch after scenarios, user selects) and **defaults** (`## Defaults` section, included in manifest without probing, user reviews manifest and removes if not applicable). Both become PG-* in the manifest.
-- **Reference files** (`references/*.md`) — detailed lookup data for `/verify` agents. Do not load during the interview.
+- **Reference files** (`references/*.md`) — detailed lookup data for the `verify` skill's agents. Do not load during the interview.
 
 **Encode quality gates and Defaults immediately after reading task files — before the interview.** Log each as `- [x]` RESOLVED.
 
@@ -149,7 +149,7 @@ After defining deliverables, probe for **initial** implementation direction. Ski
 
 **Risk Areas** - Pre-mortem outputs. "What could cause this to fail? Candidates: [R1], [R2], [R3]." Each risk has detection criteria. Not exhaustive—focus on likely/high-impact.
 
-**Trade-offs** - Decision criteria for competing concerns. "When facing [tension], priority? [A] vs [B]?" Format: `[T-N] A vs B → Prefer A because X`. Enables autonomous adjustment during /do.
+**Trade-offs** - Decision criteria for competing concerns. "When facing [tension], priority? [A] vs [B]?" Format: `[T-N] A vs B → Prefer A because X`. Enables autonomous adjustment during execution by the `do` skill.
 
 **When to include Approach**: Multi-deliverable tasks, unfamiliar domains, architectural decisions, high-risk implementations. The interview naturally reveals if it's needed.
 
@@ -382,12 +382,12 @@ Three categories, each covering **output** or **process**:
 
 | Type | Format | Example | Used By |
 |------|--------|---------|---------|
-| Global Invariant | INV-G{N} | INV-G1, INV-G2 | /verify (verified) |
-| Process Guidance | PG-{N} | PG-1, PG-2 | /do (followed) |
-| Risk Area | R-{N} | R-1, R-2 | /do (watched) |
-| Trade-off | T-{N} | T-1, T-2 | /do (consulted) |
-| Known Assumption | ASM-{N} | ASM-1, ASM-2 | /verify (audited) |
-| Acceptance Criteria | AC-{D}.{N} | AC-1.1, AC-2.3 | /verify (verified) |
+| Global Invariant | INV-G{N} | INV-G1, INV-G2 | `verify` skill (verified) |
+| Process Guidance | PG-{N} | PG-1, PG-2 | `do` skill (followed) |
+| Risk Area | R-{N} | R-1, R-2 | `do` skill (watched) |
+| Trade-off | T-{N} | T-1, T-2 | `do` skill (consulted) |
+| Known Assumption | ASM-{N} | ASM-1, ASM-2 | `verify` skill (audited) |
+| Acceptance Criteria | AC-{D}.{N} | AC-1.1, AC-2.3 | `verify` skill (verified) |
 
 ## Amendment Protocol
 
@@ -433,7 +433,7 @@ Before asking for approval, output a scannable summary that enables full manifes
 **After presenting the summary**, wait for the user's response. User responses mean:
 - **Approval** (e.g., "looks good", "approved") → proceed to Complete
 - **Feedback** (e.g., "also add X", "change Y", "use Z skill in process") → revise the manifest, re-present summary. Do not implement.
-- **Explicit /do invocation** → /define is done; /do takes over
+- **Explicit invocation of the `do` skill** → `define` is done; `do` takes over
 
 ## Collaboration Mode
 
@@ -441,12 +441,13 @@ When `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, read `references/COLLABORATI
 
 ## Complete
 
-/define ends here. Output the manifest path and stop.
+The `define` skill ends here. Output the manifest path and stop.
 
 ```text
 Manifest complete: /tmp/manifest-{timestamp}.md
 
-To execute: /do /tmp/manifest-{timestamp}.md [log-file-path if iterating]
+Next step: invoke the `do` skill with the manifest path above.
+If iterating on prior work, include the existing log file path as the second argument.
 ```
 
-If this was an iteration on a previous manifest that had an execution log, include the log file path in the suggestion.
+If this was an iteration on a previous manifest that had an execution log, mention that existing log file path in the next-step suggestion.

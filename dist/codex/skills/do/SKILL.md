@@ -15,7 +15,7 @@ Execute a Manifest: satisfy all Deliverables' Acceptance Criteria while followin
 
 `$ARGUMENTS` = manifest file path (REQUIRED), optionally with execution log path
 
-If no arguments: Output error "Usage: /do <manifest-file-path> [log-file-path]"
+If no arguments: Output error "Expected arguments: <manifest-file-path> [log-file-path]"
 
 ## Existing Execution Log
 
@@ -35,13 +35,13 @@ If input includes a log file path (iteration on previous work): **treat it as so
 
 **Log after every action** - Write to execution log immediately after each AC attempt. No exceptions. This is disaster recovery—if context is lost, the log is the only record of what happened.
 
-**Must call /verify** - Can't declare done without verification. Invoke manifest-dev:verify with manifest and log paths.
+**Must invoke the `verify` skill** - Can't declare done without verification. Invoke the `verify` skill with the manifest and log paths.
 
 **Escalation boundary** - Escalate when: (1) ACs can't be met as written (contract broken), or (2) user requests a pause mid-workflow. If ACs remain achievable and no user interrupt, continue autonomously.
 
-**Stop requires /escalate** - During /do, you cannot stop without calling /verify→/done or /escalate. If you need to pause (user requested, waiting on external action), call /escalate with "User-Requested Pause" format. Short outputs like "Done." or "Waiting." will be blocked.
+**Formal exit required** - During `do`, you cannot stop without either invoking `verify` and reaching `done`, or invoking the `escalate` skill. If you need to pause (user requested, waiting on external action), use the `escalate` skill with "User-Requested Pause" format. Short outputs like "Done." or "Waiting." will be blocked.
 
-**Refresh before verify** - Read full execution log before calling /verify to restore context.
+**Refresh before verification** - Read the full execution log before invoking the `verify` skill to restore context.
 
 ## Memento Pattern
 

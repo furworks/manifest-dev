@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Post-compact hook that restores /do workflow context after compaction.
+Post-compact hook that restores do workflow context after compaction.
 
-When the session is compacted during a /do workflow, the manifest and log
-may be lost from context. This hook detects active /do workflows and
+When the session is compacted during a do workflow, the manifest and log
+may be lost from context. This hook detects active do workflows and
 reminds Claude to re-read the manifest and log files.
 
 Registered as SessionStart hook with "resume" matcher (Gemini source=resume = post-compaction).
@@ -19,11 +19,11 @@ from hook_utils import (
     parse_do_flow,
 )
 
-DO_WORKFLOW_RECOVERY_REMINDER = """This session was compacted during an active /do workflow. Context may have been lost.
+DO_WORKFLOW_RECOVERY_REMINDER = """This session was compacted during an active do workflow. Context may have been lost.
 
 CRITICAL: Before continuing, read the manifest and execution log in FULL.
 
-The /do was invoked with: {do_args}
+The do skill was invoked with: {do_args}
 
 1. Read the manifest file - contains deliverables, acceptance criteria, and approach
 2. Check /tmp/ for your execution log (do-log-*.md) and read it to recover progress
@@ -31,7 +31,7 @@ The /do was invoked with: {do_args}
 Do not restart completed work. Resume from where you left off."""
 
 
-DO_WORKFLOW_RECOVERY_FALLBACK = """This session was compacted during an active /do workflow. Context may have been lost.
+DO_WORKFLOW_RECOVERY_FALLBACK = """This session was compacted during an active do workflow. Context may have been lost.
 
 CRITICAL: Before continuing, recover your workflow context:
 
@@ -52,21 +52,21 @@ def main() -> None:
 
     transcript_path = hook_input.get("transcript_path", "")
 
-    # If no transcript, we can't detect /do workflow
+    # If no transcript, we can't detect a do workflow
     if not transcript_path:
         sys.exit(0)
 
     state = parse_do_flow(transcript_path)
 
-    # Not in /do workflow - nothing to do
+    # Not in a do workflow - nothing to do
     if not state.has_do:
         sys.exit(0)
 
-    # /do workflow completed - no need to recover
+    # do workflow completed - no need to recover
     if state.has_done or state.has_escalate:
         sys.exit(0)
 
-    # Active /do workflow - build recovery reminder
+    # Active do workflow - build recovery reminder
     if state.do_args:
         reminder = DO_WORKFLOW_RECOVERY_REMINDER.format(do_args=state.do_args)
     else:

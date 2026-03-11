@@ -1,6 +1,6 @@
 # Hook Behavioral Specification
 
-This document specifies the exact behavior that must be implemented in `index.ts` when porting from the Python hooks in `claude-plugins/manifest-dev/hooks/`.
+This document describes the exact behavior implemented in `index.ts` and serves as the maintenance reference for the OpenCode hook adaptation from `claude-plugins/manifest-dev/hooks/`.
 
 Corrected for OpenCode v1.2.15 (March 2026). See `.claude/skills/sync-tools/references/opencode-cli.md` for the full conversion reference.
 
@@ -66,7 +66,7 @@ This means Claude Code's transcript-parsing logic (`hook_utils.py`) cannot be re
 
 `tool.execute.before` and `tool.execute.after` do **NOT** fire for tool calls within subagents (issue #5894). This is a known gap — skills invoked via the `task` tool run in isolation and their internal tool calls bypass all hooks.
 
-**Impact**: If a subagent invokes /verify, /done, or /escalate internally, the workflow state tracker in `tool.execute.before` will not see those invocations. The `todo.updated` event (see below) provides a partial workaround for progress tracking.
+**Impact**: If a subagent invokes the `verify`, `done`, or `escalate` skill internally, the workflow state tracker in `tool.execute.before` will not see those invocations. The `todo.updated` event (see below) provides a partial workaround for progress tracking.
 
 ### Hook Execution Model
 
@@ -81,11 +81,11 @@ This means Claude Code's transcript-parsing logic (`hook_utils.py`) cannot be re
 **Trigger condition**: The tool being called is `skill` (or `task`) AND the skill name is `verify` (or ends with `:verify`).
 
 **Behavior**:
-1. In `tool.execute.before`: detect skill invocations and update workflow state (track /do, /done, /escalate, /verify)
-2. In `experimental.chat.system.transform`: when /verify was invoked during an active /do workflow, push the context reminder into `output.system[]`:
+1. In `tool.execute.before`: detect skill invocations and update workflow state (track `do`, `done`, `escalate`, `verify`)
+2. In `experimental.chat.system.transform`: when the `verify` skill was invoked during an active `do` workflow, push the context reminder into `output.system[]`:
 
 ```
-VERIFICATION CONTEXT CHECK: You are about to run /verify.
+VERIFICATION CONTEXT CHECK: You are about to invoke the verify skill.
 
 Arguments: {verify_args}
 
@@ -117,21 +117,21 @@ If no arguments are present, use a minimal version without the Arguments line.
 
 **Behavior** (decision tree — same logic as Claude Code, but enforcement is best-effort):
 
-1. **No /do in workflow state** -> No action (not in workflow)
-2. **Has /do AND has /done** -> No action (verified complete)
-3. **Has /do AND has /escalate** -> No action (properly escalated)
-4. **Has /do AND has TEAM_CONTEXT AND has /verify** -> Allow (team mode: verification delegated to lead). System message: "Verification delegated to the team lead. The lead will spawn verification teammates and relay results. You will receive a message with VERIFICATION_RESULT when complete."
-5. **Has /do, 3+ consecutive short outputs** -> Log warning:
+1. **No `do` in workflow state** -> No action (not in workflow)
+2. **Has `do` AND has `done`** -> No action (verified complete)
+3. **Has `do` AND has `escalate`** -> No action (properly escalated)
+4. **Has `do` AND has TEAM_CONTEXT AND has `verify`** -> Allow (team mode: verification delegated to lead). System message: "Verification delegated to the team lead. The lead will spawn verification teammates and relay results. You will receive a message with VERIFICATION_RESULT when complete."
+5. **Has `do`, 3+ consecutive short outputs** -> Log warning:
    ```
-   WARNING: Stop allowed to break infinite loop. The /do workflow
-   was NOT properly completed. Next time, call /escalate when blocked
-   instead of minimal outputs.
+   WARNING: Stop allowed to break an infinite loop. The do workflow
+   was NOT properly completed. Next time, invoke the escalate skill when blocked
+   instead of producing minimal outputs.
    ```
-6. **Has /do but no /done or /escalate** -> Best-effort: attempt to inject follow-up prompt (fragile):
+6. **Has `do` but no `done` or `escalate`** -> Best-effort: attempt to inject follow-up prompt (fragile):
    ```
-   Stop blocked: /do workflow requires formal exit.
-   Options: (1) Run /verify to check criteria - if all pass, /verify calls /done.
-   (2) Call /escalate - for blocking issues OR user-requested pauses.
+   Stop blocked: the do workflow requires a formal exit.
+   Options: (1) Invoke the verify skill to check criteria - if all pass, transition to the done skill.
+   (2) Invoke the escalate skill for blocking issues or user-requested pauses.
    Short outputs will be blocked. Choose one.
    ```
 
@@ -141,7 +141,7 @@ If no arguments are present, use a minimal version without the Arguments line.
 
 **OpenCode implementation notes**:
 - This is the most significant behavioral gap between Claude Code and OpenCode
-- The `experimental.chat.system.transform` hook provides a partial mitigation: inject a persistent system message reminding the LLM not to stop during active /do workflows
+- The `experimental.chat.system.transform` hook provides a partial mitigation: inject a persistent system message reminding the LLM not to stop during active `do` workflows
 - The `todo.updated` event can supplement state tracking for subagent actions
 
 ---
@@ -154,18 +154,18 @@ If no arguments are present, use a minimal version without the Arguments line.
 
 **Behavior**:
 
-1. **No /do in workflow state** -> No action
-2. **Has /do AND has /done or /escalate** -> No action (workflow complete)
-3. **Has /do, active workflow** -> Push recovery reminder into `output.context[]`:
+1. **No `do` in workflow state** -> No action
+2. **Has `do` AND has `done` or `escalate`** -> No action (workflow complete)
+3. **Has `do`, active workflow** -> Push recovery reminder into `output.context[]`:
 
-If /do arguments are available:
+If `do` arguments are available:
 ```
-This session was compacted during an active /do workflow.
+This session was compacted during an active do workflow.
 Context may have been lost.
 
 CRITICAL: Before continuing, read the manifest and execution log in FULL.
 
-The /do was invoked with: {do_args}
+The do skill was invoked with: {do_args}
 
 1. Read the manifest file - contains deliverables, acceptance criteria, and approach
 2. Check /tmp/ for your execution log (do-log-*.md) and read it to recover progress
@@ -173,9 +173,9 @@ The /do was invoked with: {do_args}
 Do not restart completed work. Resume from where you left off.
 ```
 
-If /do arguments are not available, use fallback:
+If `do` arguments are not available, use fallback:
 ```
-This session was compacted during an active /do workflow.
+This session was compacted during an active do workflow.
 Context may have been lost.
 
 CRITICAL: Before continuing, recover your workflow context:
@@ -207,8 +207,8 @@ Do not restart completed work. Resume from where you left off.
 
 **OpenCode implementation notes**:
 - This is fire-and-forget (bus event, not a hook)
-- Useful for monitoring /do workflow progress without relying on transcript parsing
-- Can trigger suggestions (e.g., "all AC-* items complete, consider running /verify")
+- Useful for monitoring `do` workflow progress without relying on transcript parsing
+- Can trigger suggestions (e.g., "all AC-* items complete, consider invoking the verify skill")
 
 ---
 
@@ -218,12 +218,12 @@ The Python hooks share transcript-parsing utilities. In OpenCode, these are repl
 
 ### `DoFlowState` (in-memory)
 Tracked via `tool.execute.before` handler:
-- `hasDo: boolean` — Whether /do was invoked
-- `hasDone: boolean` — Whether /done was called after last /do
-- `hasEscalate: boolean` — Whether /escalate was called after last /do
-- `hasVerify: boolean` — Whether /verify was called after last /do
-- `doArgs: string | null` — Arguments passed to /do
-- `hasTeamContext: boolean` — Whether /do args contain a TEAM_CONTEXT block
+- `hasDo: boolean` — Whether the `do` skill was invoked
+- `hasDone: boolean` — Whether the `done` skill was called after the last `do`
+- `hasEscalate: boolean` — Whether the `escalate` skill was called after the last `do`
+- `hasVerify: boolean` — Whether the `verify` skill was called after the last `do`
+- `doArgs: string | null` — Arguments passed to the `do` skill
+- `hasTeamContext: boolean` — Whether `do` args contain a TEAM_CONTEXT block
 
 ### `consecutiveShortOutputs` (in-memory counter)
 Tracked via `tool.execute.after` handler. Counts consecutive tool outputs under 100 characters. Reset on any substantial output.

@@ -9,7 +9,7 @@ This project uses a **define -> do -> verify -> done** workflow:
 3. **verify** -- Spawns parallel verification agents to check acceptance criteria and invariants against the implementation.
 4. **done** -- Completion marker. Summarizes execution, notes any deviations, and closes the workflow.
 
-Skills handle the workflow orchestration. Agents listed below are specialized verification subagents spawned by `/verify` and supporting skills.
+Skills handle the workflow orchestration. Agents listed below are specialized verification subagents spawned by the `verify` skill and supporting skills.
 
 > **Codex CLI note**: On Codex, these agents are approximated using TOML config stubs in `agents/`. Codex agents have 6 default tools (`shell_command`, `apply_patch`, `update_plan`, `request_user_input`, `web_search`, `view_image`) plus experimental tools (`read_file`, `list_dir`, `grep_files`) that may be available depending on model configuration. Review agents use `sandbox_mode = "read-only"` to enforce read-only behavior.
 
@@ -18,7 +18,7 @@ Skills handle the workflow orchestration. Agents listed below are specialized ve
 ## Verification Agent
 
 ### criteria-checker
-Read-only verification agent. Validates a single acceptance criterion or global invariant using any automated method: shell commands, codebase analysis, file inspection, reasoning, or web research. Returns structured PASS/FAIL results with evidence. Core to the `/verify` workflow -- spawned in parallel, one per criterion.
+Read-only verification agent. Validates a single acceptance criterion or global invariant using any automated method: shell commands, codebase analysis, file inspection, reasoning, or web research. Returns structured PASS/FAIL results with evidence. Core to the `verify` skill workflow -- spawned in parallel, one per criterion.
 
 **Codex approximation**: Use `shell_command` for running tests, linting, and file inspection. Use `web_search` for research-based criteria. Report results via `update_plan` to track verification progress.
 
@@ -80,12 +80,12 @@ Verifies that code changes comply with context file (AGENTS.md) instructions and
 ## Define Workflow Agents
 
 ### manifest-verifier
-Reviews `/define` manifests for gaps that would cause implementation failure or rework. Returns specific questions to ask and areas to probe so the interview can continue. Validates completeness of acceptance criteria, invariants, assumptions, and risk areas.
+Reviews manifests produced by the `define` skill for gaps that would cause implementation failure or rework. Returns specific questions to ask and areas to probe so the interview can continue. Validates completeness of acceptance criteria, invariants, assumptions, and risk areas.
 
 **Codex approximation**: Use `shell_command` to read the manifest file, then analyze its structure against the expected format. Report gaps via structured output.
 
 ### define-session-analyzer
-Analyzes `/define` session transcripts to extract user preference patterns -- what users push back on, consistently prefer, add unprompted, skip, or reject. These patterns become probing hints for future `/define` sessions. Used by the `learn-define-patterns` skill.
+Analyzes `define` session transcripts to extract user preference patterns -- what users push back on, consistently prefer, add unprompted, skip, or reject. These patterns become probing hints for future `define` sessions. Used by the `learn-define-patterns` skill.
 
 **Codex approximation**: Use `shell_command` to read JSONL session files, then write analysis results. This is the only agent that requires write access (`sandbox_mode = "workspace-write"`).
 
@@ -93,9 +93,9 @@ Analyzes `/define` session transcripts to extract user preference patterns -- wh
 
 ## How to Use on Codex CLI
 
-1. **Skills work directly** -- Use `$define`, `$do`, `$verify`, `$done`, `$escalate`, and `$learn-define-patterns` via the Agent Skills Open Standard
+1. **Installed skills are namespaced** -- Use `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, and `$learn-define-patterns-manifest-dev` via the Agent Skills Open Standard
 2. **Multi-agent system** -- Enable with `[features] multi_agent = true` in `.codex/config.toml`. TOML stubs in `agents/` configure per-role behavior.
 3. **Review agents are read-only** -- All review agents use `sandbox_mode = "read-only"` to prevent accidental modifications
-4. **Spawn agents by role** -- When multi-agent is enabled, Codex can spawn agents with specific roles matching the TOML config names (e.g., `code-bugs-reviewer`)
+4. **Spawn agents by role** -- When multi-agent is enabled, Codex can spawn agents with specific roles matching the TOML config names (e.g., `code-bugs-reviewer-manifest-dev`)
 5. **Default tools available** -- All agents have access to 6 default tools: `shell_command`, `apply_patch`, `update_plan`, `request_user_input`, `web_search`, `view_image`
 6. **Experimental tools** -- `read_file`, `list_dir`, `grep_files` may also be available depending on model configuration

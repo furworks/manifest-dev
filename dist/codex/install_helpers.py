@@ -10,6 +10,7 @@ vs /done) and idempotency (won't double-suffix on re-run).
 
 Usage:
     python3 install_helpers.py namespace <dir> [codex|gemini|opencode]
+    python3 install_helpers.py merge-config <source-config> <dest-config>
 """
 
 from __future__ import annotations
@@ -51,6 +52,9 @@ TEXT_EXTENSIONS = {".md", ".py", ".ts", ".json", ".toml", ".rules", ".txt"}
 
 # Files to never patch (they ARE the namespace tooling).
 SKIP_FILES = {"install_helpers.py", "install.sh"}
+
+MANAGED_CONFIG_START = "# >>> manifest-dev managed config >>>"
+MANAGED_CONFIG_END = "# <<< manifest-dev managed config <<<"
 
 
 def _build_regex() -> tuple[dict[str, str], re.Pattern[str]]:
@@ -189,6 +193,167 @@ def patch_files(base: Path) -> None:
                 fpath.write_text(patched, encoding="utf-8")
 
 
+def _extract_managed_agent_tables(source_text: str) -> str:
+    matches = list(re.finditer(r"(?m)^\[agents\.[^\]]+\]\s*$", source_text))
+    if not matches:
+        raise ValueError("No [agents.<name>] tables found in source config.")
+    return source_text[matches[0].start() :].strip() + "\n"
+
+
+def _strip_managed_config_block(text: str) -> str:
+    pattern = re.compile(
+        rf"\n?{re.escape(MANAGED_CONFIG_START)}\n.*?\n{re.escape(MANAGED_CONFIG_END)}\n?",
+        flags=re.DOTALL,
+    )
+    return pattern.sub("\n", text)
+
+
+def _strip_manifest_agent_tables(text: str) -> str:
+    names = "|".join(re.escape(f"{name}{SUFFIX}") for name in AGENTS)
+    pattern = re.compile(
+        rf"(?ms)^\[agents\.(?:{names})\]\n.*?(?=^\[|\Z)",
+    )
+    return pattern.sub("", text)
+
+
+def _upsert_key_in_table_body(body: str, key: str, value: str) -> str:
+    line = f"{key} = {value}"
+    pattern = re.compile(rf"(?m)^{re.escape(key)}\s*=.*$")
+    if pattern.search(body):
+        return pattern.sub(line, body, count=1)
+
+    if body and not body.endswith("\n"):
+        body += "\n"
+    return body + line + "\n"
+
+
+def _has_key_in_table_body(body: str, key: str) -> bool:
+    pattern = re.compile(rf"(?m)^{re.escape(key)}\s*=.*$")
+    return pattern.search(body) is not None
+
+
+def _ensure_missing_table_keys(
+    text: str,
+    table_name: str,
+    keys: list[tuple[str, str]],
+) -> str:
+    table_pattern = re.compile(
+        rf"(?ms)^(\[{re.escape(table_name)}\]\n)(.*?)(?=^\[|\Z)"
+    )
+    match = table_pattern.search(text)
+    if match:
+        body = match.group(2)
+        for key, value in keys:
+            if not _has_key_in_table_body(body, key):
+                body = _upsert_key_in_table_body(body, key, value)
+        return text[: match.start()] + match.group(1) + body + text[match.end() :]
+
+    if text and not text.endswith("\n"):
+        text += "\n"
+    if text.strip():
+        text += "\n"
+    lines = [f"[{table_name}]"] + [f"{key} = {value}" for key, value in keys]
+    return text + "\n".join(lines) + "\n"
+
+
+def _ensure_list_value_in_table(
+    text: str,
+    table_name: str,
+    key: str,
+    value: str,
+) -> str:
+    table_pattern = re.compile(
+        rf"(?ms)^(\[{re.escape(table_name)}\]\n)(.*?)(?=^\[|\Z)"
+    )
+    match = table_pattern.search(text)
+    list_value = f'["{value}"]'
+    if not match:
+        return _ensure_missing_table_keys(text, table_name, [(key, list_value)])
+
+    header, body = match.group(1), match.group(2)
+    key_pattern = re.compile(rf"(?m)^({re.escape(key)}\s*=\s*)(\[.*\])$")
+    key_match = key_pattern.search(body)
+    if not key_match:
+        body = _upsert_key_in_table_body(body, key, list_value)
+        return text[: match.start()] + header + body + text[match.end() :]
+
+    existing_list = key_match.group(2)
+    if f'"{value}"' in existing_list:
+        return text
+
+    inner = existing_list[1:-1].strip()
+    merged_list = f'[{inner}, "{value}"]' if inner else list_value
+    body = key_pattern.sub(rf"\1{merged_list}", body, count=1)
+    return text[: match.start()] + header + body + text[match.end() :]
+
+
+def _ensure_table_keys(
+    text: str,
+    table_name: str,
+    keys: list[tuple[str, str]],
+) -> str:
+    table_pattern = re.compile(
+        rf"(?ms)^(\[{re.escape(table_name)}\]\n)(.*?)(?=^\[|\Z)"
+    )
+    match = table_pattern.search(text)
+    if match:
+        body = match.group(2)
+        for key, value in keys:
+            body = _upsert_key_in_table_body(body, key, value)
+        return text[: match.start()] + match.group(1) + body + text[match.end() :]
+
+    if text and not text.endswith("\n"):
+        text += "\n"
+    if text.strip():
+        text += "\n"
+    lines = [f"[{table_name}]"] + [f"{key} = {value}" for key, value in keys]
+    return text + "\n".join(lines) + "\n"
+
+
+def merge_config(source_config_path: str, dest_config_path: str) -> None:
+    source_text = Path(source_config_path).read_text(encoding="utf-8")
+    managed_tables = _extract_managed_agent_tables(source_text).rstrip()
+    managed_block = (
+        f"{MANAGED_CONFIG_START}\n"
+        f"{managed_tables}\n"
+        f"{MANAGED_CONFIG_END}\n"
+    )
+
+    dest_path = Path(dest_config_path)
+    if dest_path.exists():
+        merged_text = dest_path.read_text(encoding="utf-8")
+    else:
+        merged_text = (
+            '# manifest-dev configuration for Codex CLI\n'
+            '# Merge relevant sections into your .codex/config.toml\n'
+        )
+
+    merged_text = _strip_managed_config_block(merged_text)
+    merged_text = _strip_manifest_agent_tables(merged_text)
+    merged_text = _ensure_missing_table_keys(
+        merged_text,
+        "features",
+        [("multi_agent", "true")],
+    )
+    merged_text = _ensure_missing_table_keys(
+        merged_text,
+        "agents",
+        [
+            ("max_threads", "6"),
+            ("max_depth", "1"),
+        ],
+    )
+    merged_text = _ensure_list_value_in_table(
+        merged_text,
+        "agents",
+        "project_doc_fallback_filenames",
+        "CLAUDE.md",
+    )
+
+    merged_text = merged_text.rstrip() + "\n\n" + managed_block
+    dest_path.write_text(merged_text, encoding="utf-8")
+
+
 # ── Main entry point ──────────────────────────────────────────────────
 
 
@@ -210,10 +375,16 @@ def namespace(base_dir: str, cli_type: str = "gemini") -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] != "namespace":
+    if len(sys.argv) >= 3 and sys.argv[1] == "namespace":
+        namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")
+    elif len(sys.argv) == 4 and sys.argv[1] == "merge-config":
+        merge_config(sys.argv[2], sys.argv[3])
+    else:
         print(
-            f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]",
+            (
+                f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]\n"
+                f"   or: {sys.argv[0]} merge-config <source-config> <dest-config>"
+            ),
             file=sys.stderr,
         )
         sys.exit(1)
-    namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")

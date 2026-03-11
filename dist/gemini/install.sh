@@ -12,13 +12,15 @@
 #   1. Downloads the latest dist/gemini from the repo
 #   2. Namespaces all components with -manifest-dev suffix (avoids collisions)
 #   3. Installs to ~/.gemini/extensions/manifest-dev/
-#   4. Never overwrites user customizations in GEMINI.md
+#   4. Merges enableAgents + hooks into ~/.gemini/settings.json additively
 #
 set -euo pipefail
 
 REPO="doodledood/manifest-dev"
 BRANCH="main"
 INSTALL_DIR="${HOME}/.gemini/extensions/manifest-dev"
+SETTINGS_FILE="${HOME}/.gemini/settings.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMP_DIR=$(mktemp -d)
 
 cleanup() {
@@ -26,38 +28,39 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "==> Downloading manifest-dev extension..."
+if [ -f "$SCRIPT_DIR/install_helpers.py" ] && [ -d "$SCRIPT_DIR/skills" ] && [ -d "$SCRIPT_DIR/agents" ] && [ -d "$SCRIPT_DIR/hooks" ] && [ -f "$SCRIPT_DIR/gemini-extension.json" ]; then
+    echo "==> Using local dist/gemini from ${SCRIPT_DIR}..."
+    SOURCE_DIR="${TMP_DIR}/local-dist"
+    mkdir -p "$SOURCE_DIR"
+    cp -R "$SCRIPT_DIR"/. "$SOURCE_DIR"/
+else
+    echo "==> Downloading manifest-dev extension..."
 
-# Download repo tarball
-TARBALL_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
-curl -fsSL "$TARBALL_URL" -o "${TMP_DIR}/repo.tar.gz"
+    TARBALL_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
+    curl -fsSL "$TARBALL_URL" -o "${TMP_DIR}/repo.tar.gz"
 
-# Extract dist/gemini from tarball
-tar xzf "${TMP_DIR}/repo.tar.gz" -C "$TMP_DIR"
+    tar xzf "${TMP_DIR}/repo.tar.gz" -C "$TMP_DIR"
 
-# Find the extracted directory (manifest-dev-main or similar)
-EXTRACTED_DIR=$(ls -d "${TMP_DIR}"/manifest-dev-*/ 2>/dev/null | head -1)
-if [ -z "$EXTRACTED_DIR" ]; then
-    echo "ERROR: Could not find extracted repo directory" >&2
-    exit 1
+    EXTRACTED_DIR=$(ls -d "${TMP_DIR}"/manifest-dev-*/ 2>/dev/null | head -1)
+    if [ -z "$EXTRACTED_DIR" ]; then
+        echo "ERROR: Could not find extracted repo directory" >&2
+        exit 1
+    fi
+
+    SOURCE_DIR="${EXTRACTED_DIR}dist/gemini"
+    if [ ! -d "$SOURCE_DIR" ]; then
+        echo "ERROR: dist/gemini not found in downloaded repo" >&2
+        exit 1
+    fi
 fi
 
-SOURCE_DIR="${EXTRACTED_DIR}dist/gemini"
-if [ ! -d "$SOURCE_DIR" ]; then
-    echo "ERROR: dist/gemini not found in downloaded repo" >&2
-    exit 1
-fi
-
-# Namespace all components in source before installing
 echo "==> Namespacing components..."
 python3 "${SOURCE_DIR}/install_helpers.py" namespace "$SOURCE_DIR" gemini
 
-# Create install directory
 mkdir -p "$INSTALL_DIR"
 
 echo "==> Installing to ${INSTALL_DIR}..."
 
-# Agents (selective cleanup: remove only our namespaced files, preserve others)
 if [ -d "${SOURCE_DIR}/agents" ]; then
     mkdir -p "${INSTALL_DIR}/agents"
     find "${INSTALL_DIR}/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
@@ -65,7 +68,6 @@ if [ -d "${SOURCE_DIR}/agents" ]; then
     echo "    agents/ ($(ls "${INSTALL_DIR}/agents" | wc -l | tr -d ' ') files)"
 fi
 
-# Skills (selective cleanup: remove only our namespaced dirs)
 if [ -d "${SOURCE_DIR}/skills" ]; then
     mkdir -p "${INSTALL_DIR}/skills"
     find "${INSTALL_DIR}/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -73,7 +75,6 @@ if [ -d "${SOURCE_DIR}/skills" ]; then
     echo "    skills/ ($(ls "${INSTALL_DIR}/skills" | wc -l | tr -d ' ') dirs)"
 fi
 
-# Hooks (extension-private dir, safe to overwrite entirely)
 if [ -d "${SOURCE_DIR}/hooks" ]; then
     rm -rf "${INSTALL_DIR}/hooks"
     cp -r "${SOURCE_DIR}/hooks" "${INSTALL_DIR}/hooks"
@@ -81,13 +82,11 @@ if [ -d "${SOURCE_DIR}/hooks" ]; then
     echo "    hooks/ ($(ls "${INSTALL_DIR}/hooks" | wc -l | tr -d ' ') files)"
 fi
 
-# Copy extension manifest (always overwrite)
 if [ -f "${SOURCE_DIR}/gemini-extension.json" ]; then
     cp "${SOURCE_DIR}/gemini-extension.json" "${INSTALL_DIR}/gemini-extension.json"
     echo "    gemini-extension.json"
 fi
 
-# Copy GEMINI.md (always update -- backup existing first)
 if [ -f "${SOURCE_DIR}/GEMINI.md" ]; then
     if [ -f "${INSTALL_DIR}/GEMINI.md" ]; then
         cp "${INSTALL_DIR}/GEMINI.md" "${INSTALL_DIR}/GEMINI.md.bak"
@@ -99,21 +98,25 @@ if [ -f "${SOURCE_DIR}/GEMINI.md" ]; then
     fi
 fi
 
-# Copy README
 if [ -f "${SOURCE_DIR}/README.md" ]; then
     cp "${SOURCE_DIR}/README.md" "${INSTALL_DIR}/README.md"
     echo "    README.md"
 fi
 
+mkdir -p "$(dirname "$SETTINGS_FILE")"
+if [ -f "$SETTINGS_FILE" ]; then
+    cp "$SETTINGS_FILE" "$SETTINGS_FILE.bak"
+    python3 "${SOURCE_DIR}/install_helpers.py" merge-settings "${INSTALL_DIR}/hooks/hooks.json" "$SETTINGS_FILE"
+    echo "    settings.json (merged, backup at settings.json.bak)"
+else
+    python3 "${SOURCE_DIR}/install_helpers.py" merge-settings "${INSTALL_DIR}/hooks/hooks.json" "$SETTINGS_FILE"
+    echo "    settings.json (created with enableAgents + manifest-dev hooks)"
+fi
+
 echo ""
 echo "==> Installation complete!"
 echo ""
-echo "Next steps:"
-echo "  1. Enable agents in settings.json:"
-echo '     { "experimental": { "enableAgents": true } }'
-echo ""
-echo "  2. Merge hooks into your settings.json (see hooks/hooks.json)"
-echo ""
-echo "  3. Start using: gemini> /define-manifest-dev my task"
+echo "No manual settings changes are required."
+echo "Start a Gemini session and ask it to use the define-manifest-dev skill for your task."
 echo ""
 echo "Installed to: ${INSTALL_DIR}"

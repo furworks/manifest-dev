@@ -33,7 +33,7 @@ For each target CLI, read its reference file first. The reference file is **the 
 |-----------|------|
 | **Skills** | Copy unchanged (Agent Skills Open Standard = universal). Include all subdirectories. Replace operational CLAUDE.md references (e.g., "write to CLAUDE.md") with CLI context file name per reference file. Leave research/reference content unchanged. |
 | **Agents** | Convert frontmatter per reference file. Keep prompt body as identical as possible to Claude Code original — categories, actionability filters, severity guidelines, output formats, out-of-scope sections are the core value. Only change: frontmatter format, namespace suffix, context file name (CLAUDE.md → CLI name per reference file), genuinely unsupported features (document as limitation, don't remove). |
-| **Hooks** | Adapt to target hook protocol per reference file. Generate stubs + behavioral spec where full adaptation isn't automatable. |
+| **Hooks** | Adapt to the target hook protocol per reference file. Generate complete, installable hook/plugin payloads. Document unavoidable runtime gaps, but do not ship stubs or require manual post-install wiring. |
 | **Commands** | Generate command files from user-invocable skills (`user-invocable: true`, the default). Per reference file. |
 | **Context file** | Workflow overview + agent descriptions in the CLI's native context format per reference file. |
 | **README** | Component table, install instructions, feature parity table, required config, link to GitHub repo. |
@@ -47,7 +47,9 @@ Remote install (no clone needed) must be the primary method. Use the repo from t
 ### Install script constraints
 
 - Idempotent (safe to re-run for updates)
-- Never overwrite user-customized files
+- Never overwrite user-owned shared entrypoints or config files; merge shared config additively
+- Only replace installer-managed namespaced files or extension-private files owned by this distribution
+- Full setup must complete from `install.sh` alone; no required manual follow-up steps
 - Install scripts namespace all components with `-manifest-dev` suffix at install time via `install_helpers.py`
 - Selective cleanup: delete only `*-manifest-dev*` files/dirs, never `rm -rf` shared directories
 - `dist/` keeps original names; namespacing is an install-time concern
@@ -73,5 +75,5 @@ Summary table after all CLIs processed:
 | CLI | Skills | Agents | Hooks | Commands | Status |
 |-----|--------|--------|-------|----------|--------|
 | Gemini | N | N converted | N adapted | — | Complete |
-| OpenCode | N | N converted | stubs | N | Complete |
+| OpenCode | N | N converted | N adapted | N | Complete |
 | Codex | N | AGENTS.md + N TOML | none | — | Complete |

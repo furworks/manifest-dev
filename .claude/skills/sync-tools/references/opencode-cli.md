@@ -8,7 +8,7 @@ Reference for converting Claude Code plugin components to OpenCode format (anoma
 |-----------|------------------------|----------------|
 | Skills | Copy unchanged | — |
 | Agents | Frontmatter conversion (tool map + format) | Temperature/mode inference, description enrichment |
-| Hooks | Generate plugin skeleton with event bindings | Port Python logic to TypeScript |
+| Hooks | Generate complete plugin module placed in the local plugin directory | Adapt behavioral logic to OpenCode's event model |
 | Commands | Map skill → command markdown | Adapt prompt body |
 | MCP config | Generate opencode.json snippet | — |
 | Instructions | Rename CLAUDE.md → AGENTS.md | — |
@@ -333,13 +333,9 @@ Additional OpenCode events (no Claude Code equivalent):
 - `permission.ask` — intercept permission prompts (`output.status = "deny" | "allow"`)
 
 **Plugin installation**:
-```json
-// opencode.json
-{ "plugin": ["./plugins/manifest-dev/index.ts"] }
-```
-Or: `.opencode/plugins/index.ts` (auto-discovered).
-
-Dependencies: `.opencode/package.json` with `@opencode-ai/plugin` — OpenCode auto-installs via Bun.
+- Local plugins are auto-loaded from top-level JavaScript/TypeScript files in `.opencode/plugins/` or `~/.config/opencode/plugins/`
+- Install manifest-dev as its own top-level file (for example `plugins/manifest-dev.ts`) so it loads alongside a user's existing `plugins/index.ts`
+- Do not require changes to a user's existing root `plugins/index.ts`, root `package.json`, or `opencode.json`
 
 **Custom tools** (`.opencode/tools/`):
 ```typescript
@@ -382,10 +378,9 @@ dist/opencode/
 │   └── verify/
 │       └── SKILL.md
 ├── plugins/
-│   ├── index.ts                # Hook plugin (manual implementation)
-│   └── HOOK_SPEC.md            # Behavioral specification
+│   ├── index.ts                # Hook plugin (complete installable implementation)
+│   └── HOOK_SPEC.md            # Behavioral specification / maintenance reference
 ├── tools/                      # Custom tools (if any)
-├── opencode.json               # MCP config snippet
 └── README.md
 ```
 
@@ -407,9 +402,9 @@ cp -r dist/opencode/agents/* .opencode/agents/
 # Commands
 cp -r dist/opencode/commands/* .opencode/commands/
 
-# Plugins (hook stubs — manual implementation needed)
-cp -r dist/opencode/plugins/* .opencode/plugins/
-# Then: cd .opencode && bun install @opencode-ai/plugin
+# Plugin payload (auto-loaded)
+cp dist/opencode/plugins/index.ts .opencode/plugins/manifest-dev.ts
+cp dist/opencode/plugins/HOOK_SPEC.md .opencode/plugins/manifest-dev.HOOK_SPEC.md
 ```
 
 ## Skill Chaining
@@ -451,19 +446,18 @@ The `context-file-adherence-reviewer` agent already uses generic "context file" 
 
 ## Known Limitations
 
-1. **Hooks require manual JS/TS rewrite** — Python hooks cannot run in Bun. Generated stubs provide structure; HOOK_SPEC.md provides behavioral intent.
-2. **Block pattern** — **Throw an Error** to block tool calls, NOT `args.abort`. Error message becomes tool result seen by LLM. Confirmed from source code and issue #5894.
-3. **No Stop hook** — `session.idle` is fire-and-forget. **Cannot prevent session stopping.** Workaround (`client.session.prompt()`) is fragile with race conditions in `run` mode (issue #15267). Feature request exists (issue #12472).
-4. **Subagent hook bypass** — `tool.execute.before`/`after` does NOT fire for tool calls within subagents (issue #5894). Security/guardrail gap.
-5. **No JSONL transcript** — Session data in SQLite (`~/.local/share/opencode/opencode.db`), not JSONL files. Access via SDK client API only. Cannot reuse Claude Code's transcript parsing logic directly.
-6. **Compaction hook is experimental** — `experimental.session.compacting` prefix means it may change without notice.
-7. **Context injection is experimental** — `experimental.chat.system.transform` is the recommended approach but is also experimental.
-8. **No Notification hooks** — No equivalent to Claude Code's Notification event.
-9. **Plugin API may evolve** — v1.2.x is stable but plugin API could change.
-10. **Native .claude/ compat** — Users may not need dist/ for skills at all.
-11. **$ARGUMENTS not standardized** — Skills using `$ARGUMENTS` work in Claude Code but behavior undefined in OpenCode.
-12. **BashOutput deduplicated** — OpenCode uses `bash` for both; set `bash: true` once.
-13. **Agent mode field** — `all` (default) = everywhere; `subagent` = spawned only; `primary` = top-level only.
-14. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList are todo management tools (map to `todowrite`/`todoread`), NOT subagent tools. Only `Agent` maps to `task`.
-15. **apply_patch vs edit/write** — GPT models get `apply_patch` instead of `edit`/`write`. Non-GPT models (Anthropic, etc.) get `edit`/`write`. The swap is automatic in OpenCode's registry.
-16. **tui.prompt.append is NOT context injection** — It fills the TUI input field, not system messages. Use `experimental.chat.system.transform` for system context.
+1. **Block pattern** — **Throw an Error** to block tool calls, NOT `args.abort`. Error message becomes tool result seen by LLM. Confirmed from source code and issue #5894.
+2. **No Stop hook** — `session.idle` is fire-and-forget. **Cannot prevent session stopping.** Workaround (`client.session.prompt()`) is fragile with race conditions in `run` mode (issue #15267). Feature request exists (issue #12472).
+3. **Subagent hook bypass** — `tool.execute.before`/`after` does NOT fire for tool calls within subagents (issue #5894). Security/guardrail gap.
+4. **No JSONL transcript** — Session data in SQLite (`~/.local/share/opencode/opencode.db`), not JSONL files. Access via SDK client API only. Cannot reuse Claude Code's transcript parsing logic directly.
+5. **Compaction hook is experimental** — `experimental.session.compacting` prefix means it may change without notice.
+6. **Context injection is experimental** — `experimental.chat.system.transform` is the recommended approach but is also experimental.
+7. **No Notification hooks** — No equivalent to Claude Code's Notification event.
+8. **Plugin API may evolve** — v1.2.x is stable but plugin API could change.
+9. **Native .claude/ compat** — Users may not need dist/ for skills at all.
+10. **$ARGUMENTS not standardized** — Skills using `$ARGUMENTS` work in Claude Code but behavior undefined in OpenCode.
+11. **BashOutput deduplicated** — OpenCode uses `bash` for both; set `bash: true` once.
+12. **Agent mode field** — `all` (default) = everywhere; `subagent` = spawned only; `primary` = top-level only.
+13. **TaskCreate ≠ Agent** — Claude Code's TaskCreate/TaskUpdate/TaskGet/TaskList are todo management tools (map to `todowrite`/`todoread`), NOT subagent tools. Only `Agent` maps to `task`.
+14. **apply_patch vs edit/write** — GPT models get `apply_patch` instead of `edit`/`write`. Non-GPT models (Anthropic, etc.) get `edit`/`write`. The swap is automatic in OpenCode's registry.
+15. **tui.prompt.append is NOT context injection** — It fills the TUI input field, not system messages. Use `experimental.chat.system.transform` for system context.

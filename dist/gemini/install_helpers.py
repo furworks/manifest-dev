@@ -10,11 +10,13 @@ vs /done) and idempotency (won't double-suffix on re-run).
 
 Usage:
     python3 install_helpers.py namespace <dir> [codex|gemini|opencode]
+    python3 install_helpers.py merge-settings <source-hooks> <dest-settings>
 """
 
 from __future__ import annotations
 
 import os
+import json
 import re
 import sys
 from pathlib import Path
@@ -189,6 +191,51 @@ def patch_files(base: Path) -> None:
                 fpath.write_text(patched, encoding="utf-8")
 
 
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def merge_settings(source_hooks_path: str, dest_settings_path: str) -> None:
+    """Merge manifest-dev's Gemini settings requirements additively."""
+    source_data = json.loads(Path(source_hooks_path).read_text(encoding="utf-8"))
+
+    dest_path = Path(dest_settings_path)
+    if dest_path.exists():
+        settings = json.loads(dest_path.read_text(encoding="utf-8"))
+    else:
+        settings = {}
+
+    experimental = settings.setdefault("experimental", {})
+    if not isinstance(experimental, dict):
+        raise ValueError("'experimental' must be an object when present")
+    experimental["enableAgents"] = True
+
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        raise ValueError("'hooks' must be an object when present")
+
+    source_hooks = source_data.get("hooks", {})
+    if not isinstance(source_hooks, dict):
+        raise ValueError("Source hooks.json must contain a top-level 'hooks' object")
+
+    for event_name, event_entries in source_hooks.items():
+        if not isinstance(event_entries, list):
+            raise ValueError(f"hooks.{event_name} must be a list")
+
+        existing_entries = hooks.setdefault(event_name, [])
+        if not isinstance(existing_entries, list):
+            raise ValueError(f"settings.hooks.{event_name} must be a list when present")
+
+        seen = {_canonical_json(entry) for entry in existing_entries}
+        for entry in event_entries:
+            marker = _canonical_json(entry)
+            if marker not in seen:
+                existing_entries.append(entry)
+                seen.add(marker)
+
+    dest_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+
+
 # ── Main entry point ──────────────────────────────────────────────────
 
 
@@ -210,10 +257,14 @@ def namespace(base_dir: str, cli_type: str = "gemini") -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] != "namespace":
+    if len(sys.argv) >= 3 and sys.argv[1] == "namespace":
+        namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")
+    elif len(sys.argv) == 4 and sys.argv[1] == "merge-settings":
+        merge_settings(sys.argv[2], sys.argv[3])
+    else:
         print(
-            f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]",
+            f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]\n"
+            f"       {sys.argv[0]} merge-settings <source-hooks> <dest-settings>",
             file=sys.stderr,
         )
         sys.exit(1)
-    namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")

@@ -7,6 +7,7 @@ multi_agent = true
 [agents]
 max_threads = 6
 max_depth = 1
+project_doc_fallback_filenames = ["CLAUDE.md"]
 
 # Agent role definitions -- see agents/*.toml for per-role config
 
@@ -57,6 +58,3 @@ config_file = "agents/manifest-verifier.toml"
 [agents.define-session-analyzer]
 description = "Analyzes /define sessions to extract user preference patterns"
 config_file = "agents/define-session-analyzer.toml"
-
-# Read CLAUDE.md as fallback for AGENTS.md
-project_doc_fallback_filenames = ["CLAUDE.md"]

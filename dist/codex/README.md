@@ -7,7 +7,7 @@ Verification-first manifest workflows adapted for Codex CLI. Define tasks, execu
 | Component | Count | Status |
 |-----------|-------|--------|
 | Skills | 6 | Full compatibility (Agent Skills Open Standard) |
-| Agents | AGENTS.md + 12 TOML stubs | Informational + multi-agent config |
+| Agents | 12 TOML stubs + reference AGENTS.md | Multi-agent config + bundled reference guide |
 | Execution rules | 1 | Starlark .rules file |
 | Config | 1 | Multi-agent TOML config |
 | Hooks | 0 | Not available (Codex has no hook system yet) |
@@ -25,7 +25,7 @@ Verification-first manifest workflows adapted for Codex CLI. Define tasks, execu
 
 ### AGENTS.md
 
-Describes all 12 agents, their purposes, the define-do-verify-done workflow, and how to approximate their behavior using Codex's multi-agent system.
+Bundled as a reference document in `dist/codex/AGENTS.md`. It is not installed into `~/.codex/` by the installer.
 
 ### TOML Agent Stubs (12 total)
 
@@ -48,7 +48,7 @@ Per-agent TOML configuration files for Codex's multi-agent system. Each agent ha
 
 ### Execution Rules
 
-`rules/default.rules` provides safe defaults in Starlark:
+`rules/default.rules` is the bundled rules source. The installer copies it to `~/.codex/rules/manifest-dev.rules` to avoid clobbering an existing `default.rules`:
 - **Allow**: git operations, npm/yarn/pnpm, pytest, ruff, black, mypy, cat, ls, find, head, tail, grep
 - **Prompt**: rm, mv, cp, tee, git push
 - **Forbidden**: iptables, ip6tables, ifconfig, route (network modification)
@@ -65,7 +65,9 @@ Per-agent TOML configuration files for Codex's multi-agent system. Each agent ha
 curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/codex/install.sh | bash
 ```
 
-Installs skills, AGENTS.md, agent TOML stubs, execution rules, and config. Run again to update. Will not overwrite existing `.codex/config.toml`.
+Installs skills, agent TOML stubs, execution rules, and config into `~/.codex/` by default, or `$CODEX_HOME` if set. It does not write `AGENTS.md`. Run again to update. Existing `config.toml` is backed up and merged with the manifest-dev sections.
+
+After install, invoke the namespaced skills directly on Codex: `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, and `$learn-define-patterns-manifest-dev`.
 
 ### Skills only
 
@@ -76,22 +78,31 @@ npx skills add doodledood/manifest-dev --all -a codex
 ### Manual
 
 ```bash
-# Skills
-cp -r dist/codex/skills/* .agents/skills/
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+TMP_DIR=$(mktemp -d)
+mkdir -p "$TMP_DIR/codex"
+cp -R dist/codex/. "$TMP_DIR/codex"
+python3 "$TMP_DIR/codex/install_helpers.py" namespace "$TMP_DIR/codex" codex
 
-# AGENTS.md
-cp dist/codex/AGENTS.md ./AGENTS.md
+# Skills
+mkdir -p "$CODEX_HOME/skills"
+cp -r "$TMP_DIR/codex/skills/"* "$CODEX_HOME/skills/"
 
 # Agent TOML stubs
-mkdir -p .codex/agents
-cp dist/codex/agents/*.toml .codex/agents/
+mkdir -p "$CODEX_HOME/agents"
+cp "$TMP_DIR/codex/agents/"*.toml "$CODEX_HOME/agents/"
 
 # Execution rules
-mkdir -p .codex/rules
-cp dist/codex/rules/default.rules .codex/rules/
+mkdir -p "$CODEX_HOME/rules"
+cp "$TMP_DIR/codex/rules/default.rules" "$CODEX_HOME/rules/manifest-dev.rules"
 
-# Config (merge into existing or copy fresh)
-cp dist/codex/config.toml .codex/config.toml
+# Config
+if [ -f "$CODEX_HOME/config.toml" ]; then
+  cp "$CODEX_HOME/config.toml" "$CODEX_HOME/config.toml.bak"
+fi
+python3 "$TMP_DIR/codex/install_helpers.py" merge-config "$TMP_DIR/codex/config.toml" "$CODEX_HOME/config.toml"
+
+rm -rf "$TMP_DIR"
 ```
 
 ## Feature Parity

@@ -165,7 +165,7 @@ Both `/define` and `/do` support a team collaboration mode activated by passing 
 
 ## Multi-CLI Distribution
 
-Multi-CLI distributions under `dist/` for Gemini CLI, OpenCode, and Codex CLI are maintained at the repo level via `/sync-tools` (in `.claude/skills/`). The Claude Code plugin is the single source of truth; `/sync-tools` converts agents, adapts hooks, and copies skills unchanged. See per-CLI READMEs in `dist/` for installation and feature parity.
+Multi-CLI distributions under `dist/` for Gemini CLI, OpenCode, and Codex CLI are maintained at the repo level via `/sync-tools` (in `.claude/skills/`). The Claude Code plugin is the single source of truth; `/sync-tools` converts agents, adapts hooks into installable target-native payloads, wires additive installer config, and copies skills unchanged. See per-CLI READMEs in `dist/` for installation and feature parity.
 
 ## Hooks
 
