@@ -57,7 +57,7 @@ Per-agent TOML configuration files for Codex's multi-agent system. Each agent ha
 
 `config.toml` enables multi-agent with all 12 agents registered, `max_threads = 6`, `max_depth = 1`, and `project_doc_fallback_filenames = ["CLAUDE.md"]`.
 
-## Install / Update
+## Install / Update / Uninstall
 
 ### Everything (one command, no clone needed)
 
@@ -68,6 +68,14 @@ curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/c
 Installs skills, agent TOML stubs, execution rules, and config into `~/.codex/` by default, or `$CODEX_HOME` if set. It does not write `AGENTS.md`. Run again to update. Existing `config.toml` is backed up and merged with the manifest-dev sections.
 
 After install, invoke the namespaced skills directly on Codex: `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, and `$learn-define-patterns-manifest-dev`.
+
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/codex/install.sh | bash -s -- uninstall
+```
+
+This removes only manifest-dev-managed Codex files: the suffixed skills, suffixed agent TOML stubs, `rules/manifest-dev.rules`, and the manifest-dev-managed sections in `~/.codex/config.toml`. Before unmerging shared config, the script backs it up to `config.toml.pre-manifest-dev-uninstall.bak`.
 
 ### Skills only
 

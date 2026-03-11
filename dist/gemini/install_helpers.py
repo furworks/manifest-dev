@@ -53,6 +53,7 @@ TEXT_EXTENSIONS = {".md", ".py", ".ts", ".json", ".toml", ".rules", ".txt"}
 
 # Files to never patch (they ARE the namespace tooling).
 SKIP_FILES = {"install_helpers.py", "install.sh"}
+STATE_VERSION = 1
 
 
 def _build_regex() -> tuple[dict[str, str], re.Pattern[str]]:
@@ -195,15 +196,60 @@ def _canonical_json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
-def merge_settings(source_hooks_path: str, dest_settings_path: str) -> None:
+def _load_state(state_path: str | None) -> dict[str, object]:
+    if not state_path:
+        return {}
+    path = Path(state_path)
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_state(state_path: str | None, state: dict[str, object]) -> None:
+    if not state_path:
+        return
+    Path(state_path).write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+
+
+def _build_settings_state(
+    settings: dict[str, object],
+    settings_existed: bool,
+) -> dict[str, object]:
+    experimental = settings.get("experimental")
+    enable_agents_present = False
+    enable_agents_value: object | None = None
+    if isinstance(experimental, dict) and "enableAgents" in experimental:
+        enable_agents_present = True
+        enable_agents_value = experimental.get("enableAgents")
+
+    return {
+        "version": STATE_VERSION,
+        "settings_existed": settings_existed,
+        "experimental": {
+            "enableAgents": {
+                "present": enable_agents_present,
+                "value": enable_agents_value,
+            }
+        },
+        "hooks_added": {},
+    }
+
+
+def merge_settings(
+    source_hooks_path: str,
+    dest_settings_path: str,
+    state_path: str | None = None,
+) -> None:
     """Merge manifest-dev's Gemini settings requirements additively."""
     source_data = json.loads(Path(source_hooks_path).read_text(encoding="utf-8"))
 
     dest_path = Path(dest_settings_path)
-    if dest_path.exists():
+    settings_existed = dest_path.exists()
+    if settings_existed:
         settings = json.loads(dest_path.read_text(encoding="utf-8"))
     else:
         settings = {}
+    state = _load_state(state_path) or _build_settings_state(settings, settings_existed)
 
     experimental = settings.setdefault("experimental", {})
     if not isinstance(experimental, dict):
@@ -218,6 +264,10 @@ def merge_settings(source_hooks_path: str, dest_settings_path: str) -> None:
     if not isinstance(source_hooks, dict):
         raise ValueError("Source hooks.json must contain a top-level 'hooks' object")
 
+    hooks_added = state.setdefault("hooks_added", {})
+    if not isinstance(hooks_added, dict):
+        raise ValueError("State hooks_added must be an object when present")
+
     for event_name, event_entries in source_hooks.items():
         if not isinstance(event_entries, list):
             raise ValueError(f"hooks.{event_name} must be a list")
@@ -227,13 +277,96 @@ def merge_settings(source_hooks_path: str, dest_settings_path: str) -> None:
             raise ValueError(f"settings.hooks.{event_name} must be a list when present")
 
         seen = {_canonical_json(entry) for entry in existing_entries}
+        recorded = hooks_added.setdefault(event_name, [])
+        if not isinstance(recorded, list):
+            raise ValueError(f"State hooks_added.{event_name} must be a list when present")
+        recorded_seen = {_canonical_json(entry) for entry in recorded}
         for entry in event_entries:
             marker = _canonical_json(entry)
             if marker not in seen:
                 existing_entries.append(entry)
                 seen.add(marker)
+                if marker not in recorded_seen:
+                    recorded.append(entry)
+                    recorded_seen.add(marker)
 
     dest_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    _write_state(state_path, state)
+
+
+def unmerge_settings(
+    source_hooks_path: str,
+    dest_settings_path: str,
+    state_path: str | None = None,
+) -> None:
+    """Remove manifest-dev's Gemini settings requirements additively."""
+    dest_path = Path(dest_settings_path)
+    if not dest_path.exists():
+        return
+
+    source_data = json.loads(Path(source_hooks_path).read_text(encoding="utf-8"))
+    settings = json.loads(dest_path.read_text(encoding="utf-8"))
+    state = _load_state(state_path)
+
+    hooks = settings.get("hooks")
+    if isinstance(hooks, dict):
+        removal_hooks = state.get("hooks_added", source_data.get("hooks", {}))
+        if isinstance(removal_hooks, dict):
+            for event_name, entries in removal_hooks.items():
+                existing_entries = hooks.get(event_name)
+                if not isinstance(existing_entries, list):
+                    continue
+                if not isinstance(entries, list):
+                    continue
+
+                removal_markers = {_canonical_json(entry) for entry in entries}
+                filtered = [
+                    entry
+                    for entry in existing_entries
+                    if _canonical_json(entry) not in removal_markers
+                ]
+                if filtered:
+                    hooks[event_name] = filtered
+                else:
+                    hooks.pop(event_name, None)
+
+        if not hooks:
+            settings.pop("hooks", None)
+
+    experimental = settings.get("experimental")
+    if isinstance(experimental, dict):
+        exp_state = state.get("experimental", {})
+        enable_agents_state = None
+        if isinstance(exp_state, dict):
+            enable_agents_state = exp_state.get("enableAgents")
+
+        if isinstance(enable_agents_state, dict):
+            present = bool(enable_agents_state.get("present"))
+            previous_value = enable_agents_state.get("value")
+            current_value = experimental.get("enableAgents")
+
+            if not present:
+                if current_value is True:
+                    experimental.pop("enableAgents", None)
+            elif "enableAgents" not in experimental:
+                experimental["enableAgents"] = previous_value
+            else:
+                experimental["enableAgents"] = previous_value
+
+        if not experimental:
+            settings.pop("experimental", None)
+
+    if settings:
+        dest_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    elif not state.get("settings_existed", True):
+        dest_path.unlink()
+    else:
+        dest_path.write_text("{}\n", encoding="utf-8")
+
+    if state_path:
+        state_file = Path(state_path)
+        if state_file.exists():
+            state_file.unlink()
 
 
 # ── Main entry point ──────────────────────────────────────────────────
@@ -261,10 +394,17 @@ if __name__ == "__main__":
         namespace(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "gemini")
     elif len(sys.argv) == 4 and sys.argv[1] == "merge-settings":
         merge_settings(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 5 and sys.argv[1] == "merge-settings":
+        merge_settings(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif len(sys.argv) == 4 and sys.argv[1] == "unmerge-settings":
+        unmerge_settings(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 5 and sys.argv[1] == "unmerge-settings":
+        unmerge_settings(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
         print(
             f"Usage: {sys.argv[0]} namespace <dir> [codex|gemini|opencode]\n"
-            f"       {sys.argv[0]} merge-settings <source-hooks> <dest-settings>",
+            f"       {sys.argv[0]} merge-settings <source-hooks> <dest-settings> [state-file]\n"
+            f"       {sys.argv[0]} unmerge-settings <source-hooks> <dest-settings> [state-file]",
             file=sys.stderr,
         )
         sys.exit(1)

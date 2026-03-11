@@ -28,6 +28,14 @@ It does not write `AGENTS.md`, and it does not replace existing user plugins or 
 
 By default it installs globally into `~/.config/opencode/`, which is OpenCode's real config path. If you explicitly want a project-local install, run `OPENCODE_INSTALL_TARGET=project bash dist/opencode/install.sh`.
 
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/opencode/install.sh | bash -s -- uninstall
+```
+
+This removes only manifest-dev-managed OpenCode files from the selected target: the suffixed skills, suffixed agents, suffixed commands, `plugins/manifest-dev.ts`, and the manifest-dev hook spec. It leaves user-owned `plugins/index.ts` and unrelated `opencode.json` settings alone, while cleaning any legacy manifest-dev plugin registration if it still exists.
+
 ### Skills only (via npx)
 
 If you only want the skills (no agents, commands, or hooks):

@@ -11,17 +11,28 @@ REPO="doodledood/manifest-dev"
 BRANCH="main"
 DIST_PATH="dist/codex"
 INSTALL_ROOT="${CODEX_HOME:-$HOME/.codex}"
+STATE_FILE="$INSTALL_ROOT/manifest-dev-install-state.json"
 SCRIPT_SOURCE="${BASH_SOURCE[0]-}"
 SCRIPT_DIR=""
 if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
   SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 fi
+ACTION="${1:-install}"
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 echo "manifest-dev installer for Codex CLI"
 echo "======================================"
 echo ""
+
+case "$ACTION" in
+  install|uninstall)
+    ;;
+  *)
+    echo "Usage: bash install.sh [install|uninstall]" >&2
+    exit 1
+    ;;
+esac
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/install_helpers.py" ] && [ -d "$SCRIPT_DIR/skills" ] && [ -d "$SCRIPT_DIR/agents" ] && [ -f "$SCRIPT_DIR/config.toml" ]; then
   echo "Using local dist/codex from $SCRIPT_DIR..."
@@ -39,6 +50,34 @@ fi
 if [ ! -d "$SRC" ]; then
   echo "Error: $DIST_PATH not found in archive" >&2
   exit 1
+fi
+
+if [ "$ACTION" = "uninstall" ]; then
+  echo "Removing manifest-dev-managed Codex files from $INSTALL_ROOT..."
+
+  find "$INSTALL_ROOT/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+  find "$INSTALL_ROOT/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+  rm -f "$INSTALL_ROOT/rules/manifest-dev.rules"
+
+  if [ -f "$INSTALL_ROOT/config.toml" ]; then
+    cp "$INSTALL_ROOT/config.toml" "$INSTALL_ROOT/config.toml.pre-manifest-dev-uninstall.bak"
+    python3 "$SRC/install_helpers.py" unmerge-config "$INSTALL_ROOT/config.toml" "$STATE_FILE"
+    echo "Config: manifest-dev sections removed (backup at $INSTALL_ROOT/config.toml.pre-manifest-dev-uninstall.bak)"
+  elif [ -f "$STATE_FILE" ]; then
+    rm -f "$STATE_FILE"
+  fi
+
+  rmdir "$INSTALL_ROOT/skills" 2>/dev/null || true
+  rmdir "$INSTALL_ROOT/agents" 2>/dev/null || true
+  rmdir "$INSTALL_ROOT/rules" 2>/dev/null || true
+  rmdir "$INSTALL_ROOT" 2>/dev/null || true
+
+  echo ""
+  echo "======================================"
+  echo "Done!"
+  echo ""
+  echo "Removed manifest-dev-managed Codex files only."
+  exit 0
 fi
 
 # --- Namespace components in source before installing ---
@@ -82,10 +121,10 @@ echo ""
 mkdir -p "$INSTALL_ROOT"
 if [ -f "$INSTALL_ROOT/config.toml" ]; then
   cp "$INSTALL_ROOT/config.toml" "$INSTALL_ROOT/config.toml.bak"
-  python3 "$SRC/install_helpers.py" merge-config "$SRC/config.toml" "$INSTALL_ROOT/config.toml"
+  python3 "$SRC/install_helpers.py" merge-config "$SRC/config.toml" "$INSTALL_ROOT/config.toml" "$STATE_FILE"
   echo "Config: config.toml merged (backup at $INSTALL_ROOT/config.toml.bak)"
 else
-  python3 "$SRC/install_helpers.py" merge-config "$SRC/config.toml" "$INSTALL_ROOT/config.toml"
+  python3 "$SRC/install_helpers.py" merge-config "$SRC/config.toml" "$INSTALL_ROOT/config.toml" "$STATE_FILE"
   echo "Config: config.toml installed to $INSTALL_ROOT/"
 fi
 

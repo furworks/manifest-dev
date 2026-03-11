@@ -22,11 +22,21 @@ if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
   SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 fi
 INSTALL_MODE="${OPENCODE_INSTALL_TARGET:-global}"
+ACTION="${1:-install}"
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 echo "manifest-dev installer for OpenCode"
 echo "====================================="
+
+case "$ACTION" in
+  install|uninstall)
+    ;;
+  *)
+    echo "Usage: bash install.sh [install|uninstall]" >&2
+    exit 1
+    ;;
+esac
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/install_helpers.py" ] && [ -d "$SCRIPT_DIR/skills" ] && [ -d "$SCRIPT_DIR/agents" ] && [ -d "$SCRIPT_DIR/commands" ] && [ -d "$SCRIPT_DIR/plugins" ]; then
   echo "Using local dist/opencode from $SCRIPT_DIR..."
@@ -50,6 +60,48 @@ if [ "$INSTALL_MODE" = "project" ]; then
 else
   TARGET="$HOME/.config/opencode"
   echo "Installing globally: ~/.config/opencode/"
+fi
+
+if [ "$ACTION" = "uninstall" ]; then
+  echo "Removing manifest-dev-managed OpenCode files from $TARGET..."
+
+  find "$TARGET/skills" -maxdepth 1 -name "*-manifest-dev" -type d -exec rm -rf {} + 2>/dev/null || true
+  find "$TARGET/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+  find "$TARGET/commands" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
+
+  mkdir -p "$TARGET/plugins"
+  ROOT_PLUGIN="$TARGET/plugins/index.ts"
+  if [ -f "$ROOT_PLUGIN" ] && grep -q 'manifest-dev plugin for OpenCode CLI' "$ROOT_PLUGIN"; then
+    rm -f "$ROOT_PLUGIN"
+    echo "  Plugin: removed legacy manifest-dev root plugin"
+  fi
+  rm -f \
+    "$TARGET/plugins/manifest-dev.ts" \
+    "$TARGET/plugins/manifest-dev.HOOK_SPEC.md" \
+    "$TARGET/plugins/index.ts.manifest-dev-legacy.bak"
+  rm -rf "$TARGET/plugins/manifest-dev"
+
+  if [ -f "$TARGET/opencode.json" ]; then
+    BEFORE_CONFIG="$TMP_DIR/opencode.json.before"
+    cp "$TARGET/opencode.json" "$BEFORE_CONFIG"
+    python3 "$SRC/install_helpers.py" cleanup-config "$TARGET/opencode.json"
+    if ! cmp -s "$TARGET/opencode.json" "$BEFORE_CONFIG"; then
+      cp "$BEFORE_CONFIG" "$TARGET/opencode.json.pre-manifest-dev-uninstall.bak"
+      echo "  Config: removed legacy manifest-dev plugin registration (backup at $TARGET/opencode.json.pre-manifest-dev-uninstall.bak)"
+    fi
+  fi
+
+  rmdir "$TARGET/skills" 2>/dev/null || true
+  rmdir "$TARGET/agents" 2>/dev/null || true
+  rmdir "$TARGET/commands" 2>/dev/null || true
+  rmdir "$TARGET/plugins" 2>/dev/null || true
+  rmdir "$TARGET" 2>/dev/null || true
+
+  echo ""
+  echo "Done!"
+  echo ""
+  echo "Removed manifest-dev-managed OpenCode files only."
+  exit 0
 fi
 
 echo "Namespacing components..."

@@ -20,17 +20,28 @@ REPO="doodledood/manifest-dev"
 BRANCH="main"
 INSTALL_DIR="${HOME}/.gemini/extensions/manifest-dev"
 SETTINGS_FILE="${HOME}/.gemini/settings.json"
+STATE_FILE="${INSTALL_DIR}/install-state.json"
 SCRIPT_SOURCE="${BASH_SOURCE[0]-}"
 SCRIPT_DIR=""
 if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
     SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 fi
+ACTION="${1:-install}"
 TMP_DIR=$(mktemp -d)
 
 cleanup() {
     rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
+
+case "$ACTION" in
+    install|uninstall)
+        ;;
+    *)
+        echo "Usage: bash install.sh [install|uninstall]" >&2
+        exit 1
+        ;;
+esac
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/install_helpers.py" ] && [ -d "$SCRIPT_DIR/skills" ] && [ -d "$SCRIPT_DIR/agents" ] && [ -d "$SCRIPT_DIR/hooks" ] && [ -f "$SCRIPT_DIR/gemini-extension.json" ]; then
     echo "==> Using local dist/gemini from ${SCRIPT_DIR}..."
@@ -60,6 +71,28 @@ fi
 
 echo "==> Namespacing components..."
 python3 "${SOURCE_DIR}/install_helpers.py" namespace "$SOURCE_DIR" gemini
+
+if [ "$ACTION" = "uninstall" ]; then
+    echo "==> Removing manifest-dev Gemini extension..."
+
+    if [ -f "$SETTINGS_FILE" ]; then
+        cp "$SETTINGS_FILE" "$SETTINGS_FILE.pre-manifest-dev-uninstall.bak"
+        python3 "${SOURCE_DIR}/install_helpers.py" unmerge-settings "${SOURCE_DIR}/hooks/hooks.json" "$SETTINGS_FILE" "$STATE_FILE"
+        echo "    settings.json (manifest-dev hooks removed, backup at settings.json.pre-manifest-dev-uninstall.bak)"
+    elif [ -f "$STATE_FILE" ]; then
+        rm -f "$STATE_FILE"
+    fi
+
+    rm -rf "$INSTALL_DIR"
+    rmdir "$(dirname "$INSTALL_DIR")" 2>/dev/null || true
+    rmdir "${HOME}/.gemini" 2>/dev/null || true
+
+    echo ""
+    echo "==> Uninstall complete!"
+    echo ""
+    echo "Removed manifest-dev-managed Gemini files only."
+    exit 0
+fi
 
 mkdir -p "$INSTALL_DIR"
 
@@ -110,10 +143,10 @@ fi
 mkdir -p "$(dirname "$SETTINGS_FILE")"
 if [ -f "$SETTINGS_FILE" ]; then
     cp "$SETTINGS_FILE" "$SETTINGS_FILE.bak"
-    python3 "${SOURCE_DIR}/install_helpers.py" merge-settings "${INSTALL_DIR}/hooks/hooks.json" "$SETTINGS_FILE"
+    python3 "${SOURCE_DIR}/install_helpers.py" merge-settings "${INSTALL_DIR}/hooks/hooks.json" "$SETTINGS_FILE" "$STATE_FILE"
     echo "    settings.json (merged, backup at settings.json.bak)"
 else
-    python3 "${SOURCE_DIR}/install_helpers.py" merge-settings "${INSTALL_DIR}/hooks/hooks.json" "$SETTINGS_FILE"
+    python3 "${SOURCE_DIR}/install_helpers.py" merge-settings "${INSTALL_DIR}/hooks/hooks.json" "$SETTINGS_FILE" "$STATE_FILE"
     echo "    settings.json (created with enableAgents + manifest-dev hooks)"
 fi
 

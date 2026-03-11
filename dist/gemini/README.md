@@ -21,6 +21,14 @@ curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/g
 Re-running the installer updates the extension in `~/.gemini/extensions/manifest-dev/`. If `GEMINI.md` already exists in that extension directory, it is backed up to `GEMINI.md.bak` and replaced with the current bundled version.
 The installer also merges `experimental.enableAgents = true` and the manifest-dev hook registrations into `~/.gemini/settings.json` additively, backing up the file first when it already exists. No post-install edits are required.
 
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/gemini/install.sh | bash -s -- uninstall
+```
+
+This removes the extension-private directory at `~/.gemini/extensions/manifest-dev/` and unmerges only the manifest-dev hook registrations from `~/.gemini/settings.json`. If the installer had turned on `experimental.enableAgents`, uninstall restores that shared setting to its prior state when it can do so safely. Before editing `settings.json`, the script backs it up to `settings.json.pre-manifest-dev-uninstall.bak`.
+
 ### Option 2: Skills only (via npx)
 
 ```bash

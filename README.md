@@ -44,6 +44,14 @@ alias upgrade-manifest-dev-all='upgrade-manifest-dev-codex && upgrade-manifest-d
 
 Then run `source ~/.zshrc` once. Future updates are just `upgrade-manifest-dev-codex`, `upgrade-manifest-dev-gemini`, `upgrade-manifest-dev-opencode`, or `upgrade-manifest-dev-all` for all three.
 
+Uninstall uses the same entrypoints:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/gemini/install.sh | bash -s -- uninstall
+curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/opencode/install.sh | bash -s -- uninstall
+curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/codex/install.sh | bash -s -- uninstall
+```
+
 ## The Mindset Shift
 
 Instead of telling the AI *how* to build something, you tell it what you'd accept.
@@ -254,13 +262,13 @@ verify:
 
 ## Multi-CLI Support
 
-The Claude Code plugin is the source of truth. Per-CLI distributions under `dist/` provide native packages for other AI coding CLIs. Each has a one-command remote installer — run again to update.
+The Claude Code plugin is the source of truth. Per-CLI distributions under `dist/` provide native packages for other AI coding CLIs. Each has a one-command remote installer — run again to update, or pass `uninstall` to remove only manifest-dev-managed files.
 
 | CLI | Install | Skills | Agents | Hooks | Details |
 |-----|---------|--------|--------|-------|---------|
 | Claude Code | `/plugin install` | Full | Full | Full | Primary target |
 | Gemini CLI | `curl .../gemini/install.sh \| bash` | Full | Full (converted) | Full (adapted) | [README](dist/gemini/README.md) |
-| OpenCode | `curl .../opencode/install.sh \| bash` | Full | Full (converted) | Stubs | [README](dist/opencode/README.md) |
+| OpenCode | `curl .../opencode/install.sh \| bash` | Full | Full (converted) | Partial (adapted plugin) | [README](dist/opencode/README.md) |
 | Codex CLI | `curl .../codex/install.sh \| bash` | Full | TOML stubs | Not available | [README](dist/codex/README.md) |
 
 **Keeping distributions in sync**: After changing plugin components, run `/sync-tools` in Claude Code to regenerate `dist/`. The sync skill reads reference files with per-CLI conversion rules and produces the full distribution for each target.
