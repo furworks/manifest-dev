@@ -164,7 +164,7 @@ def test_sync_tools_docs_require_complete_additive_installs() -> None:
     assert "install.sh` must merge" in gemini_ref
 
 
-def test_opencode_installer_preserves_root_plugin_and_cleans_legacy_config(
+def test_opencode_installer_preserves_root_plugin_and_config(
     tmp_path: Path,
 ) -> None:
     env = os.environ.copy()
@@ -175,16 +175,13 @@ def test_opencode_installer_preserves_root_plugin_and_cleans_legacy_config(
     plugins_dir.mkdir(parents=True, exist_ok=True)
     root_plugin = plugins_dir / "index.ts"
     root_plugin.write_text("// user-managed root plugin\n", encoding="utf-8")
-    legacy_plugin_dir = plugins_dir / "manifest-dev"
-    legacy_plugin_dir.mkdir(parents=True, exist_ok=True)
-    (legacy_plugin_dir / "index.ts").write_text("// legacy manifest plugin\n", encoding="utf-8")
     opencode_config = opencode_dir / "opencode.json"
     opencode_config.write_text(
         json.dumps(
             {
                 "$schema": "https://opencode.ai/config.json",
                 "default_agent": "build",
-                "plugin": ["./plugins/index.ts", "./plugins/manifest-dev/index.ts"],
+                "plugin": ["./plugins/index.ts"],
                 "mcp": {"custom": {"type": "local", "command": ["echo", "hi"]}},
             },
             indent=2,
@@ -206,12 +203,11 @@ def test_opencode_installer_preserves_root_plugin_and_cleans_legacy_config(
     assert merged["default_agent"] == "build"
     assert merged["mcp"]["custom"]["command"] == ["echo", "hi"]
     assert merged["plugin"].count("./plugins/index.ts") == 1
-    assert "./plugins/manifest-dev/index.ts" not in merged["plugin"]
     assert root_plugin.read_text(encoding="utf-8") == "// user-managed root plugin\n"
     assert (plugins_dir / "manifest-dev.ts").is_file()
     assert (plugins_dir / "manifest-dev.HOOK_SPEC.md").is_file()
-    assert not legacy_plugin_dir.exists()
-    assert (opencode_dir / "opencode.json.bak").is_file()
+    assert not (plugins_dir / "index.ts.manifest-dev-legacy.bak").exists()
+    assert not (opencode_dir / "opencode.json.bak").exists()
     assert "No manual plugin wiring is required." in result.stdout
 
     subprocess.run(
@@ -224,34 +220,7 @@ def test_opencode_installer_preserves_root_plugin_and_cleans_legacy_config(
     )
 
     merged_again = json.loads(opencode_config.read_text(encoding="utf-8"))
-    assert "./plugins/manifest-dev/index.ts" not in merged_again["plugin"]
-
-
-def test_opencode_installer_migrates_legacy_root_plugin(tmp_path: Path) -> None:
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path / "home")
-
-    opencode_dir = Path(env["HOME"]) / ".config" / "opencode"
-    plugins_dir = opencode_dir / "plugins"
-    plugins_dir.mkdir(parents=True, exist_ok=True)
-    root_plugin = plugins_dir / "index.ts"
-    root_plugin.write_text(
-        "/** manifest-dev plugin for OpenCode CLI */\nexport default {}\n",
-        encoding="utf-8",
-    )
-
-    subprocess.run(
-        ["bash", str(DIST / "opencode" / "install.sh")],
-        cwd=ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    assert not root_plugin.exists()
-    assert (plugins_dir / "index.ts.manifest-dev-legacy.bak").is_file()
-    assert (plugins_dir / "manifest-dev.ts").is_file()
+    assert merged_again == merged
 
 
 def test_gemini_installer_merges_settings_additively(tmp_path: Path) -> None:

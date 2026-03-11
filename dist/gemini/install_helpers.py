@@ -246,38 +246,20 @@ def _normalize_state(
     state: dict[str, object],
     settings_existed: bool,
 ) -> dict[str, object]:
-    if (
+    if not (
         isinstance(state.get("experimental"), dict)
         and "original_experimental" in state
         and isinstance(state.get("hooks_added"), dict)
     ):
-        return {
-            "version": STATE_VERSION,
-            "settings_existed": bool(state.get("settings_existed", settings_existed)),
-            "original_experimental": state.get("original_experimental"),
-            "experimental": state["experimental"],
-            "hooks_added": state["hooks_added"],
-        }
+        return _build_settings_state(settings, settings_existed)
 
-    normalized = _build_settings_state(settings, settings_existed)
-    exp_state = state.get("experimental", {})
-    if isinstance(exp_state, dict) and "enableAgents" in exp_state:
-        normalized["experimental"] = exp_state
-        current_experimental = settings.get("experimental")
-        if isinstance(current_experimental, dict):
-            migrated_experimental = dict(current_experimental)
-            enable_agents_state = exp_state.get("enableAgents")
-            if isinstance(enable_agents_state, dict):
-                if enable_agents_state.get("present"):
-                    migrated_experimental["enableAgents"] = enable_agents_state.get("value")
-                else:
-                    migrated_experimental.pop("enableAgents", None)
-            normalized["original_experimental"] = migrated_experimental
-    hooks_added = state.get("hooks_added", {})
-    if isinstance(hooks_added, dict):
-        normalized["hooks_added"] = hooks_added
-    normalized["settings_existed"] = bool(state.get("settings_existed", settings_existed))
-    return normalized
+    return {
+        "version": STATE_VERSION,
+        "settings_existed": bool(state.get("settings_existed", settings_existed)),
+        "original_experimental": state.get("original_experimental"),
+        "experimental": dict(state["experimental"]),
+        "hooks_added": dict(state["hooks_added"]),
+    }
 
 
 def _collect_hook_names(entries: list[object]) -> set[str]:

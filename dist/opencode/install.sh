@@ -69,26 +69,10 @@ if [ "$ACTION" = "uninstall" ]; then
   find "$TARGET/agents" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
   find "$TARGET/commands" -maxdepth 1 -name "*-manifest-dev*" -exec rm -rf {} + 2>/dev/null || true
 
-  mkdir -p "$TARGET/plugins"
-  ROOT_PLUGIN="$TARGET/plugins/index.ts"
-  if [ -f "$ROOT_PLUGIN" ] && grep -q 'manifest-dev plugin for OpenCode CLI' "$ROOT_PLUGIN"; then
-    rm -f "$ROOT_PLUGIN"
-    echo "  Plugin: removed legacy manifest-dev root plugin"
-  fi
   rm -f \
     "$TARGET/plugins/manifest-dev.ts" \
     "$TARGET/plugins/manifest-dev.HOOK_SPEC.md"
   rm -rf "$TARGET/plugins/manifest-dev"
-
-  if [ -f "$TARGET/opencode.json" ]; then
-    BEFORE_CONFIG="$TMP_DIR/opencode.json.before"
-    cp "$TARGET/opencode.json" "$BEFORE_CONFIG"
-    python3 "$SRC/install_helpers.py" cleanup-config "$TARGET/opencode.json"
-    if ! cmp -s "$TARGET/opencode.json" "$BEFORE_CONFIG"; then
-      cp "$BEFORE_CONFIG" "$TARGET/opencode.json.pre-manifest-dev-uninstall.bak"
-      echo "  Config: removed legacy manifest-dev plugin registration (backup at $TARGET/opencode.json.pre-manifest-dev-uninstall.bak)"
-    fi
-  fi
 
   rmdir "$TARGET/skills" 2>/dev/null || true
   rmdir "$TARGET/agents" 2>/dev/null || true
@@ -122,27 +106,11 @@ cp -r "$SRC/commands/"* "$TARGET/commands/"
 echo "  Commands: $(ls "$SRC/commands/" | wc -l | tr -d ' ') installed"
 
 mkdir -p "$TARGET/plugins"
-ROOT_PLUGIN="$TARGET/plugins/index.ts"
-if [ -f "$ROOT_PLUGIN" ] && grep -q 'manifest-dev plugin for OpenCode CLI' "$ROOT_PLUGIN"; then
-  cp "$ROOT_PLUGIN" "$ROOT_PLUGIN.manifest-dev-legacy.bak"
-  rm -f "$ROOT_PLUGIN"
-  echo "  Plugin: migrated legacy manifest-dev root plugin (backup at $ROOT_PLUGIN.manifest-dev-legacy.bak)"
-fi
 rm -f "$TARGET/plugins/manifest-dev.ts" "$TARGET/plugins/manifest-dev.HOOK_SPEC.md"
 rm -rf "$TARGET/plugins/manifest-dev"
 cp "$SRC/plugins/index.ts" "$TARGET/plugins/manifest-dev.ts"
 cp "$SRC/plugins/HOOK_SPEC.md" "$TARGET/plugins/manifest-dev.HOOK_SPEC.md"
 echo "  Plugin: installed to plugins/manifest-dev.ts"
-
-if [ -f "$TARGET/opencode.json" ]; then
-  cp "$TARGET/opencode.json" "$TARGET/opencode.json.bak"
-  python3 "$SRC/install_helpers.py" cleanup-config "$TARGET/opencode.json"
-  if cmp -s "$TARGET/opencode.json" "$TARGET/opencode.json.bak"; then
-    echo "  Config: opencode.json left unchanged"
-  else
-    echo "  Config: removed legacy manifest-dev plugin registration (backup at $TARGET/opencode.json.bak)"
-  fi
-fi
 
 echo ""
 echo "Done! Restart OpenCode to activate."

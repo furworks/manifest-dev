@@ -237,13 +237,6 @@ def _get_table_key_value(text: str, table_name: str, key: str) -> str | None:
     return match.group(1).strip()
 
 
-def _table_list_contains_value(text: str, table_name: str, key: str, value: str) -> bool:
-    current_value = _get_table_key_value(text, table_name, key)
-    if current_value is None:
-        return False
-    return f'"{value}"' in current_value
-
-
 def _parse_quoted_list(raw_value: str | None) -> list[str] | None:
     if raw_value is None:
         return None
@@ -349,26 +342,6 @@ def _ensure_list_value_in_table(
     merged_list = f'[{inner}, "{value}"]' if inner else list_value
     body = key_pattern.sub(rf"\1{merged_list}", body, count=1)
     return text[: match.start()] + header + body + text[match.end() :]
-
-
-def _ensure_table_keys(
-    text: str,
-    table_name: str,
-    keys: list[tuple[str, str]],
-) -> str:
-    match = _table_match(text, table_name)
-    if match:
-        body = match.group(2)
-        for key, value in keys:
-            body = _upsert_key_in_table_body(body, key, value)
-        return text[: match.start()] + match.group(1) + body + text[match.end() :]
-
-    if text and not text.endswith("\n"):
-        text += "\n"
-    if text.strip():
-        text += "\n"
-    lines = [f"[{table_name}]"] + [f"{key} = {value}" for key, value in keys]
-    return text + "\n".join(lines) + "\n"
 
 
 def _remove_key_from_table(
@@ -477,40 +450,15 @@ def _build_config_state(existing_text: str, config_existed: bool) -> dict[str, o
 
 
 def _normalize_state(existing_text: str, state: dict[str, object], config_existed: bool) -> dict[str, object]:
-    if isinstance(state.get("original_keys"), dict) and isinstance(state.get("original_lists"), dict):
-        return {
-            "version": STATE_VERSION,
-            "config_existed": bool(state.get("config_existed", config_existed)),
-            "original_keys": state["original_keys"],
-            "original_lists": state["original_lists"],
-        }
-
-    added_keys = state.get("added_keys", {})
-    added_lists = state.get("added_list_values", {})
-    if not isinstance(added_keys, dict) or not isinstance(added_lists, dict):
+    if not isinstance(state.get("original_keys"), dict) or not isinstance(state.get("original_lists"), dict):
         return _build_config_state(existing_text, config_existed)
 
-    normalized = _build_config_state(existing_text, config_existed)
-    original_keys = normalized.get("original_keys", {})
-    if isinstance(original_keys, dict):
-        for key in DEFAULT_SHARED_VALUES:
-            if added_keys.get(key):
-                original_keys[key] = None
-
-    current_list = _parse_quoted_list(
-        _get_table_key_value(existing_text, "agents", "project_doc_fallback_filenames")
-    )
-    original_lists = normalized.get("original_lists", {})
-    if isinstance(original_lists, dict):
-        if isinstance(current_list, list) and "CLAUDE.md" in current_list and "CLAUDE.md" in added_lists.get("agents.project_doc_fallback_filenames", []):
-            original_lists["agents.project_doc_fallback_filenames"] = [
-                item for item in current_list if item != "CLAUDE.md"
-            ]
-        else:
-            original_lists["agents.project_doc_fallback_filenames"] = current_list
-
-    normalized["config_existed"] = bool(state.get("config_existed", config_existed))
-    return normalized
+    return {
+        "version": STATE_VERSION,
+        "config_existed": bool(state.get("config_existed", config_existed)),
+        "original_keys": dict(state["original_keys"]),
+        "original_lists": dict(state["original_lists"]),
+    }
 
 
 def merge_config(

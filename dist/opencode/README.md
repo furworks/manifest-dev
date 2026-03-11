@@ -22,8 +22,6 @@ curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/o
 ```
 
 This downloads the latest release and installs skills, agents, commands, and the OpenCode plugin into `~/.config/opencode/` by default. Safe to re-run. The installer adds the plugin as `plugins/manifest-dev.ts`, so it loads alongside a user's existing `plugins/index.ts` without overwriting shared plugin entrypoints.
-If it detects an older manifest-dev install that wrote into the shared root `plugins/index.ts`, it backs that file up and migrates away from the shared entrypoint automatically.
-
 It does not write `AGENTS.md`, and it does not replace existing user plugins or unrelated `opencode.json` entries.
 
 By default it installs globally into `~/.config/opencode/`, which is OpenCode's real config path. If you explicitly want a project-local install, run `OPENCODE_INSTALL_TARGET=project bash dist/opencode/install.sh`.
@@ -34,7 +32,7 @@ By default it installs globally into `~/.config/opencode/`, which is OpenCode's 
 curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/opencode/install.sh | bash -s -- uninstall
 ```
 
-This removes only manifest-dev-managed OpenCode files from the selected target: the suffixed skills, suffixed agents, suffixed commands, `plugins/manifest-dev.ts`, and the manifest-dev hook spec. It leaves user-owned `plugins/index.ts` and unrelated `opencode.json` settings alone, while cleaning any legacy manifest-dev plugin registration if it still exists.
+This removes only manifest-dev-managed OpenCode files from the selected target: the suffixed skills, suffixed agents, suffixed commands, `plugins/manifest-dev.ts`, and the manifest-dev hook spec. It leaves user-owned `plugins/index.ts` and unrelated `opencode.json` settings alone.
 
 ### Skills only (via npx)
 
