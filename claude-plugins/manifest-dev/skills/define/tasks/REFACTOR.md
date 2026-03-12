@@ -2,6 +2,10 @@
 
 Restructuring without behavior change.
 
+## Quality Gates
+
+No additional quality gates beyond CODING.md base.
+
 ## The Contract
 
 Every refactor must establish:

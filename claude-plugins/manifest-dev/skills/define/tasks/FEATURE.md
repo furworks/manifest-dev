@@ -4,10 +4,12 @@ New functionality: features, APIs, enhancements.
 
 ## Quality Gates
 
-- **Requirements traceability** — every specified requirement maps to implementation; nothing lost between spec and code
-- **Behavior completeness** — all specified use cases and interactions implemented, not just the happy path
-- **Error experience** — feature failures produce clear, actionable feedback to the user, not silent failures or raw stack traces
-- **Documentation updated** — all affected documentation (API docs, user guides, READMEs, changelogs) identified and updated with the feature
+| Aspect | Agent | Threshold |
+|--------|-------|-----------|
+| Requirements traceability | general-purpose | Every specified requirement maps to implementation; nothing lost between spec and code |
+| Behavior completeness | general-purpose | All specified use cases and interactions implemented, not just the happy path |
+| Error experience | general-purpose | Feature failures produce clear, actionable feedback to the user, not silent failures or raw stack traces |
+| Documentation updated | docs-reviewer | All affected documentation (API docs, user guides, READMEs, changelogs) identified and updated with the feature |
 
 ## Risks
 
