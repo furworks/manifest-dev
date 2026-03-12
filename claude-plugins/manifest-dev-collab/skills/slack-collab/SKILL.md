@@ -7,9 +7,14 @@ description: 'Orchestrate team collaboration on define/do workflows through Slac
 
 Orchestrate a full define → do → PR → review → QA → done workflow with your team through Slack. You are the **lead** — spawn teammates and coordinate phases.
 
-`$ARGUMENTS` = task description (what to build/change), or `--resume <state-file-path>` to resume.
+`$ARGUMENTS` = task description (what to build/change), with optional flags:
+- `--resume <state-file-path>` — resume an interrupted workflow
+- `--interview <level>` — forwarded to `/define` (controls interview depth: `minimal | autonomous | thorough`)
+- `--mode <level>` — forwarded to `/do` (controls verification intensity: `efficient | balanced | thorough`)
 
-If `$ARGUMENTS` is empty, ask what they want to build or change.
+`--resume` must appear first when present (existing behavior). `--interview` and `--mode` can appear anywhere in the remaining arguments. Flags persist in state and reach the appropriate teammate (see Phase 1, Phase 3). Flag values are forwarded verbatim — `/define` and `/do` validate them.
+
+If `$ARGUMENTS` is empty (no task description and no `--resume`), ask what they want to build or change.
 
 ## Prerequisites
 
@@ -148,6 +153,10 @@ Re-read the state file before each phase transition to guard against context com
     "ci_status": "unknown",
     "pr_ready": false
   },
+  "flags": {
+    "interview": null,
+    "mode": null
+  },
   "phase_state": {
     "waiting_for": [],
     "active_threads": {},
@@ -170,9 +179,10 @@ Delivery: SendMessage to <worker> | File at <path>
 
 If `$ARGUMENTS` starts with `--resume`:
 1. Read the state file at the provided path.
-2. Re-create the team (slack-coordinator, define-worker, executor) with existing channel/stakeholder context in their spawn prompts.
-3. If resuming from Phase 4 or later and `pr_url` is set, also spawn github-coordinator with the PR URL from the state file.
-4. Continue from the interrupted phase. If `phase_state.waiting_for` is populated, resume polling from where it left off — check for responses that arrived while the process was down.
+2. Restore flags from `state.flags` (default to `{"interview": null, "mode": null}` if the key is missing — older state files may not include it). If `--interview` or `--mode` flags are also provided alongside `--resume`, they override the stored values.
+3. Re-create the team (slack-coordinator, define-worker, executor) with existing channel/stakeholder context in their spawn prompts.
+4. If resuming from Phase 4 or later and `pr_url` is set, also spawn github-coordinator with the PR URL from the state file.
+5. Continue from the interrupted phase. If `phase_state.waiting_for` is populated, resume polling from where it left off — check for responses that arrived while the process was down.
 
 ## Phase Flow
 
@@ -190,11 +200,11 @@ If `$ARGUMENTS` starts with `--resume`:
    - **define-worker**: `subagent_type: "manifest-dev-collab:define-worker"`, `team_name: "<team>"`, `name: "define-worker"`. Omit model (inherits parent). Pass the task description in the prompt.
    - **executor**: `subagent_type: "manifest-dev-collab:executor"`, `team_name: "<team>"`, `name: "executor"`. Omit model (inherits parent). Pass initial context in the prompt.
 4. Message slack-coordinator: "Post a kickoff message to channel [channel_id]: 'Kicking off: [task summary]'. Then post an intro thread tagging all stakeholders. Start your poll loop — report back with thread_ts values and keep polling for stakeholder responses from now on."
-5. When slack-coordinator reports thread info, write state file. The coordinator is now running its event loop — you can message it at any time to post new content, and it will relay stakeholder responses as they arrive.
+5. When slack-coordinator reports thread info, write state file (include parsed `flags`). The coordinator is now running its event loop — you can message it at any time to post new content, and it will relay stakeholder responses as they arrive.
 
 ### Phase 1: Define
 
-1. Message define-worker: "Run /define for: [task description]\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: define"
+1. Message define-worker with the task description, TEAM_CONTEXT block, and the `--interview` flag if one was parsed. Example: "Run /define for: [task description] --interview minimal\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: define"
 2. When define-worker messages you with Q&A questions, route them to slack-coordinator with expertise context (e.g., "Relevant expertise: backend/security") so the coordinator can create a separate parent message and tag the right stakeholder(s). Relay coordinator's responses back to define-worker.
 3. When define-worker requests a subagent (manifest-verifier), follow the Subagent Bridge Protocol.
 4. When define-worker messages you with the manifest_path, update state file.
@@ -208,7 +218,7 @@ If `$ARGUMENTS` starts with `--resume`:
 
 ### Phase 3: Execute
 
-1. Message executor: "Run /do for manifest at [manifest_path]\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: execute"
+1. Message executor with the manifest path, TEAM_CONTEXT block, and the `--mode` flag if one was parsed. Example: "Run /do for manifest at [manifest_path] --mode efficient\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: execute"
 2. When executor messages you with escalations, route them to slack-coordinator. Relay responses back.
 3. **Verification relay**: When executor messages you with a VERIFICATION_REQUEST (containing all criteria with IDs, methods, commands/prompts):
    - Spawn one verification teammate per criterion in parallel using the Agent tool. Each teammate verifies its assigned criterion and reports back.
