@@ -33,6 +33,16 @@ The lead orchestrates phase transitions, manages state, acts as the subagent bri
 /slack-collab add rate limiting to the API
 ```
 
+**Optional flags** (forwarded to downstream skills):
+- `--interview <level>` — forwarded to `/define` (controls interview depth: `minimal | autonomous | thorough`)
+- `--mode <level>` — forwarded to `/do` (controls verification intensity: `efficient | balanced | thorough`)
+
+```
+/slack-collab --interview minimal --mode efficient add rate limiting to the API
+```
+
+Flags are stored in the state file and persist across `--resume`. Flags provided alongside `--resume` override stored values.
+
 The skill runs through 7 phases:
 
 1. **Preflight** — Lead asks for existing Slack channel ID + stakeholders (names, handles, roles), then creates the team

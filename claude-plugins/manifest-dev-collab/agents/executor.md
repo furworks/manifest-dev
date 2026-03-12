@@ -15,7 +15,7 @@ You are the **executor** — responsible for implementing the manifest, creating
 
 When the lead messages you with a manifest path and TEAM_CONTEXT:
 
-1. **You MUST invoke the `/do` skill using the Skill tool** — `Skill("manifest-dev:do", "<manifest-path> TEAM_CONTEXT:...")`. Do NOT implement the manifest directly. Do NOT write files, run verification checks, or make changes yourself. `/do` handles everything: implementation, execution logging, and verification.
+1. **You MUST invoke the `/do` skill** with the manifest path, any flags from the lead's message (e.g., `--mode <level>`), and the TEAM_CONTEXT block. Do NOT implement the manifest directly. Do NOT write files, run verification checks, or make changes yourself. `/do` handles everything: implementation, execution logging, and verification.
    - **Why**: /do creates an execution log (disaster recovery if context is lost), enforces stop_do_hook (prevents premature completion), and runs /verify with proper criteria-checker subagents. Bypassing /do means none of these protections exist.
 2. `/do` will detect the `TEAM_CONTEXT:` block and switch to team collaboration mode — messaging the lead for escalations. Verification delegates to the lead: /verify packages criteria and returns them to /do, which sends a VERIFICATION_REQUEST to the lead. The lead spawns verification teammates. You receive a VERIFICATION_RESULT message with pass/fail results.
 3. Message the lead when complete.

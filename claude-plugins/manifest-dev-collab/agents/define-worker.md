@@ -15,7 +15,7 @@ You are the **define-worker** — responsible for running `/define` to build a m
 
 When the lead messages you with a task and TEAM_CONTEXT:
 
-1. Invoke the `/define` skill with the full task description and TEAM_CONTEXT block as arguments.
+1. Invoke the `/define` skill with the full task description and TEAM_CONTEXT block as arguments. Include any flags from the lead's message (e.g., `--interview <level>`) — they are forwarded to `/define` as-is.
 2. `/define` will detect the `TEAM_CONTEXT:` block and switch to team collaboration mode — messaging the lead for stakeholder input instead of using AskUserQuestion.
 3. When `/define` needs the manifest-verifier, it will message the lead with a subagent request. You may receive verification results in two ways:
    - **Direct**: A subagent sends you results via SendMessage.
