@@ -22,7 +22,9 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 ## Input
 
-`$ARGUMENTS` = task description, optionally with context/research
+`$ARGUMENTS` = task description, optionally with context/research and `--interview <level>`
+
+Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough"
 
 If no arguments provided, ask: "What would you like to build or change?"
 
@@ -103,6 +105,22 @@ After understanding the task, calibrate interview depth:
 
 When uncertain, default to Standard. User can signal "enough" to compress at any point.
 
+## Interview Style
+
+Interview style controls **who decides** — the user or the agent. All protocols still run at every level; the difference is whether findings are presented via AskUserQuestion or auto-resolved by picking the recommended option.
+
+Complexity triage is orthogonal: it determines **which** protocols run; interview style determines **how** each protocol's findings are handled.
+
+| Style | Principle | AskUserQuestion |
+|-------|-----------|-----------------|
+| **thorough** (default) | User decides everything. Current behavior — no change. | All questions go to user. |
+| **minimal** | User decides scope, constraints, and high-impact items. Agent auto-resolves the rest by picking the recommended option. | Ask when: scope boundaries, hard constraints, or multiple options are equally valid (no clear recommended choice). |
+| **autonomous** | Agent decides everything. Present the final manifest for approval — user accepts, rejects, or gives feedback. | No questions during the interview. All decisions auto-resolved. |
+
+**Auto-decided items**: When interview style causes an item to be auto-decided (agent picks recommended option instead of asking), encode it normally as INV/AC/PG with an "(auto)" annotation, AND list it in the Known Assumptions section with the reasoning for the chosen option.
+
+**Style is dynamic**: The `--interview` flag sets the starting posture, not a rigid lock. If a user on autonomous explicitly asks questions or requests probing, engage. If a user on thorough signals "enough" or says "just build it", shift to autonomous for the remainder of the session. When the user or verifier gives feedback on an autonomous manifest, auto-resolve the concerns and stay in autonomous mode unless the user explicitly requests more interaction. Log any style shift to the discovery file.
+
 ## Constraints
 
 **All questions use AskUserQuestion** - Every user question goes through AskUserQuestion (tool limit: 2-4 options), one marked "(Recommended)". Never ask open-ended questions—they're cognitively demanding. Present concrete options the user can accept, reject, or adjust.
@@ -148,8 +166,6 @@ Read full log before synthesis. Unresolved `- [ ]` items must be addressed first
 **Confirm understanding periodically** - Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct?" This catches interpretation drift early—a misunderstanding in round 2 compounds through round 8 if never checked.
 
 **Batch related questions** - Group related questions into a single turn rather than asking one at a time. Batching keeps momentum and reduces round-trips without sacrificing depth. Each batch should cover a coherent topic area—don't mix unrelated concerns in one batch.
-
-**Fast-track signal** — If the user signals they want minimal interview ("just build it", "I trust your judgment", "keep this quick"), compress to: one round of high-priority questions (scope + constraints), encode reasonable defaults as Known Assumptions, and proceed to synthesis. Log compressed areas so the manifest-verifier can flag gaps the user chose to skip.
 
 **Stop when converged** - Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
 
