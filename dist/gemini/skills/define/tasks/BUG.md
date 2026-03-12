@@ -2,6 +2,10 @@
 
 Defect resolution, regression fixes, error corrections.
 
+## Quality Gates
+
+No additional quality gates beyond CODING.md base.
+
 ## Root Cause Verification
 
 Fix must address cause, not symptom. Probe: what's the actual root cause vs. where the error surfaces?

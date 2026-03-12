@@ -61,44 +61,44 @@ When no source file exists for a relevant source type, the general quality gates
 
 #### Rigor
 
-| Aspect | Threshold |
-|--------|-----------|
-| Emergent depth | Dedicated sections, follow-up searches, or scope evolution documented for unexpected findings |
-| Question completeness | All dimensions of the research question identified and addressed |
-| Quantification | Claims that could be quantified use numbers, not vague qualitative language — "faster" becomes "~2x faster" when evidence supports it |
-| Recency | Sources published within the topic's relevance window — fast-moving topics demand recent, stable topics tolerate older |
+| Aspect | Agent | Threshold |
+|--------|-------|-----------|
+| Emergent depth | criteria-checker | Dedicated sections, follow-up searches, or scope evolution documented for unexpected findings |
+| Question completeness | criteria-checker | All dimensions of the research question identified and addressed |
+| Quantification | criteria-checker | Claims that could be quantified use numbers, not vague qualitative language — "faster" becomes "~2x faster" when evidence supports it |
+| Recency | criteria-checker | Sources published within the topic's relevance window — fast-moving topics demand recent, stable topics tolerate older |
 
 #### Output Quality
 
-| Aspect | Threshold |
-|--------|-----------|
-| Synthesis | Findings connected into meaning — "so what?" answered, not just facts listed |
-| Output structure | Report organized for the reader's decision flow — navigable, scannable, key insights surfaced not buried |
-| Prioritization | When multiple options or findings exist, ranked with explicit criteria — not just listed |
+| Aspect | Agent | Threshold |
+|--------|-------|-----------|
+| Synthesis | general-purpose | Findings connected into meaning — "so what?" answered, not just facts listed |
+| Output structure | general-purpose | Report organized for the reader's decision flow — navigable, scannable, key insights surfaced not buried |
+| Prioritization | general-purpose | When multiple options or findings exist, ranked with explicit criteria — not just listed |
 
 #### Utility
 
-| Aspect | Threshold |
-|--------|-----------|
-| Actionability | Output enables a decision or next step without further research |
-| Follow-up anticipation | Report preempts the reader's likely next questions rather than leaving obvious gaps |
+| Aspect | Agent | Threshold |
+|--------|-------|-----------|
+| Actionability | general-purpose | Output enables a decision or next step without further research |
+| Follow-up anticipation | general-purpose | Report preempts the reader's likely next questions rather than leaving obvious gaps |
 
 #### Evidence Assessment
 
-| Aspect | Threshold |
-|--------|-----------|
-| GRADE-adapted confidence | Evidence quality assessed beyond source type — a PRIMARY source can be low-confidence if inconsistent with other evidence, indirect to the question, or imprecise. Dimensions: risk of bias, inconsistency, indirectness, imprecision, publication bias |
-| Claim decomposition | Complex claims broken into independently verifiable atoms. Compound claims hide errors — "X reached $500B in 2023 driven by Y" contains three separate verifiable claims |
-| Disagreement classification | Source conflicts classified before resolution: factual conflicts → investigate deeper, favor higher authority; open questions → preserve both positions; methodological differences → present both with framing. Never force false consensus on genuine open questions |
+| Aspect | Agent | Threshold |
+|--------|-------|-----------|
+| GRADE-adapted confidence | general-purpose | Evidence quality assessed beyond source type — a PRIMARY source can be low-confidence if inconsistent with other evidence, indirect to the question, or imprecise. Dimensions: risk of bias, inconsistency, indirectness, imprecision, publication bias |
+| Claim decomposition | criteria-checker | Complex claims broken into independently verifiable atoms. Compound claims hide errors — "X reached $500B in 2023 driven by Y" contains three separate verifiable claims |
+| Disagreement classification | general-purpose | Source conflicts classified before resolution: factual conflicts → investigate deeper, favor higher authority; open questions → preserve both positions; methodological differences → present both with framing. Never force false consensus on genuine open questions |
 
 #### Process Discipline
 
-| Aspect | Threshold |
-|--------|-----------|
-| Protocol deviation tracking | Departures from original research plan documented with rationale — pre-registration's value comes from making deviations visible, not preventing them |
-| Linchpin analysis | Claims whose failure would collapse most conclusions identified and targeted for strongest verification effort |
-| Outside view | Reference class identified — "how often do claims of this sort hold?" applied after initial conclusions to counter anchoring and base rate neglect |
-| Adversarial convergence | Adversarial findings descended in severity across waves — not merely absent. Final wave attacked from new angles. Conclusions became more accurate, not more hedged (bipolar check) |
+| Aspect | Agent | Threshold |
+|--------|-------|-----------|
+| Protocol deviation tracking | criteria-checker | Departures from original research plan documented with rationale — pre-registration's value comes from making deviations visible, not preventing them |
+| Linchpin analysis | general-purpose | Claims whose failure would collapse most conclusions identified and targeted for strongest verification effort |
+| Outside view | general-purpose | Reference class identified — "how often do claims of this sort hold?" applied after initial conclusions to counter anchoring and base rate neglect |
+| Adversarial convergence | general-purpose | Adversarial findings descended in severity across waves — not merely absent. Final wave attacked from new angles. Conclusions became more accurate, not more hedged (bipolar check) |
 
 ## Risks
 

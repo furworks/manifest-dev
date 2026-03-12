@@ -1,6 +1,6 @@
 ---
 name: define
-description: 'Manifest builder. Plan work, scope tasks, spec out requirements. Converts needs into Deliverables + Invariants with verification criteria.'
+description: 'Manifest builder. Plan work, scope tasks, spec out requirements, break down complex tasks before implementation. Converts needs into Deliverables + Invariants with verification criteria. Use when planning features, debugging complex issues, scoping refactors, or whenever a task needs structured thinking before coding.'
 ---
 
 # /define - Manifest Builder
@@ -44,6 +44,8 @@ Domain-specific guidance available in:
 
 **Composition**: Code-change tasks combine CODING.md (base quality gates) with domain-specific guidance. Text-authoring tasks combine WRITING.md (base prose quality) with content-type guidance—a "blog post" benefits from both WRITING.md and BLOG.md, a "technical proposal" from both WRITING.md and DOCUMENT.md. Research tasks compose RESEARCH.md (base research methodology) with source-type files—when web research is identified as relevant, load `tasks/research/sources/SOURCE_WEB.md` alongside `tasks/research/RESEARCH.md`. RESEARCH.md's Data Sources table lists available source files and probes which sources apply. Domains aren't mutually exclusive—a "bug fix that requires refactoring" benefits from both BUG.md and REFACTOR.md. Related domains compound coverage.
 
+**Exception**: PROMPTING tasks do NOT compose with CODING.md unless the task also changes executable code. PROMPTING.md has its own quality gates (prompt-reviewer, clarity, structure, etc.). When a task changes both prompts AND code, apply both PROMPTING.md and CODING.md gates, scoping each to the relevant files.
+
 **Task file structures are presumed relevant.** Task files contain quality gates, reviewer agents, risks, scenarios, and trade-offs. These are angles you won't think to check on your own — they exist precisely because they're easy to miss. Quality gates are auto-included; Resolvable structures (risks, scenarios, trade-offs) must be **resolved**: either presented to the user for selection, or explicitly skipped with logged reasoning (e.g., "CODING.md concurrency risk skipped: single-threaded CLI tool"). Silent drops are the failure mode — not over-asking.
 
 **Task file content types.** Five categories, each handled differently:
@@ -84,6 +86,22 @@ Scope deliverables and verification to repo context. Cross-repo invariants get e
 5. **Directed** - For complex tasks, establish initial implementation direction (Approach) before execution. Architecture defines starting direction, not step-by-step script. Trade-offs enable autonomous adjustment when reality diverges.
 
 6. **Efficient** - Question quality, not brevity. Each question must: materially change the manifest, lock an assumption, or choose between meaningful trade-offs. If it fails all three, don't ask. One missed criterion costs more than one extra question—err toward asking, never ask trivia. Prioritize questions that split the space—scope and constraints before details.
+
+## Interview Flow
+
+Domain Grounding → Outside View → Pre-Mortem → Backcasting → Adversarial Self-Review (skip for simple tasks). Protocols are sequential—each feeds the next. Domain Grounding reveals context that makes Outside View specific. Outside View establishes base rates that make Pre-Mortem grounded. Pre-Mortem surfaces failures that Backcasting complements with positive dependencies.
+
+## Complexity Triage
+
+After understanding the task, calibrate interview depth:
+
+| Complexity | Indicators | Protocols |
+|------------|-----------|-----------|
+| **Simple** | Single file, obvious approach, low risk | Domain Grounding + quick Pre-Mortem |
+| **Standard** | Multi-file, clear domain, moderate risk | All protocols, lightweight Adversarial |
+| **Complex** | Multi-deliverable, unfamiliar domain, high risk, multi-repo | All protocols including Approach section |
+
+When uncertain, default to Standard. User can signal "enough" to compress at any point.
 
 ## Constraints
 
@@ -130,6 +148,8 @@ Read full log before synthesis. Unresolved `- [ ]` items must be addressed first
 **Confirm understanding periodically** - Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct?" This catches interpretation drift early—a misunderstanding in round 2 compounds through round 8 if never checked.
 
 **Batch related questions** - Group related questions into a single turn rather than asking one at a time. Batching keeps momentum and reduces round-trips without sacrificing depth. Each batch should cover a coherent topic area—don't mix unrelated concerns in one batch.
+
+**Fast-track signal** — If the user signals they want minimal interview ("just build it", "I trust your judgment", "keep this quick"), compress to: one round of high-priority questions (scope + constraints), encode reasonable defaults as Known Assumptions, and proceed to synthesis. Log compressed areas so the manifest-verifier can flag gaps the user chose to skip.
 
 **Stop when converged** - Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
 
