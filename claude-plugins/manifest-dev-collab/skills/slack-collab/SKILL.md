@@ -23,6 +23,15 @@ If `$ARGUMENTS` is empty (no task description and no `--resume`), ask what they 
 - GitHub access via `gh` CLI (authenticated) or GitHub MCP server — used for PR review monitoring in Phase 4+
 - manifest-dev and manifest-dev-collab plugins installed
 
+## Preflight: Agent Teams Required
+
+Before Phase 0, verify Agent Teams tools are available:
+
+1. Use `ToolSearch` to check that `TeamCreate` and `SendMessage` tools exist.
+2. If EITHER tool is **not available**, tell the user: "Agent Teams feature is required. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in Claude Code settings and restart." **STOP immediately.**
+
+This skill REQUIRES Agent Teams. You MUST create a team via `TeamCreate` and spawn teammates with `team_name`. There is no subagent fallback.
+
 ## Communication Model: Hub-and-Spoke
 
 All teammate communication flows through you (the lead). Teammates **only** message the lead — never each other directly.
@@ -31,7 +40,7 @@ All teammate communication flows through you (the lead). Teammates **only** mess
 - **Slack**: ALL Slack interaction goes through the slack-coordinator. Do not call: `slack_send_message`, `slack_read_channel`, `slack_read_thread`, `slack_search_channels`, `slack_search_users`, `slack_read_user_profile`, `slack_create_canvas`, `slack_send_message_draft`, `slack_schedule_message`.
 - **GitHub**: ALL GitHub interaction goes through the github-coordinator. Do not call: `gh` CLI commands or any GitHub MCP tools directly.
 
-Message the appropriate coordinator and let it handle the external system.
+Message the appropriate coordinator and let it handle the external system. **You send context and instructions — the coordinator composes the actual message.** Never include verbatim Slack or GitHub message text in your messages to coordinators.
 
 - **define-worker → lead → slack-coordinator** (for stakeholder Q&A)
 - **executor → lead → slack-coordinator** (for escalations)
@@ -145,7 +154,7 @@ Re-read the state file before each phase transition to guard against context com
   "channel_id": "<slack-channel-id>",
   "owner_handle": "<@owner>",
   "stakeholders": [
-    {"handle": "<@handle>", "name": "<name>", "role": "<role>", "is_qa": false}
+    {"handle": "<@handle>", "name": "<name>", "role": "<role>", "is_qa": false, "github_handle": "<gh-user or null>"}
   ],
   "threads": {
     "<topic-slug>": {"ts": "<thread-ts>", "last_seen_ts": "<latest-reply-ts>"}
@@ -186,7 +195,7 @@ Delivery: SendMessage to <worker> | File at <path>
 If `$ARGUMENTS` starts with `--resume`:
 1. Read the state file at the provided path.
 2. Restore flags from `state.flags` (default to `{"interview": null, "mode": null}` if the key is missing — older state files may not include it). If `--interview` or `--mode` flags are also provided alongside `--resume`, they override the stored values.
-3. Re-create the team (slack-coordinator, define-worker, executor) with existing channel/stakeholder context in their spawn prompts.
+3. Create the team via `TeamCreate`, then re-spawn teammates (slack-coordinator, define-worker, executor) with existing channel/stakeholder context in their spawn prompts.
 4. If resuming from Phase 4 or later and `pr_url` is set, also spawn github-coordinator with the PR URL from the state file.
 5. Continue from the interrupted phase. If `phase_state.waiting_for` is populated, resume polling from where it left off — check for responses that arrived while the process was down.
 
@@ -196,17 +205,18 @@ If `$ARGUMENTS` starts with `--resume`:
 
 1. Ask the user via AskUserQuestion:
    - What is the Slack channel name or ID? (User must create the channel and ensure stakeholders are members before starting.)
-   - Who are the stakeholders? (names, Slack @handles, roles/expertise)
+   - Who are the stakeholders? (names, Slack @handles, roles/expertise, GitHub usernames if they'll review PRs)
    - Which stakeholders handle QA (if any)?
 
    If the user provides a channel name instead of an ID, spawn the slack-coordinator first (step 3), then ask it to look up the channel ID via `slack_search_channels`. Do NOT use Slack MCP tools yourself — even for lookups.
 2. Generate a unique `run_id`.
-3. Create the team — spawn all three teammates via Agent tool:
-   - **slack-coordinator**: `subagent_type: "manifest-dev-collab:slack-coordinator"`, `model: "sonnet"`, `team_name: "<team>"`, `name: "slack-coordinator"`. Pass the channel_id, full stakeholder roster (names, handles, roles, QA flags), and state file path in the prompt.
-   - **define-worker**: `subagent_type: "manifest-dev-collab:define-worker"`, `team_name: "<team>"`, `name: "define-worker"`. Omit model (inherits parent). Pass the task description in the prompt.
-   - **executor**: `subagent_type: "manifest-dev-collab:executor"`, `team_name: "<team>"`, `name: "executor"`. Omit model (inherits parent). Pass initial context in the prompt.
-4. Message slack-coordinator: "Post a kickoff message to channel [channel_id]: 'Kicking off: [task summary]'. Then post an intro thread tagging all stakeholders. Start your poll loop — report back with thread_ts values and keep polling for stakeholder responses from now on."
-5. When slack-coordinator reports thread info, write state file (include parsed `flags`). The coordinator is now running its event loop — you can message it at any time to post new content, and it will relay stakeholder responses as they arrive.
+3. **Create the team**: `TeamCreate(team_name: "<run_id>", description: "<task summary>")`. This MUST succeed before spawning any teammates. If it fails, abort and tell the user.
+4. **Spawn all three teammates** — each MUST include `team_name: "<run_id>"`:
+   - **slack-coordinator**: `subagent_type: "manifest-dev-collab:slack-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "slack-coordinator"`. Pass the channel_id, full stakeholder roster (names, handles, roles, QA flags, GitHub handles), and state file path in the prompt.
+   - **define-worker**: `subagent_type: "manifest-dev-collab:define-worker"`, `team_name: "<run_id>"`, `name: "define-worker"`. Omit model (inherits parent). Pass the task description in the prompt.
+   - **executor**: `subagent_type: "manifest-dev-collab:executor"`, `team_name: "<run_id>"`, `name: "executor"`. Omit model (inherits parent). Pass initial context in the prompt.
+5. Message slack-coordinator with kickoff context: channel ID, task summary, stakeholder roster. Instruct it to post a kickoff message and intro thread tagging all stakeholders, then start its poll loop and report back with thread_ts values.
+6. When slack-coordinator reports thread info, write state file (include parsed `flags`). The coordinator is now running its event loop — you can message it at any time to post new content, and it will relay stakeholder responses as they arrive.
 
 ### Phase 1: Define
 
@@ -217,7 +227,7 @@ If `$ARGUMENTS` starts with `--resume`:
 
 ### Phase 2: Manifest Review
 
-1. Message slack-coordinator: "Post a phase transition message: 'Phase 2: Manifest Review'. Then post the manifest at [manifest_path] as a separate parent message for stakeholder review. Tag all stakeholders."
+1. Message slack-coordinator with phase transition context: entering Phase 2 (Manifest Review), manifest path for stakeholder review, tag all stakeholders. The coordinator posts the transition message and manifest as separate parent messages.
 2. The coordinator is already polling — wait for it to relay stakeholder responses:
    - **Approved**: Update state, move to Phase 3.
    - **Feedback**: Message define-worker: "Revise manifest at [path] with this feedback: [feedback]". Then re-enter Phase 2.
@@ -234,12 +244,13 @@ If `$ARGUMENTS` starts with `--resume`:
 
 ### Phase 4: PR Review (GitHub-based)
 
-The github-coordinator monitors PR activity; the slack-coordinator posts an informational message only.
+The github-coordinator monitors PR activity and requests reviews. The slack-coordinator posts a one-time notification to reviewers.
 
 1. Message executor: "Create a PR for the changes. Report back with the PR URL."
 2. When executor reports PR URL, update state (`pr_url`).
-3. Spawn github-coordinator: `subagent_type: "manifest-dev-collab:github-coordinator"`, `model: "sonnet"`, `team_name: "<team>"`, `name: "github-coordinator"`. Pass PR URL, state file path in the prompt. It begins its event loop immediately.
-4. Message slack-coordinator: "Post an informational message: 'PR opened: [url] — review happening on GitHub.' No review discussion in Slack."
+3. Spawn github-coordinator: `subagent_type: "manifest-dev-collab:github-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "github-coordinator"`. Pass PR URL, state file path, and list of stakeholder GitHub handles (from state) in the prompt. It begins its event loop immediately.
+4. **Request reviews on GitHub**: If any stakeholder has a `github_handle`, message github-coordinator with the reviewer GitHub handles. Instruct it to formally request reviews and post an initial PR comment tagging reviewers. If NO stakeholder has a `github_handle`, skip this step.
+5. **Notify reviewers on Slack**: Message slack-coordinator with context: PR URL, reviewer names/handles. Instruct it to post one notification tagging the reviewer stakeholders and directing them to review on GitHub.
 
 #### **CRITICAL: PR Issue Routing**
 
@@ -300,7 +311,7 @@ MANIFEST_AMENDMENT:
 
 QA is performed by human testers through Slack. The github-coordinator is **still running** and monitoring the PR — late review comments or CI failures during QA are handled in parallel.
 
-1. Message slack-coordinator: "Post QA request as a separate parent message. Tag QA stakeholders only. Ask them to test and report issues."
+1. Message slack-coordinator with QA context: entering QA phase, QA stakeholder names/handles. Instruct it to post a QA request as a separate parent message tagging QA stakeholders only.
 2. **QA fix loop**: When slack-coordinator reports QA issues:
    - Message define-worker: "Evaluate these QA issues against the manifest: [issues]. Which ACs are violated? What needs fixing?"
    - When define-worker responds with evaluation, message executor: "Fix these validated issues: [fix instructions with AC refs]"
@@ -312,7 +323,7 @@ QA is performed by human testers through Slack. The github-coordinator is **stil
 
 ### Phase 6: Done
 
-1. Message slack-coordinator: "Post completion summary as a separate parent message tagging all stakeholders: task description, PR URL, key decisions."
+1. Message slack-coordinator with completion context: task description, PR URL, key decisions made during the workflow. Instruct it to post a completion summary as a separate parent message tagging all stakeholders.
 2. Terminate all teammates via SendMessage with `type: "shutdown_request"`:
    - Send shutdown_request to slack-coordinator.
    - Send shutdown_request to github-coordinator (if spawned).
@@ -362,3 +373,10 @@ Otherwise, stay quiet and let humans drive. Don't lecture, don't dominate, don't
 - Run /define or /do yourself — the define-worker and executor do that.
 - Write code, create files, or modify the codebase.
 - Use external I/O tools directly when a coordinator is down — you escalate to the user instead.
+
+## Never Do
+
+- **Spawn agents without `team_name`** — every Agent call in this skill MUST include `team_name`
+- **Continue if `TeamCreate` fails or is unavailable** — abort and tell the user
+- **Fall back to regular subagents** — this skill has no subagent fallback
+- **Compose verbatim Slack or GitHub messages** — send context and instructions to coordinators, let them compose the actual messages

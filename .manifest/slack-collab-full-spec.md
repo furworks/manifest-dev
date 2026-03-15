@@ -7,11 +7,11 @@
 - **Goal:** Collaborative define/do workflow via Slack using Agent Teams — seamless enough to handle real sessions (bot comment triage, CI failure classification, lean polling, lead orchestration) without human intervention for routine decisions.
 
 - **Mental Model:**
-  - **Lead** = the `/slack-collab` skill session. Orchestrator with voice — manages phases, writes state file, acts as subagent bridge, and contributes to discussions (answers when referenced, surfaces conflicts, fact-checks claims). **NEVER uses Slack MCP tools directly** — all Slack interaction routes through the slack-coordinator. Unnamed voice (no system attribution prefix). Role hierarchy: lead = orchestrator, humans = advisors, owner = override power. Terminates all teammates via shutdown_request in Phase 6.
+  - **Lead** = the `/slack-collab` skill session. Orchestrator with voice — manages phases, writes state file, acts as subagent bridge, and contributes to discussions (answers when referenced, surfaces conflicts, fact-checks claims). **NEVER uses Slack MCP tools directly** — all Slack interaction routes through the slack-coordinator. **Sends context and instructions to coordinators — never composes verbatim messages.** Unnamed voice (no system attribution prefix). Role hierarchy: lead = orchestrator, humans = advisors, owner = override power. Must create team via `TeamCreate` before spawning any teammates. Verifies Agent Teams availability (ToolSearch for TeamCreate + SendMessage) before Phase 0 — aborts if unavailable. Terminates all teammates via shutdown_request in Phase 6.
   - **slack-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:slack-coordinator`) = dedicated Slack I/O teammate. Posts messages, sends DMs, polls threads and DM conversations, routes stakeholder answers to lead. Continuous split-sleep polling at 60-second intervals (two 30s halves with mailbox check between) — starts after first thread, runs until shutdown_request. Checks for lead messages 3 times per poll cycle (before polling, after polling, mid-sleep). Each item (question, review, phase transition) gets its own parent message in the main channel (no mega-thread). Tags only relevant stakeholders per thread. Disambiguates pronouns when relaying messages (replaces "you"/"me"/"us" with specific names/roles). Responds honestly to identity questions about lead's contributions (AI orchestrator) only when directly asked. Lean diff-only reporting — uses `last_seen_ts` per thread, reports only new messages since last poll. Recovers from compaction via state file.
   - **define-worker** (spawned via `subagent_type: manifest-dev-collab:define-worker`, model omitted = inherits parent) = runs `/define` with TEAM_CONTEXT. Messages lead for all communication (stakeholder Q&A routed through lead -> coordinator). Requests verification subagent launches from lead. Persists as manifest authority for QA evaluation AND Phase 4 PR comment evaluation (classifies comments, amends manifest for valid gaps, explains drops).
   - **executor** (spawned via `subagent_type: manifest-dev-collab:executor`, model omitted = inherits parent) = MUST invoke `/do` via Skill tool (never implement directly). Messages lead for escalations (routed through lead -> coordinator). Runs /verify locally (has all tools inherited from lead, including Agent tool for spawning criteria-checkers). Creates PR. Fixes QA issues routed through lead. Contains redundant guard: rejects PR review issues without AC references from define-worker.
-  - **github-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:github-coordinator`) = dedicated GitHub I/O teammate. Polls PR reviews, comments, CI status. Spawned in Phase 4 after PR creation. Same split-sleep polling pattern as slack-coordinator (60s, lean diffs, state recovery). Distinguishes bot vs human comment authors in reports. Recovers from compaction via state file.
+  - **github-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:github-coordinator`) = dedicated GitHub I/O teammate. Polls PR reviews, comments, CI status. Spawned in Phase 4 after PR creation. Same split-sleep polling pattern as slack-coordinator (60s, lean diffs, state recovery). Distinguishes bot vs human comment authors in reports. Recovers from compaction via state file. **Initial actions at spawn**: requests formal PR reviews via `gh pr edit --add-reviewer` and posts initial PR comment tagging reviewers (when GitHub handles are provided).
   - **Hub-and-spoke** = all teammate communication flows through the lead. No direct teammate-to-teammate messaging. The lead is the communication hub.
   - **Subagent bridge** = define-worker requests manifest-verifier launches from lead. Subagents send results directly to the requesting worker via SendMessage (if feasible) or write to `/tmp/subagent-result-{id}.md` and lead tells worker the file path (fallback). Exception: executor runs /verify locally and spawns its own criteria-checkers — verification doesn't go through the bridge.
   - **TEAM_CONTEXT** = behavior switch. Tells `/define` and `/do` to message the lead instead of using AskUserQuestion. Format includes `lead` name, `coordinator` name, and `role`.
@@ -34,13 +34,14 @@
 /slack-collab "build auth system"
 |
 +- PHASE 0: PREFLIGHT (Lead alone, no team yet)
+|  +- Preflight: ToolSearch for TeamCreate + SendMessage. Abort if missing.
 |  +- Ask user via AskUserQuestion:
 |  |   - Existing Slack channel ID (no creation)
-|  |   - Stakeholders (names, Slack handles, roles)
+|  |   - Stakeholders (names, Slack handles, roles, GitHub usernames)
 |  |   - QA needs
-|  +- Create team via subagent_type: slack-coord (sonnet), define-worker, executor
-|  +- Message slack-coord: "Post intro to channel, create
-|  |   topic threads for initial Q&A"
+|  +- TeamCreate(team_name: run_id) — must succeed before spawning
+|  +- Spawn teammates (all with team_name): slack-coord (sonnet), define-worker, executor
+|  +- Message slack-coord with kickoff context (not verbatim text)
 |  +- Coord sends thread_ts values to lead
 |  +- Lead writes state file
 |
@@ -71,8 +72,9 @@
 +- PHASE 4: PR + REVIEW
 |  +- Lead messages executor: "Create PR"
 |  +- Executor creates PR, messages lead with URL
-|  +- Lead spawns github-coordinator (sonnet) with PR URL
-|  +- Lead messages slack-coord: "Post PR for review"
+|  +- Lead spawns github-coordinator (sonnet) with PR URL + reviewer GH handles
+|  +- GitHub review request: coordinator adds reviewers (gh pr edit --add-reviewer) + initial comment
+|  +- Slack notification: coordinator posts one message tagging reviewers, directing to GitHub
 |  +- github-coordinator polls PR: reports diffs (bot/human labeled)
 |  +- Bot comments -> define-worker classifies -> fix or FP (comment + resolve)
 |  +- Human comments -> define-worker classifies -> comment -> wait approval -> resolve
@@ -107,6 +109,9 @@
   - [R-8] Lean polling breaks thread tracking — coordinator misses messages because last_seen_ts is wrong or stale | Detect: test with concurrent thread replies during a poll cycle
   - [R-9] Redundant guards create conflicting rules — SKILL.md says one thing, agent says slightly different | Detect: prompt-reviewer subagent catches conflicts (INV-G20)
   - [R-10] Define-worker manifest amendments during Phase 4 create confusion — executor works on outdated ACs | Detect: amendment protocol requires lead approval before executor acts
+  - [R-11] Lead spawns regular subagents instead of teammates (missing TeamCreate/team_name) | Detect: preflight ToolSearch + explicit TeamCreate step + Never Do guard
+  - [R-12] Slack-coordinator exits after completing a discrete lead request (context rot → "task done") | Detect: CRITICAL infinite loop callout + resume-after-handling reinforcement + What You Do NOT Do entry
+  - [R-13] PR URLs not clickable in Slack (wrong formatting) | Detect: URL formatting guidance in slack-coordinator
 
 - **Trade-offs:**
   - [T-1] Hub-and-spoke vs mesh -> Prefer hub-and-spoke: lead visibility, reduced teammate confusion
@@ -118,6 +123,8 @@
   - [T-7] Brevity vs explicit guidance -> Prefer explicit for bot/human/CI rules (new behavior needs clarity) but keep existing sections concise
   - [T-8] Flexibility vs specificity -> Hard process rules (bot=resolve, human=discuss), flexible evaluation (define-worker judges merit)
   - [T-9] Self-contained coordinators vs lead-driven polling -> Prefer self-contained (proven pattern, simpler recovery) over CronCreate (moves context problem to lead)
+  - [T-10] Consistency vs minimal change in lead message composition -> Prefer consistency: ALL lead-to-coordinator messages use context+instructions, not just new ones
+  - [T-11] Polling reinforcement level: slack-coordinator vs github-coordinator -> Slack gets more (CRITICAL + inline + Do NOT Do) because it handles more discrete tasks with more exit signals; GitHub gets less (CRITICAL + Do NOT Do)
 
 ## 3. Global Invariants (The Constitution)
 
@@ -368,6 +375,8 @@
 - [ASM-7] Slack API supports reading reactions via the existing MCP tools (slack_read_thread returns reaction data) | Default: Yes | Impact if wrong: reaction monitoring would need a different MCP tool or API call
 - [ASM-8] GitHub PR thread resolution is possible via `gh` CLI or GitHub MCP tools available to the github-coordinator | Default: Yes | Impact if wrong: bot thread resolution would need a manual workflow instead
 - [ASM-9] Define-worker can amend the manifest file directly during Phase 4 (write access to /tmp/manifest-*.md) | Default: Yes, define-worker already writes to /tmp/ | Impact if wrong: amendments would need to go through the lead as file-based handoff
+- [ASM-10] Slack-coordinator exit-after-discrete-task problem is caused by missing prompt reinforcement, not deeper architectural issue | Default: prompt reinforcement sufficient (github-coordinator stays alive better with same rule but fewer discrete tasks) | Impact if wrong: needs external keepalive mechanism
+- [ASM-11] GitHub handles provided by users are valid GitHub usernames | Default: gh pr edit --add-reviewer fails gracefully for invalid handles | Impact if wrong: reviewer assignment silently fails for that user
 
 ## 6. Deliverables (The Work)
 
@@ -1134,4 +1143,113 @@
   verify:
     method: subagent
     prompt: "Read slack-collab/SKILL.md. Verify: (1) lead decides nudges, (2) gentle tone, (3) owner escalation is last resort after nudge attempt."
+  ```
+
+### Amendment 2: TeamCreate, PR Review Workflow, Message Composition, Coordinator Polling (2026-03-15)
+
+*Session 90deebaf showed: skill spawned subagents instead of teammates (no TeamCreate), PR link not clickable in Slack, no review request on GitHub PR, no Slack reviewer notification, coordinators exit prematurely, lead composed verbatim Slack messages.*
+
+- [INV-G28] Agent Teams required — preflight ToolSearch for TeamCreate + SendMessage, abort if unavailable. No subagent fallback.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md. Verify preflight section before Phase 0 checks for TeamCreate and SendMessage via ToolSearch, aborts if missing, and states no subagent fallback."
+  ```
+
+- [INV-G29] TeamCreate before any spawn — every Agent call includes team_name. Never Do section enforces this.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 0. Verify TeamCreate is called before any Agent spawn. Verify Never Do section prohibits Agent without team_name."
+  ```
+
+- [INV-G30] Lead never composes verbatim Slack/GitHub messages — sends context and instructions, coordinator composes.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read all Phase sections (0-6) in SKILL.md. Find every coordinator-directed message. Verify none contain verbatim Slack/GitHub text in quotes. All must use context+instructions pattern."
+  ```
+
+- [INV-G31] Coordinators are infinite event loops — only shutdown_request terminates. Both coordinators have CRITICAL callout and What You Do NOT Do entry.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read slack-coordinator.md and github-coordinator.md. Verify both have: (1) CRITICAL infinite loop statement, (2) 'Exit, return, or stop' in Do NOT Do section."
+  ```
+
+- [AC-1.28] **Preflight tool check**: Section between Prerequisites and Phase 0 with ToolSearch, abort, env var message.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md. Verify preflight section instructs ToolSearch for TeamCreate + SendMessage, tells user to set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 if missing, STOP immediately."
+  ```
+
+- [AC-1.29] **Phase 0 TeamCreate step**: Explicit TeamCreate with run_id before spawns. Handles failure (abort).
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 0. Verify: TeamCreate step before spawns, must succeed, handles failure with abort."
+  ```
+
+- [AC-1.30] **Phase 0 GitHub handles**: AskUserQuestion includes GitHub usernames. State schema has nullable github_handle.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 0 step 1 and state file schema. Verify GitHub usernames asked for and github_handle field is nullable in schema."
+  ```
+
+- [AC-1.31] **Phase 4 GitHub review request**: Messages github-coordinator with reviewer handles for formal review + initial comment. Skips if no github_handle.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 4. Verify step that messages github-coordinator with reviewer handles, requests reviews, posts comment. Handles zero-reviewers (skip)."
+  ```
+
+- [AC-1.32] **Phase 4 Slack reviewer notification**: Messages slack-coordinator with PR URL + reviewer context. Tags reviewers, directs to GitHub.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 4. Verify step messaging slack-coordinator with PR URL and reviewer names, using context+instructions pattern."
+  ```
+
+- [AC-1.33] **Context+instructions pattern**: ALL lead-to-coordinator messages across Phases 0-6 use context+instructions, no verbatim text.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read all Phase sections in SKILL.md. Verify every coordinator-directed message uses context+instructions. List any violations."
+  ```
+
+- [AC-1.34] **Never Do section**: Bottom of SKILL.md. Contains: no Agent without team_name, abort on TeamCreate fail, no subagent fallback, no verbatim composition.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read end of SKILL.md. Verify Never Do section with 4 items: team_name required, TeamCreate fail abort, no subagent fallback, no verbatim messages."
+  ```
+
+- [AC-2.14] **Slack-coordinator CRITICAL loop**: Infinite loop callout at top of Operating Model. Resume-after-handling reinforcement in step 1.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read slack-coordinator.md Operating Model. Verify CRITICAL infinite loop statement and step 1 has 'do not exit' after handling."
+  ```
+
+- [AC-2.15] **Slack-coordinator URL formatting**: Plain text URLs, no markdown-style, no angle brackets. Slack auto-unfurls.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read slack-coordinator.md. Verify URL formatting guidance: plain text, auto-unfurl, no [text](url), no angle brackets."
+  ```
+
+- [AC-8.6] **GitHub-coordinator review request capability**: Initial Actions section at spawn — add-reviewer + initial comment when handles provided.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read github-coordinator.md. Verify Initial Actions section with gh pr edit --add-reviewer and initial PR comment tagging reviewers."
+  ```
+
+- [AC-8.7] **GitHub-coordinator polling reinforcement**: CRITICAL label on Never stop polling + Do NOT exit entry.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read github-coordinator.md. Verify CRITICAL on polling rule and exit prohibition in What You Do NOT Do."
   ```
