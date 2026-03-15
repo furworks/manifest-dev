@@ -577,6 +577,43 @@ class TestStopHookInvocationPatterns:
         assert result is not None
         assert result["decision"] == "block"
 
+    def test_define_expansion_referencing_do_does_not_trigger(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+    ):
+        """isMeta /define expansion referencing skills/do/ in body should NOT detect /do."""
+        # Real bug: /define SKILL.md references "skills/do/references/BUDGET_MODES.md"
+        # in its body text. The isMeta regex was matching this as a /do invocation.
+        ismeta_define_expansion = {
+            "type": "user",
+            "isMeta": True,
+            "message": {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Base directory for this skill: /path/to/plugins/skills/define\n\n"
+                            "# /define - Manifest Builder\n\n"
+                            "Build a comprehensive Manifest...\n\n"
+                            "## Verification Loop\n\n"
+                            "After writing the manifest, check the manifest's `mode:` field "
+                            "and the `/define manifest-verifier` row in "
+                            "`skills/do/references/BUDGET_MODES.md`.\n\n"
+                            "To execute: /do /tmp/manifest-{timestamp}.md"
+                        ),
+                    }
+                ]
+            },
+        }
+        transcript_path = temp_transcript([ismeta_define_expansion])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — no /do invocation, just /define referencing a /do file path
+        assert result is None
+
     def test_detects_combined_command_and_ismeta(
         self,
         experimental_hook_path: Path,

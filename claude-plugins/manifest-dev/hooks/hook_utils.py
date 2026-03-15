@@ -141,10 +141,15 @@ def _is_user_skill_invocation(line_data: dict[str, Any], skill_name: str) -> boo
     # Pattern 2: isMeta skill expansion (most reliable for user-invoked)
     if line_data.get("isMeta"):
         if "Base directory for this skill:" in text:
-            # Match skills/{skill-name} or skills/{skill-name}/
-            pattern = rf"skills/{re.escape(skill_name)}(?:/|\s|$)"
-            if re.search(pattern, text):
-                return True
+            # Only search the "Base directory" line — the body may reference
+            # other skills' files (e.g., skills/do/references/...) which would
+            # false-positive if we searched the entire text.
+            for line in text.split("\n"):
+                if "Base directory for this skill:" in line:
+                    pattern = rf"skills/{re.escape(skill_name)}(?:/|\s|$)"
+                    if re.search(pattern, line):
+                        return True
+                    break
 
     # Pattern 3: command-name tags (various formats)
     # Match /<skill> or /manifest-dev:skill (only our plugin)
