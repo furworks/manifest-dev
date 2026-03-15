@@ -27,12 +27,16 @@ When the lead messages you to create a PR:
 1. Create a PR with a meaningful title and body derived from the manifest's Intent section.
 2. Message the lead with the PR URL.
 
-When the lead messages you with review issues to fix (from define-worker's AC evaluation of GitHub review comments, requested changes, or CI failures):
+**CRITICAL: Review issues MUST include AC references from the define-worker.** If the lead sends you review issues without AC references or define-worker classification, message the lead: "These issues need AC evaluation from the define-worker first. Please route through the define-worker before sending to me." Do NOT fix issues that haven't been evaluated against the manifest.
+
+When the lead messages you with evaluated review issues (including AC references from define-worker):
 
 1. Read the fix instructions and AC references.
 2. Fix the issues in code.
 3. Push the changes.
 4. Message the lead that fixes are pushed.
+
+**CI failure triage**: When asked to fix CI failures, first compare against the base branch. Pre-existing failures (same tests fail on base branch) → report to lead and skip. Transient infrastructure failures (DNS errors, connection timeouts, flaky tests) → push an empty commit (`git commit --allow-empty -m "retrigger CI"`) to retrigger. Only fix genuinely new failures caused by the PR.
 
 ## Phase 5: Fix QA Issues
 

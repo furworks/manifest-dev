@@ -23,9 +23,23 @@ When the lead messages you with a task and TEAM_CONTEXT:
 4. Wait for `/define` to complete. It will produce a manifest file at `/tmp/manifest-{timestamp}.md`.
 5. Message the lead with the manifest path: "Manifest complete: [path]"
 
-## Phase 2: Manifest Authority (Persist)
+## Phase 2+: Manifest Authority (Persist)
 
 After /define completes, **stay alive**. Do not exit. You have the full context of every interview decision — why each AC was written, what trade-offs were considered, what stakeholders said.
+
+### Phase 4: PR Review Comment Evaluation
+
+When the lead messages you with PR review comments (from the github-coordinator):
+
+1. **Evaluate each comment on merit** regardless of source. Bots can be right, humans can be wrong — judge by project value, not source authority.
+2. **Classify** each comment as:
+   - **Actionable**: Real issue with a clear fix. Provide fix instructions and reference the affected AC(s). If no existing AC covers it, propose a manifest amendment.
+   - **False-positive**: Comment's premise is incorrect, or the concern doesn't apply. Provide reasoning.
+   - **Needs-clarification**: Unclear whether it applies — needs stakeholder input.
+3. **Amend the manifest** when review reveals genuine gaps. Use the MANIFEST_AMENDMENT format (defined in SKILL.md). Explain which comments led to the amendment and which were dropped with reasoning. Lead must approve amendments before they take effect.
+4. **Handle human resistance**: If a human reviewer disagrees with your classification, consider their reasoning — they may have context you don't. Propose a compromise if possible. The owner is the final authority on disputes.
+
+### Phase 5: QA Issue Evaluation
 
 When the lead messages you during QA with issues:
 1. Read the reported issue.
@@ -38,7 +52,9 @@ When the lead messages you during QA with issues:
 
 **You do:**
 - Run /define to build the manifest
-- Evaluate QA issues against the manifest (as manifest authority)
+- Evaluate PR review comments against the manifest during Phase 4 (classify, amend, explain)
+- Evaluate QA issues against the manifest during Phase 5
+- Amend the manifest when PR review reveals genuine gaps
 - Message the lead via SendMessage for all communication
 
 **You do NOT:**

@@ -10,12 +10,12 @@ Team collaboration on define/do workflows through Slack and GitHub.
 
 | Teammate | Model | Role | Spawned |
 |----------|-------|------|---------|
-| **slack-coordinator** | sonnet | ALL Slack I/O. Posts messages, polls threads (30s intervals, 24h timeout), routes answers between lead and stakeholders. Topic-based threads. Prompt injection defense. | Phase 0 |
-| **define-worker** | default | Runs `/define` with TEAM_CONTEXT. Persists after define as manifest authority — evaluates QA issues against the manifest. | Phase 0 |
-| **executor** | default | Runs `/do` with TEAM_CONTEXT. Creates PR. Fixes QA issues routed through the lead. | Phase 0 |
-| **github-coordinator** | sonnet | ALL GitHub PR I/O. Polls reviews, comments, CI status. Batched reports to lead. Persists through QA for late PR activity. | Phase 4 |
+| **slack-coordinator** | sonnet | ALL Slack I/O. Lean diff polling (60s, `last_seen_ts`), reaction monitoring, main channel monitoring. Pronoun disambiguation. State file recovery on compaction. Prompt injection defense. | Phase 0 |
+| **define-worker** | default | Runs `/define` with TEAM_CONTEXT. Persists as manifest authority — evaluates PR review comments (Phase 4) and QA issues (Phase 5). Can amend the manifest during PR review. | Phase 0 |
+| **executor** | default | Runs `/do` with TEAM_CONTEXT. Creates PR. CI triage (base-branch comparison, empty commit retrigger). Redundant guard: rejects unclassified PR issues. | Phase 0 |
+| **github-coordinator** | sonnet | ALL GitHub PR I/O. Lean diff polling, bot vs human comment labeling, full PR state reporting. State file recovery on compaction. | Phase 4 |
 
-The lead orchestrates phase transitions, manages state, acts as the subagent bridge (spawning verification agents on behalf of workers), and handles crash recovery. It never touches Slack or GitHub directly.
+The lead is the **orchestrator** — it actively contributes to discussions (fact-checking, synthesizing, surfacing conflicts), manages phase transitions, acts as the subagent bridge, and handles crash recovery. It never touches Slack or GitHub directly. Stakeholders are advisors; the owner has override power.
 
 **Communication model:** Hub-and-spoke — all teammates communicate only with the lead. The lead routes to the slack-coordinator for Slack interaction and to the github-coordinator for GitHub PR monitoring. Subagents spawned by the lead can send results directly to the requesting worker.
 
@@ -49,7 +49,7 @@ The skill runs through 7 phases:
 2. **Define** — define-worker runs `/define`, messages lead for Q&A (lead routes to slack-coordinator → Slack)
 3. **Manifest Review** — slack-coordinator posts manifest to Slack, polls for approval
 4. **Execute** — executor runs `/do`, messages lead for escalations
-5. **PR Review** — executor creates PR, github-coordinator monitors reviews/comments/CI on GitHub. Fix loop: github-coordinator → lead → define-worker evaluates → executor fixes. PR done when approved + no unresolved + CI green.
+5. **PR Review** — executor creates PR, github-coordinator monitors (bot/human labeled). Fix loop: github-coordinator → lead → define-worker evaluates (can amend manifest) → executor fixes. Bot comments: fix or resolve, no discussion. Human comments: comment and wait for approval. CI triage: base-branch comparison, empty commit for transient failures.
 6. **QA** (optional) — Human QA via Slack + github-coordinator still monitors PR. Both fix loops operate in parallel.
 7. **Done** — slack-coordinator posts completion summary, all teammates shut down
 
@@ -167,7 +167,7 @@ sequenceDiagram
 
 ## How It Works
 
-The lead coordinates teammates via Agent Teams mailbox messaging (hub-and-spoke). Skills (`/define`, `/do`) receive a `TEAM_CONTEXT` block that tells them to message the lead — skills don't know about Slack. The lead routes stakeholder questions to the coordinator, which handles all Slack interactions: posting in topic-based threads, polling (30s intervals, 24h timeout before owner escalation), and relaying answers back through the lead.
+The lead coordinates teammates via Agent Teams mailbox messaging (hub-and-spoke). Skills (`/define`, `/do`) receive a `TEAM_CONTEXT` block that tells them to message the lead — skills don't know about Slack. The lead routes stakeholder questions to the coordinator, which handles all Slack interactions: posting in topic-based threads, lean diff polling (60s intervals, `last_seen_ts` tracking, reaction monitoring, 24h timeout before owner escalation), and relaying answers back through the lead. Coordinators recover seamlessly from context compaction via state file.
 
 Workers needing subagent capabilities (manifest-verifier, verification agents) request launches from the lead via a structured subagent request. The lead spawns them and results are delivered directly to the requesting worker (or via file-based handoff as fallback).
 
