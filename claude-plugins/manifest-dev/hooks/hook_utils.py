@@ -329,6 +329,9 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
 
     Tracks the most recent /do invocation and what happened after it.
     Each new /do resets the flow state.
+
+    Handles user interrupts: if /do is invoked but the user interrupts
+    before the assistant responds, the /do is considered cancelled.
     """
     has_do = False
     has_verify = False
@@ -336,6 +339,10 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
     has_escalate = False
     do_args: str | None = None
     has_team_context = False
+    # Tracks whether assistant has responded since the last /do invocation.
+    # Used to detect interrupted /do: if the user interrupts before the
+    # assistant responds, /do never started processing.
+    do_turn_has_response = False
 
     try:
         with open(transcript_path, encoding="utf-8") as f:
@@ -365,9 +372,30 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
                         has_verify = False
                         has_done = False
                         has_escalate = False
+                        do_turn_has_response = False
                         if args:
                             do_args = args
                             has_team_context = "TEAM_CONTEXT" in args
+
+                    # For assistant Skill tool calls (Pattern 1), the /do
+                    # invocation IS an assistant message — mark as responded.
+                    if data.get("type") == "assistant":
+                        do_turn_has_response = True
+
+                # Track assistant responses after /do to detect interrupted /do
+                if has_do and not do_turn_has_response:
+                    if data.get("type") == "assistant":
+                        do_turn_has_response = True
+
+                # Detect user interrupt: if /do was invoked but the assistant
+                # never responded, the /do was cancelled by the interrupt.
+                if has_do and not do_turn_has_response:
+                    if data.get("type") == "user":
+                        text = get_message_text(data)
+                        if "[Request interrupted by user]" in text:
+                            has_do = False
+                            do_args = None
+                            has_team_context = False
 
                 # Check for /verify, /done, /escalate after /do (any invocation pattern)
                 if has_do and was_skill_invoked(data, "verify"):

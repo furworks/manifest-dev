@@ -891,3 +891,374 @@ class TestStopHookTeamMode:
 
         assert result is not None
         assert result["decision"] == "allow"
+
+
+class TestStopHookInterruptHandling:
+    """Tests for user interrupt handling during /do workflow.
+
+    Bug: When /do is invoked but the user immediately interrupts before
+    the assistant responds, the hook still treats the session as having
+    an active /do workflow, blocking all subsequent stops.
+    """
+
+    @pytest.fixture
+    def user_interrupt(self) -> dict[str, Any]:
+        """User interrupt message."""
+        return {
+            "type": "user",
+            "message": {"content": "[Request interrupted by user]"},
+        }
+
+    @pytest.fixture
+    def user_regular_message(self) -> dict[str, Any]:
+        """Regular user message (no skill invocation)."""
+        return {
+            "type": "user",
+            "message": {"content": "Please continue with the define work"},
+        }
+
+    @pytest.fixture
+    def assistant_working(self) -> dict[str, Any]:
+        """Assistant doing substantial work (editing files)."""
+        return {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "text", "text": "I'll update the manifest now."},
+                    {
+                        "type": "tool_use",
+                        "name": "Edit",
+                        "input": {"file_path": "/tmp/manifest.md"},
+                    },
+                ]
+            },
+        }
+
+    @pytest.fixture
+    def ismeta_do_expansion(self) -> dict[str, Any]:
+        """isMeta expansion for /do skill."""
+        return {
+            "type": "user",
+            "isMeta": True,
+            "message": {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Base directory for this skill: "
+                            "/path/to/plugins/skills/do\n\n"
+                            "# /do - Manifest Executor\n\n..."
+                        ),
+                    }
+                ]
+            },
+        }
+
+    @pytest.fixture
+    def ismeta_define_expansion(self) -> dict[str, Any]:
+        """isMeta expansion for /define skill (references skills/do/ in body)."""
+        return {
+            "type": "user",
+            "isMeta": True,
+            "message": {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Base directory for this skill: "
+                            "/path/to/plugins/skills/define\n\n"
+                            "# /define - Manifest Builder\n\n"
+                            "Build a comprehensive Manifest...\n\n"
+                            "Check `skills/do/references/BUDGET_MODES.md`.\n\n"
+                            "To execute: /do /tmp/manifest-{timestamp}.md"
+                        ),
+                    }
+                ]
+            },
+        }
+
+    def test_allows_stop_after_interrupted_do(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        user_interrupt: dict[str, Any],
+    ):
+        """Stop should be allowed when /do was invoked but immediately interrupted."""
+        transcript_path = temp_transcript([
+            user_do_command,
+            user_interrupt,
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — /do was cancelled by interrupt before assistant processed it
+        assert result is None
+
+    def test_blocks_when_do_interrupted_after_assistant_response(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        assistant_working: dict[str, Any],
+        user_interrupt: dict[str, Any],
+    ):
+        """Stop should still block when /do was interrupted AFTER assistant started processing."""
+        transcript_path = temp_transcript([
+            user_do_command,
+            assistant_working,  # Assistant started /do work
+            user_interrupt,  # User interrupts mid-execution
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should BLOCK — /do was active and assistant was working
+        assert result is not None
+        assert result["decision"] == "block"
+
+    def test_interrupted_do_then_reinvoked_still_blocks(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        user_interrupt: dict[str, Any],
+    ):
+        """When /do is interrupted then re-invoked, the second /do should block."""
+        second_do = {
+            "type": "user",
+            "message": {
+                "content": (
+                    "<command-name>/manifest-dev:do</command-name>"
+                    "<command-args>/tmp/define.md</command-args>"
+                )
+            },
+        }
+        transcript_path = temp_transcript([
+            user_do_command,
+            user_interrupt,  # First /do cancelled
+            second_do,  # New /do invocation
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should BLOCK — second /do is active and has no /done
+        assert result is not None
+        assert result["decision"] == "block"
+
+    def test_session_reproduction_do_interrupted_then_define_continues(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        user_interrupt: dict[str, Any],
+        user_regular_message: dict[str, Any],
+        assistant_working: dict[str, Any],
+    ):
+        """Reproduce exact session bug: /do invoked, interrupted, then /define work continues.
+
+        This is the exact scenario from session 7ae7e4d8:
+        1. User invokes /do (command-name + isMeta)
+        2. User immediately interrupts
+        3. User sends regular message continuing /define work
+        4. Assistant works on /define content
+        5. Stop hook should NOT block
+        """
+        ismeta_do = {
+            "type": "user",
+            "isMeta": True,
+            "message": {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Base directory for this skill: "
+                            "/path/to/plugins/skills/do\n\n"
+                            "# /do - Manifest Executor\n\n..."
+                        ),
+                    }
+                ]
+            },
+        }
+        transcript_path = temp_transcript([
+            user_do_command,  # /do command (line 944 in session)
+            ismeta_do,  # isMeta expansion (line 945)
+            user_interrupt,  # Interrupt (line 948)
+            user_regular_message,  # Regular message (line 950)
+            assistant_working,  # Assistant works on /define (lines 952+)
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — /do was cancelled by interrupt, assistant is doing /define work
+        assert result is None
+
+    def test_allows_stop_after_interrupted_do_then_regular_messages(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        user_interrupt: dict[str, Any],
+        user_regular_message: dict[str, Any],
+    ):
+        """Stop should be allowed after interrupted /do followed by regular conversation."""
+        transcript_path = temp_transcript([
+            user_do_command,
+            user_interrupt,
+            user_regular_message,
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {"type": "text", "text": "Sure, I'll help with that."}
+                    ]
+                },
+            },
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — /do was cancelled
+        assert result is None
+
+    def test_multiple_interrupts(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        user_interrupt: dict[str, Any],
+    ):
+        """Multiple /do invocations each interrupted should all be cancelled."""
+        second_do = {
+            "type": "user",
+            "message": {
+                "content": (
+                    "<command-name>/do</command-name>"
+                    "<command-args>/tmp/second.md</command-args>"
+                )
+            },
+        }
+        transcript_path = temp_transcript([
+            user_do_command,
+            user_interrupt,  # First /do cancelled
+            second_do,
+            user_interrupt,  # Second /do cancelled
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — both /do invocations were cancelled
+        assert result is None
+
+    def test_assistant_skill_do_then_interrupted_still_blocks(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        assistant_skill_do: dict[str, Any],
+        user_interrupt: dict[str, Any],
+    ):
+        """When /do is invoked via assistant Skill tool call, interrupt should NOT cancel it.
+
+        Pattern 1 (assistant Skill tool_use) means the assistant is already processing,
+        so the interrupt is mid-execution, not a cancellation.
+        """
+        transcript_path = temp_transcript([
+            assistant_skill_do,
+            user_interrupt,
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should BLOCK — assistant was already processing /do
+        assert result is not None
+        assert result["decision"] == "block"
+
+    def test_interrupted_do_with_ismeta_expansion(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_interrupt: dict[str, Any],
+        ismeta_do_expansion: dict[str, Any],
+    ):
+        """isMeta /do expansion followed by interrupt should cancel /do."""
+        user_do_short = {
+            "type": "user",
+            "message": {
+                "content": (
+                    "<command-name>/do</command-name>"
+                    "<command-args>/tmp/define.md</command-args>"
+                )
+            },
+        }
+        transcript_path = temp_transcript([
+            user_do_short,
+            ismeta_do_expansion,
+            user_interrupt,
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — /do + isMeta was interrupted before assistant processed
+        assert result is None
+
+    def test_interrupted_do_then_done_reinvoked_and_completed(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+        user_interrupt: dict[str, Any],
+        assistant_skill_done: dict[str, Any],
+    ):
+        """Interrupted /do followed by successful /do with /done should allow."""
+        second_do = {
+            "type": "user",
+            "message": {
+                "content": (
+                    "<command-name>/do</command-name>"
+                    "<command-args>/tmp/define.md</command-args>"
+                )
+            },
+        }
+        transcript_path = temp_transcript([
+            user_do_command,
+            user_interrupt,  # First /do cancelled
+            second_do,  # New /do
+            assistant_skill_done,  # Properly completed
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — second /do was properly completed with /done
+        assert result is None
+
+    def test_interrupt_without_do_is_harmless(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        user_interrupt: dict[str, Any],
+    ):
+        """Interrupt without any /do should not affect anything."""
+        transcript_path = temp_transcript([
+            {"type": "user", "message": {"content": "Hello"}},
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [{"type": "text", "text": "Hi there!"}]
+                },
+            },
+            user_interrupt,
+        ])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        # Should ALLOW — no /do in transcript
+        assert result is None
