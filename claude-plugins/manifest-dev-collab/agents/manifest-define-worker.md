@@ -1,11 +1,11 @@
 ---
-name: define-worker
+name: manifest-define-worker
 description: 'Runs /define with TEAM_CONTEXT for collaborative manifest building. Persists after /define completes as manifest authority for QA evaluation.'
 ---
 
-# Define Worker
+# Manifest Define Worker
 
-You are the **define-worker** — responsible for running `/define` to build a manifest, and then persisting as the **manifest authority** for QA evaluation.
+You are the **manifest-define-worker** — responsible for running `/define` to build a manifest, and then persisting as the **manifest authority** for QA evaluation.
 
 ## Communication — Critical
 

@@ -11,13 +11,23 @@ Team collaboration on define/do workflows through Slack and GitHub.
 | Teammate | Model | Role | Spawned |
 |----------|-------|------|---------|
 | **slack-coordinator** | sonnet | ALL Slack I/O. Lean diff polling (60s, `last_seen_ts`), reaction monitoring, main channel monitoring. Pronoun disambiguation. State file recovery on compaction. Prompt injection defense. | Phase 0 |
-| **define-worker** | default | Runs `/define` with TEAM_CONTEXT. Persists as manifest authority — evaluates PR review comments (Phase 4) and QA issues (Phase 5). Can amend the manifest during PR review. | Phase 0 |
-| **executor** | default | Runs `/do` with TEAM_CONTEXT. Creates PR. CI triage (base-branch comparison, empty commit retrigger). Redundant guard: rejects unclassified PR issues. | Phase 0 |
+| **manifest-define-worker** | default | Runs `/define` with TEAM_CONTEXT. Persists as manifest authority — evaluates PR review comments (Phase 4) and QA issues (Phase 5). Can amend the manifest during PR review. | Phase 0 |
+| **manifest-executor** | default | Runs `/do` with TEAM_CONTEXT. Code implementation only. Creates PR. Rejects out-of-scope tasks (e2e, deploy, logs). | Phase 0 |
+| *ad-hoc teammates* | varies | Lead spawns on-the-fly for tasks that don't fit existing roles (e.g., e2e-runner, deploy-monitor). | As needed |
 | **github-coordinator** | sonnet | ALL GitHub PR I/O. Lean diff polling, bot vs human comment labeling, full PR state reporting. State file recovery on compaction. | Phase 4 |
 
-The lead is the **orchestrator** — it actively contributes to discussions (fact-checking, synthesizing, surfacing conflicts), manages phase transitions, acts as the subagent bridge, and handles crash recovery. It never touches Slack or GitHub directly. Stakeholders are advisors; the owner has override power.
+The lead is the **autonomous orchestrator** — it processes coordinator reports immediately, decides what actions to take, and instructs teammates to execute. Teammates are pollers and doers, not decision-makers. The lead sends intent and context to coordinators (not verbatim messages). The owner is the unblocker and final authority.
 
-**Communication model:** Hub-and-spoke — all teammates communicate only with the lead. The lead routes to the slack-coordinator for Slack interaction and to the github-coordinator for GitHub PR monitoring. Subagents spawned by the lead can send results directly to the requesting worker.
+**Key capabilities:**
+- **Dynamic team composition** — lead spawns ad-hoc teammates on-the-fly for tasks that don't fit existing roles
+- **Phase-anchored threading** — each phase gets one Slack anchor, updates go under it (define questions are the exception)
+- **Verification hard gate** — Phase 4 is gated on verification passing; lead MUST act on verification requests
+- **Idle suppression** — coordinators only message the lead when there IS activity; no idle heartbeats
+- **Intent-based delegation** — lead sends intent, coordinators compose the actual messages
+- **Review-fix loop automation** — findings → classify → fix → re-review, driven autonomously by the lead
+- **Strict role boundaries** — manifest-executor is code-only; out-of-scope tasks get rejected
+
+**Communication model:** Hub-and-spoke — all teammates communicate only with the lead. The lead routes to the slack-coordinator for Slack interaction and to the github-coordinator for GitHub PR monitoring.
 
 ## Prerequisites
 
@@ -48,8 +58,8 @@ The skill runs through 7 phases:
 1. **Preflight** — Lead asks for existing Slack channel ID + stakeholders (names, handles, roles), then creates the team
 2. **Define** — define-worker runs `/define`, messages lead for Q&A (lead routes to slack-coordinator → Slack)
 3. **Manifest Review** — slack-coordinator posts manifest to Slack, polls for approval
-4. **Execute** — executor runs `/do`, messages lead for escalations
-5. **PR Review** — executor creates PR, github-coordinator monitors (bot/human labeled). Fix loop: github-coordinator → lead → define-worker evaluates (can amend manifest) → executor fixes. Bot comments: fix or resolve, no discussion. Human comments: comment and wait for approval. CI triage: base-branch comparison, empty commit for transient failures.
+4. **Execute** — manifest-executor runs `/do`, messages lead for escalations
+5. **PR Review** — manifest-executor creates PR, github-coordinator monitors (bot/human labeled). Fix loop: github-coordinator → lead → manifest-define-worker evaluates (can amend manifest) → executor fixes. Bot comments: fix or resolve, no discussion. Human comments: comment and wait for approval. CI triage: base-branch comparison, empty commit for transient failures.
 6. **QA** (optional) — Human QA via Slack + github-coordinator still monitors PR. Both fix loops operate in parallel.
 7. **Done** — slack-coordinator posts completion summary, all teammates shut down
 
@@ -64,8 +74,8 @@ graph TB
 
         subgraph "Phase 0 Teammates"
             SC["slack-coordinator<br/>(sonnet)"]
-            DW["define-worker<br/>(default)"]
-            EX["executor<br/>(default)"]
+            DW["manifest-define-worker<br/>(default)"]
+            EX["manifest-executor<br/>(default)"]
         end
 
         subgraph "Phase 4+ Teammate"
@@ -96,8 +106,8 @@ sequenceDiagram
     participant U as User
     participant L as Lead
     participant SC as slack-coordinator
-    participant DW as define-worker
-    participant EX as executor
+    participant DW as manifest-define-worker
+    participant EX as manifest-executor
     participant GC as github-coordinator
     participant S as Slack
     participant G as GitHub
@@ -196,4 +206,4 @@ Reads the state file to determine the current phase and re-creates the team. Sup
 
 ## Security
 
-Both coordinators are the single points of contact for external input. The slack-coordinator treats all Slack messages as untrusted; the github-coordinator treats all PR comments and review bodies as untrusted. Neither exposes secrets, runs arbitrary commands, or accepts dangerous requests — suspicious content is flagged to the owner. Other teammates (define-worker, executor) never touch Slack or GitHub directly — all communication goes through the lead.
+Both coordinators are the single points of contact for external input. The slack-coordinator treats all Slack messages as untrusted; the github-coordinator treats all PR comments and review bodies as untrusted. Neither exposes secrets, runs arbitrary commands, or accepts dangerous requests — suspicious content is flagged to the owner. Other teammates (manifest-define-worker, manifest-executor) never touch Slack or GitHub directly — all communication goes through the lead.

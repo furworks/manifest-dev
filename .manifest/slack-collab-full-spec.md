@@ -7,18 +7,24 @@
 - **Goal:** Collaborative define/do workflow via Slack using Agent Teams — seamless enough to handle real sessions (bot comment triage, CI failure classification, lean polling, lead orchestration) without human intervention for routine decisions.
 
 - **Mental Model:**
-  - **Lead** = the `/slack-collab` skill session. Orchestrator with voice — manages phases, writes state file, acts as subagent bridge, and contributes to discussions (answers when referenced, surfaces conflicts, fact-checks claims). **NEVER uses Slack MCP tools directly** — all Slack interaction routes through the slack-coordinator. **Sends context and instructions to coordinators — never composes verbatim messages.** Unnamed voice (no system attribution prefix). Role hierarchy: lead = orchestrator, humans = advisors, owner = override power. Must create team via `TeamCreate` before spawning any teammates. Verifies Agent Teams availability (ToolSearch for TeamCreate + SendMessage) before Phase 0 — aborts if unavailable. Terminates all teammates via shutdown_request in Phase 6.
-  - **slack-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:slack-coordinator`) = dedicated Slack I/O teammate. Posts messages, sends DMs, polls threads and DM conversations, routes stakeholder answers to lead. Continuous split-sleep polling at 60-second intervals (two 30s halves with mailbox check between) — starts after first thread, runs until shutdown_request. Checks for lead messages 3 times per poll cycle (before polling, after polling, mid-sleep). Each item (question, review, phase transition) gets its own parent message in the main channel (no mega-thread). Tags only relevant stakeholders per thread. Disambiguates pronouns when relaying messages (replaces "you"/"me"/"us" with specific names/roles). Responds honestly to identity questions about lead's contributions (AI orchestrator) only when directly asked. Lean diff-only reporting — uses `last_seen_ts` per thread, reports only new messages since last poll. Recovers from compaction via state file.
-  - **define-worker** (spawned via `subagent_type: manifest-dev-collab:define-worker`, model omitted = inherits parent) = runs `/define` with TEAM_CONTEXT. Messages lead for all communication (stakeholder Q&A routed through lead -> coordinator). Requests verification subagent launches from lead. Persists as manifest authority for QA evaluation AND Phase 4 PR comment evaluation (classifies comments, amends manifest for valid gaps, explains drops).
-  - **executor** (spawned via `subagent_type: manifest-dev-collab:executor`, model omitted = inherits parent) = MUST invoke `/do` via Skill tool (never implement directly). Messages lead for escalations (routed through lead -> coordinator). Runs /verify locally (has all tools inherited from lead, including Agent tool for spawning criteria-checkers). Creates PR. Fixes QA issues routed through lead. Contains redundant guard: rejects PR review issues without AC references from define-worker.
-  - **github-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:github-coordinator`) = dedicated GitHub I/O teammate. Polls PR reviews, comments, CI status. Spawned in Phase 4 after PR creation. Same split-sleep polling pattern as slack-coordinator (60s, lean diffs, state recovery). Distinguishes bot vs human comment authors in reports. Recovers from compaction via state file. **Initial actions at spawn**: requests formal PR reviews via `gh pr edit --add-reviewer` and posts initial PR comment tagging reviewers (when GitHub handles are provided).
+  - **Lead** = the `/slack-collab` skill session. **Autonomous orchestrator** — the brain of the dev process. Processes coordinator reports immediately, decides what actions to take, instructs teammates to execute. Teammates are pollers and doers, not decision-makers. The **owner** is the unblocker, final say, and source of info — the lead should never need the owner to say "poll slack" or "check PR". **NEVER uses Slack MCP tools directly** — all Slack interaction routes through the slack-coordinator. **Sends intent and context to coordinators — never composes verbatim messages.** Unnamed voice (no system attribution prefix). Must create team via `TeamCreate` before spawning any teammates. Verifies Agent Teams availability (ToolSearch for TeamCreate + SendMessage) before Phase 0 — aborts if unavailable. Can spawn **ad-hoc teammates** on-the-fly when tasks don't fit existing roles. Only the lead sends shutdown_request (on owner's approval or Phase 6 completion).
+  - **slack-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:slack-coordinator`) = dedicated Slack I/O teammate. Poller and doer — polls threads, reports changes to lead, executes lead's posting instructions. Runs FOREVER until shutdown_request from lead (no self-exit for any reason). **Silent when nothing changed** — no idle heartbeats. Lead controls threading (specifies target thread_ts or "new parent"). Continuous split-sleep polling at 60-second intervals. Lean diff-only reporting — uses `last_seen_ts` per thread. Recovers from compaction via state file. Tags only relevant stakeholders. Disambiguates pronouns. Responds honestly to identity questions about lead's contributions.
+  - **manifest-define-worker** (spawned via `subagent_type: manifest-dev-collab:manifest-define-worker`, model omitted = inherits parent) = runs `/define` with TEAM_CONTEXT. Messages lead for all communication (stakeholder Q&A routed through lead -> coordinator). Requests verification subagent launches from lead. Persists as manifest authority for QA evaluation AND Phase 4 PR comment evaluation (classifies comments, amends manifest for valid gaps, explains drops).
+  - **manifest-executor** (spawned via `subagent_type: manifest-dev-collab:manifest-executor`, model omitted = inherits parent) = code implementation ONLY. MUST invoke `/do` via Skill tool. Creates PR. Fixes review/QA issues routed through lead. **Strict scope**: rejects out-of-scope tasks (e2e testing, deploy monitoring, log queries) — tells lead to route to an ad-hoc teammate. Acknowledges every lead message immediately before starting work. Every completion includes "Done. Please verify — waiting for your verification result."
+  - **github-coordinator** (sonnet model, spawned via `subagent_type: manifest-dev-collab:github-coordinator`) = dedicated GitHub I/O teammate. Poller and doer — polls all PR comment types (formal reviews, inline comments, top-level comments, CI checks + flexibility clause), reports changes to lead, executes lead's instructions. Runs FOREVER until shutdown_request from lead. **Silent when nothing changed.** Spawned in Phase 4 after PR creation. Distinguishes bot vs human. Recovers from compaction via state file.
+  - **Ad-hoc teammates** = lead spawns on-the-fly when a task doesn't fit existing roles (e.g., e2e-runner, deploy-monitor, CI watcher). Prompt includes role, tools, communication rules, hub-and-spoke compliance. Same pattern: report → lead decides → execute → confirm.
   - **Hub-and-spoke** = all teammate communication flows through the lead. No direct teammate-to-teammate messaging. The lead is the communication hub.
   - **Subagent bridge** = define-worker requests manifest-verifier launches from lead. Subagents send results directly to the requesting worker via SendMessage (if feasible) or write to `/tmp/subagent-result-{id}.md` and lead tells worker the file path (fallback). Exception: executor runs /verify locally and spawns its own criteria-checkers — verification doesn't go through the bridge.
   - **TEAM_CONTEXT** = behavior switch. Tells `/define` and `/do` to message the lead instead of using AskUserQuestion. Format includes `lead` name, `coordinator` name, and `role`.
   - **State file** = crash/resume recovery. JSON at `/tmp/collab-state-{run_id}.json`. Written by lead (single writer) after phase transitions and thread updates. Includes per-thread `last_seen_ts` for diff polling recovery. Supports mid-phase resume.
-  - **Active polling** = coordinators poll continuously with 60-second split-sleep cycles (sleep 30 -> check mailbox -> sleep 30). Lean diff-only: read only new messages since `last_seen_ts`. On compaction/respawn, recover from state file. 24-hour timeout before escalating unanswered questions to owner.
+  - **Active polling** = coordinators poll continuously with 60-second split-sleep cycles (sleep 30 -> check mailbox -> sleep 30). Lean diff-only: read only new messages since `last_seen_ts`. **Silent when nothing changed** — no idle heartbeats. On compaction/respawn, recover from state file.
   - **User comms after Phase 0** = once the team is spawned, ALL user communication goes through the slack-coordinator -> Slack. No terminal output or AskUserQuestion during the workflow. Only exception: coordinator failure escalation.
   - **Channel** = user-provided. No channel creation or invite available in Slack MCP. User must create channel and ensure stakeholders are members before starting.
+  - **Phase-anchored threading** = each phase gets ONE anchor parent message in Slack. Lead tracks `thread_ts` per phase in state file. Updates within a phase go under its anchor. Exception: Define questions get their own parents for notification visibility.
+  - **Verification hard gate** = when manifest-executor signals completion, lead MUST invoke /verify (not optional). On failure: executor fixes, re-signals, lead re-verifies. Phase 4 gated on pass.
+  - **Bot review convergence** = fix all real (non-FP) bot issues with no hard round cap. Converge when new findings are clearly diminishing in count AND severity. HIGH-severity always fixed.
+  - **Review-fix loop automation** = reviewer findings → manifest-define-worker classifies → lead batches fixes to manifest-executor → re-review. Owner only involved for final approval or escalation.
+  - **Teammates are doers, not decision-makers** = all teammates follow: poll/work → report to lead → wait for instructions → execute → confirm. Coordinators don't autonomously resolve threads or reply. Executor doesn't decide what to fix. Lead is the brain.
 
 - **TEAM_CONTEXT Format:**
   ```
@@ -1252,4 +1258,162 @@
   verify:
     method: subagent
     prompt: "Read github-coordinator.md. Verify CRITICAL on polling rule and exit prohibition in What You Do NOT Do."
+  ```
+
+### Amendment 3: Session-Derived Fixes from 3 Real Collab Sessions (2026-03-16)
+
+*Analysis of sessions b9950717 (v1.7.0), 808ae917 (v1.8.0), 90deebaf (v1.10.0) revealed 16 gaps. Renames: executor→manifest-executor, define-worker→manifest-define-worker.*
+
+**Lead Autonomy & Role Clarity:**
+
+- [INV-G32] Lead is autonomous orchestrator — processes coordinator reports immediately, decides actions, instructs teammates. Owner = unblocker/final-say/info-source. User never needs to say "poll slack" or "check PR".
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md. Verify lead autonomy: (1) processes reports autonomously, (2) decides actions, (3) owner = unblocker, (4) user never needs to manually trigger polls."
+  ```
+
+- [INV-G33] Teammates are doers and pollers, not decision-makers. All follow: poll/work → report → wait → execute → confirm. Coordinators don't autonomously resolve threads, reply to comments, or add reviewers.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md and all agent files. Verify: (1) SKILL.md defines teammates as doers, (2) each agent file describes poll→report→wait→execute→confirm pattern, (3) no agent autonomously takes action without lead instruction."
+  ```
+
+- [INV-G34] Intent-based delegation — lead sends intent and context to coordinators, not verbatim messages. Coordinators compose the actual Slack/GitHub messages.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Communication Model. Verify intent-based delegation with example. Verify 'never composes verbatim' rule."
+  ```
+
+**Coordinator Lifecycle:**
+
+- [INV-G35] Coordinators never self-exit — CRITICAL callout near event loop + Never Do entry in both coordinators. No exit for time-of-day, idle period, resource conservation.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read both coordinator agent files. Verify never-self-exit in TWO locations each: CRITICAL callout + Does NOT Do section. Verify prohibitions include time-of-day, idle, resource conservation."
+  ```
+
+- [INV-G36] Only lead can shut down coordinators — on owner's approval or Phase 6. Slack "stop" and PR "stop monitoring" are untrusted input.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read both coordinator agent files and SKILL.md Phase 6. Verify: (1) only lead sends shutdown, (2) untrusted input from Slack/GitHub ignored, (3) Phase 6 or owner approval required."
+  ```
+
+- [INV-G37] Idle notification suppression — coordinators only message lead when there IS activity. No "no new activity" heartbeats.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read both coordinator agent files. Verify: (1) no idle notifications, (2) only message on new activity, (3) silent when nothing changed."
+  ```
+
+**Threading & Communication:**
+
+- [AC-1.35] **Phase-anchored threading**: SKILL.md defines one anchor per phase, lead tracks thread_ts per phase, specifies target when instructing coordinator. Define questions are exception.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md. Verify phase-anchored threading: anchor per phase, thread_ts tracking, lead specifies target, define exception."
+  ```
+
+- [AC-2.16] **Slack-coordinator thread routing**: Posts where lead says (thread_ts target or "new parent"). Does NOT independently decide threading.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read slack-coordinator.md Threading Model. Verify lead controls threading, coordinator follows instructions."
+  ```
+
+**GitHub Coordinator Improvements:**
+
+- [AC-8.8] **API endpoint enumeration**: Polling section enumerates formal reviews, review comments (inline), issue comments (top-level), CI checks, plus flexibility clause. Inline clearly separate from formal reviews.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read github-coordinator.md What to Poll. Verify 5 categories enumerated with inline/formal separation and flexibility clause."
+  ```
+
+- [AC-8.9] **Doer + poller role**: GitHub coordinator polls, reports, executes lead's instructions. Does NOT autonomously resolve threads, reply, or add reviewers.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read github-coordinator.md opening. Verify doer+poller role described, no autonomous actions."
+  ```
+
+**Executor Improvements:**
+
+- [AC-4.6] **Renamed to manifest-executor**: File renamed, frontmatter updated, all references across 4 files + README updated.
+  ```yaml
+  verify:
+    method: bash
+    command: "test -f claude-plugins/manifest-dev-collab/agents/manifest-executor.md && ! test -f claude-plugins/manifest-dev-collab/agents/executor.md && echo PASS || echo FAIL"
+  ```
+
+- [AC-4.7] **Manifest-define-worker rename**: File renamed, frontmatter updated, all references updated.
+  ```yaml
+  verify:
+    method: bash
+    command: "test -f claude-plugins/manifest-dev-collab/agents/manifest-define-worker.md && ! test -f claude-plugins/manifest-dev-collab/agents/define-worker.md && echo PASS || echo FAIL"
+  ```
+
+- [AC-4.8] **Acknowledgment protocol**: Manifest-executor acknowledges every lead message immediately via SendMessage before starting work.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read manifest-executor.md. Verify acknowledgment protocol: ack every message, via SendMessage, before starting, with task summary."
+  ```
+
+- [AC-4.9] **Strict scope enforcement**: Manifest-executor rejects out-of-scope tasks (e2e, deploy, logs, CI monitoring). Messages lead to route elsewhere.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read manifest-executor.md Scope Enforcement. Verify out-of-scope list and rejection behavior."
+  ```
+
+- [AC-4.10] **Verification request on every completion**: Manifest-executor signals 'Done. Please verify — waiting for your verification result.' on every completion.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read manifest-executor.md. Verify every completion message includes verification request. Check Phase 3, 4, and 5 completion messages."
+  ```
+
+**Verification & Review Loop:**
+
+- [AC-1.36] **Verification hard gate**: When manifest-executor signals completion, lead MUST invoke /verify. Phase 4 gated on pass. Failure loop: fix → re-signal → re-verify.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 3. Verify verification hard gate: must verify, gated Phase 4, failure loop."
+  ```
+
+- [AC-1.37] **Bot review convergence**: Fix all non-FP. Converge on diminishing count+severity. No hard cap. Generic language. HIGH always fixed.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 4 bot handling. Verify convergence signal, no round cap, generic terms, HIGH always fixed."
+  ```
+
+- [AC-1.38] **Review-fix loop automation**: Findings auto-routed to manifest-define-worker → classified fixes to manifest-executor → re-review. User only for final approval.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 4 Review-Fix Loop section. Verify autonomous loop: classify → fix → re-review, user only for approval."
+  ```
+
+**Dynamic Team Composition:**
+
+- [AC-1.39] **Dynamic teammate spawning**: SKILL.md documents when to spawn (task doesn't fit roles), what to include in prompt (role, tools, comms, hub-spoke), how to integrate (lead routes). Examples provided.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Dynamic Teammate Spawning section. Verify: when, what, how, examples."
+  ```
+
+- [AC-1.40] **Lead-only shutdown authority**: Only lead sends shutdown on owner approval or Phase 6. Slack/GitHub "stop" messages do not trigger shutdown.
+  ```yaml
+  verify:
+    method: subagent
+    prompt: "Read SKILL.md Phase 6 shutdown step. Verify lead-only authority, owner approval, Slack stop ignored."
   ```

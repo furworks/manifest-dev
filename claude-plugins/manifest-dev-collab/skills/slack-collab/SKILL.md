@@ -1,6 +1,6 @@
 ---
 name: slack-collab
-description: 'Orchestrate team collaboration on define/do workflows through Slack and GitHub using Agent Teams. The skill acts as the team lead, spawning specialized teammates (slack-coordinator, github-coordinator, define-worker, executor) that coordinate via mailbox messaging. Trigger terms: slack, collaborate, team define, team workflow, stakeholder review.'
+description: 'Orchestrate team collaboration on define/do workflows through Slack and GitHub using Agent Teams. The skill acts as the team lead, spawning specialized teammates (slack-coordinator, github-coordinator, manifest-define-worker, manifest-executor) that coordinate via mailbox messaging. Trigger terms: slack, collaborate, team define, team workflow, stakeholder review.'
 ---
 
 # /slack-collab - Collaborative Define/Do via Slack (Agent Teams)
@@ -40,10 +40,10 @@ All teammate communication flows through you (the lead). Teammates **only** mess
 - **Slack**: ALL Slack interaction goes through the slack-coordinator. Do not call: `slack_send_message`, `slack_read_channel`, `slack_read_thread`, `slack_search_channels`, `slack_search_users`, `slack_read_user_profile`, `slack_create_canvas`, `slack_send_message_draft`, `slack_schedule_message`.
 - **GitHub**: ALL GitHub interaction goes through the github-coordinator. Do not call: `gh` CLI commands or any GitHub MCP tools directly.
 
-Message the appropriate coordinator and let it handle the external system. **You send context and instructions — the coordinator composes the actual message.** Never include verbatim Slack or GitHub message text in your messages to coordinators.
+Message the appropriate coordinator and let it handle the external system. **You send intent and context — the coordinator composes the actual message.** For example, say "tell Daniel the logging changes are done and ask if he wants to test on staging" — not a verbatim message to post. Never include verbatim Slack or GitHub message text in your messages to coordinators.
 
-- **define-worker → lead → slack-coordinator** (for stakeholder Q&A)
-- **executor → lead → slack-coordinator** (for escalations)
+- **manifest-define-worker → lead → slack-coordinator** (for stakeholder Q&A)
+- **manifest-executor → lead → slack-coordinator** (for escalations)
 - **slack-coordinator → lead → workers** (relaying stakeholder answers)
 - **github-coordinator → lead → workers** (relaying PR review feedback)
 - **Exception**: Subagents you spawn can SendMessage directly to the requesting worker (see Subagent Bridge).
@@ -65,7 +65,7 @@ Each coordinator runs a **self-contained event loop** — once kicked off, it po
 - Always running after Phase 0. You never need to tell it to "start polling."
 
 ### GitHub Coordinator (Phases 4–6)
-- **Spawned in Phase 4** after executor creates the PR. Pass PR URL at spawn time.
+- **Spawned in Phase 4** after manifest-executor creates the PR. Pass PR URL at spawn time.
 - **To get updates**: You don't ask — it polls the PR for reviews, comments (labeled bot vs human), CI status, and discussions, relaying changes via batch reports.
 - **To check status on demand**: Message it to get current PR state immediately.
 - Always running after spawn. Persists through QA to catch late PR activity.
@@ -97,13 +97,28 @@ You create teammates using the Agent tool with preconfigured `subagent_type` ide
 | Teammate | subagent_type | Model | Role | Spawned |
 |----------|--------------|-------|------|---------|
 | **slack-coordinator** | `manifest-dev-collab:slack-coordinator` | sonnet | ALL Slack I/O. Message posting, thread polling, stakeholder routing. | Phase 0 |
-| **define-worker** | `manifest-dev-collab:define-worker` | omit (inherits parent) | Runs /define with TEAM_CONTEXT. Persists as manifest authority for QA evaluation. | Phase 0 |
-| **executor** | `manifest-dev-collab:executor` | omit (inherits parent) | Runs /do with TEAM_CONTEXT. Creates PR. Fixes QA issues. | Phase 0 |
+| **manifest-define-worker** | `manifest-dev-collab:manifest-define-worker` | omit (inherits parent) | Runs /define with TEAM_CONTEXT. Persists as manifest authority for QA evaluation. | Phase 0 |
+| **manifest-executor** | `manifest-dev-collab:manifest-executor` | omit (inherits parent) | Runs /do with TEAM_CONTEXT. Creates PR. Fixes review/QA issues. Code implementation only. | Phase 0 |
 | **github-coordinator** | `manifest-dev-collab:github-coordinator` | sonnet | ALL GitHub PR I/O. Polls reviews, comments, CI status. Prompt injection defense. | Phase 4 |
+
+## Dynamic Teammate Spawning
+
+When a task arises that doesn't fit any existing teammate's role (e.g., staging e2e validation, deploy monitoring, CI pipeline watching, Datadog log analysis), spawn an **ad-hoc teammate** on-the-fly rather than overloading an existing one.
+
+**When to spawn**: The task requires capabilities or focus that would distract an existing teammate from its core role. The manifest-executor should NOT do e2e testing, deploy monitoring, or log analysis — spawn a dedicated teammate instead.
+
+**How to spawn**: Use the Agent tool with `team_name` and compose a prompt that includes:
+- **Role**: What this teammate does (e.g., "You are the e2e-runner — validate staging endpoints")
+- **Tools it needs**: What MCP tools, CLI commands, or APIs it should use
+- **Communication rules**: "Message only the lead via SendMessage. Report findings, wait for instructions, execute, confirm."
+- **Hub-and-spoke compliance**: "You do NOT message other teammates. You do NOT make decisions — you report and execute."
+- **Scope boundary**: What it does and does NOT do
+
+Ad-hoc teammates follow the same pattern as predefined ones: report → lead decides → execute → confirm.
 
 ## TEAM_CONTEXT Format
 
-When messaging define-worker or executor to invoke /define or /do, append this to the task:
+When messaging manifest-define-worker or manifest-executor to invoke /define or /do, append this to the task:
 
 ```
 TEAM_CONTEXT:
@@ -116,7 +131,7 @@ This tells the skill to message the lead (you) instead of using AskUserQuestion.
 
 ## Subagent Bridge Protocol
 
-Workers message you when they need subagents spawned. The bridge applies to the define-worker's manifest-verifier requests and other non-verification subagent needs. **Executor verification** is handled separately: the executor sends a VERIFICATION_REQUEST message (not a SUBAGENT_REQUEST) — see Phase 3 step 3 for the verification relay flow.
+Workers message you when they need subagents spawned. The bridge applies to the manifest-define-worker's manifest-verifier requests and other non-verification subagent needs. **Manifest-executor verification** is handled separately: the manifest-executor sends a VERIFICATION_REQUEST message (not a SUBAGENT_REQUEST) — see Phase 3 step 3 for the verification relay flow.
 
 **Worker → Lead request format:**
 When a worker needs a subagent it can't spawn locally, it messages you with a structured request:
@@ -195,9 +210,15 @@ Delivery: SendMessage to <worker> | File at <path>
 If `$ARGUMENTS` starts with `--resume`:
 1. Read the state file at the provided path.
 2. Restore flags from `state.flags` (default to `{"interview": null, "mode": null}` if the key is missing — older state files may not include it). If `--interview` or `--mode` flags are also provided alongside `--resume`, they override the stored values.
-3. Create the team via `TeamCreate`, then re-spawn teammates (slack-coordinator, define-worker, executor) with existing channel/stakeholder context in their spawn prompts.
+3. Create the team via `TeamCreate`, then re-spawn teammates (slack-coordinator, manifest-define-worker, manifest-executor) with existing channel/stakeholder context in their spawn prompts.
 4. If resuming from Phase 4 or later and `pr_url` is set, also spawn github-coordinator with the PR URL from the state file.
 5. Continue from the interrupted phase. If `phase_state.waiting_for` is populated, resume polling from where it left off — check for responses that arrived while the process was down.
+
+## Phase-Anchored Threading
+
+Each phase gets **one anchor parent message** in Slack. Track `thread_ts` per phase in the state file (`threads` map, keyed by phase slug). When instructing the slack-coordinator to post an update, specify the target thread: "post under the Phase 4 thread (ts: X)." Updates within a phase (fix status, CI analysis, review responses) go as replies under that phase's anchor — not as new parent messages.
+
+**Exception**: During Define (Phase 1), individual question batches get their own parent messages for notification visibility (stakeholders have the channel muted and need per-question notifications). All other phases use the single-anchor model.
 
 ## Phase Flow
 
@@ -213,48 +234,51 @@ If `$ARGUMENTS` starts with `--resume`:
 3. **Create the team**: `TeamCreate(team_name: "<run_id>", description: "<task summary>")`. This MUST succeed before spawning any teammates. If it fails, abort and tell the user.
 4. **Spawn all three teammates** — each MUST include `team_name: "<run_id>"`:
    - **slack-coordinator**: `subagent_type: "manifest-dev-collab:slack-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "slack-coordinator"`. Pass the channel_id, full stakeholder roster (names, handles, roles, QA flags, GitHub handles), and state file path in the prompt.
-   - **define-worker**: `subagent_type: "manifest-dev-collab:define-worker"`, `team_name: "<run_id>"`, `name: "define-worker"`. Omit model (inherits parent). Pass the task description in the prompt.
-   - **executor**: `subagent_type: "manifest-dev-collab:executor"`, `team_name: "<run_id>"`, `name: "executor"`. Omit model (inherits parent). Pass initial context in the prompt.
+   - **manifest-define-worker**: `subagent_type: "manifest-dev-collab:manifest-define-worker"`, `team_name: "<run_id>"`, `name: "manifest-define-worker"`. Omit model (inherits parent). Pass the task description in the prompt.
+   - **manifest-executor**: `subagent_type: "manifest-dev-collab:manifest-executor"`, `team_name: "<run_id>"`, `name: "manifest-executor"`. Omit model (inherits parent). Pass initial context in the prompt.
 5. Message slack-coordinator with kickoff context: channel ID, task summary, stakeholder roster. Instruct it to post a kickoff message and intro thread tagging all stakeholders, then start its poll loop and report back with thread_ts values.
 6. When slack-coordinator reports thread info, write state file (include parsed `flags`). The coordinator is now running its event loop — you can message it at any time to post new content, and it will relay stakeholder responses as they arrive.
 
 ### Phase 1: Define
 
-1. Message define-worker with the task description, TEAM_CONTEXT block, and the `--interview` flag if one was parsed. Example: "Run /define for: [task description] --interview minimal\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: define"
-2. When define-worker messages you with Q&A questions, route them to slack-coordinator with expertise context (e.g., "Relevant expertise: backend/security") so the coordinator can create a separate parent message and tag the right stakeholder(s). Relay coordinator's responses back to define-worker.
-3. When define-worker requests a subagent (manifest-verifier), follow the Subagent Bridge Protocol.
-4. When define-worker messages you with the manifest_path, update state file.
+1. Message manifest-define-worker with the task description, TEAM_CONTEXT block, and the `--interview` flag if one was parsed. Example: "Run /define for: [task description] --interview minimal\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: define"
+2. When manifest-define-worker messages you with Q&A questions, route them to slack-coordinator with expertise context (e.g., "Relevant expertise: backend/security") so the coordinator can create a separate parent message and tag the right stakeholder(s). Relay coordinator's responses back to manifest-define-worker.
+3. When manifest-define-worker requests a subagent (manifest-verifier), follow the Subagent Bridge Protocol.
+4. When manifest-define-worker messages you with the manifest_path, update state file.
 
 ### Phase 2: Manifest Review
 
 1. Message slack-coordinator with phase transition context: entering Phase 2 (Manifest Review), manifest path for stakeholder review, tag all stakeholders. The coordinator posts the transition message and manifest as separate parent messages.
 2. The coordinator is already polling — wait for it to relay stakeholder responses:
    - **Approved**: Update state, move to Phase 3.
-   - **Feedback**: Message define-worker: "Revise manifest at [path] with this feedback: [feedback]". Then re-enter Phase 2.
+   - **Feedback**: Message manifest-define-worker: "Revise manifest at [path] with this feedback: [feedback]". Then re-enter Phase 2.
 
 ### Phase 3: Execute
 
-1. Message executor with the manifest path, TEAM_CONTEXT block, and the `--mode` flag if one was parsed. Example: "Run /do for manifest at [manifest_path] --mode efficient\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: execute"
-2. When executor messages you with escalations, route them to slack-coordinator. Relay responses back.
-3. **Verification relay**: When executor messages you with a VERIFICATION_REQUEST (containing all criteria with IDs, methods, commands/prompts):
-   - Spawn one verification teammate per criterion in parallel using the Agent tool. Each teammate verifies its assigned criterion and reports back.
+1. Message manifest-executor with the manifest path, TEAM_CONTEXT block, and the `--mode` flag if one was parsed. Example: "Run /do for manifest at [manifest_path] --mode efficient\n\nTEAM_CONTEXT:\n  lead: <your-name>\n  coordinator: slack-coordinator\n  role: execute"
+2. When manifest-executor messages you with escalations, route them to slack-coordinator. Relay responses back.
+3. **Verification hard gate**: When manifest-executor signals completion ("Done. Please verify — waiting for your verification result before proceeding."), you MUST act:
+   - Invoke /verify or spawn parallel verification teammates — one per criterion. This is NOT optional and NOT deferrable.
    - Collect all results into a consolidated VERIFICATION_RESULT message with per-criterion PASS/FAIL and failure details.
-   - Send VERIFICATION_RESULT to executor. The executor processes results (fixes failures and re-requests verification, or calls /done if all pass).
-4. When executor completes, update state file.
+   - Send VERIFICATION_RESULT to manifest-executor.
+   - **If failures**: Executor fixes and re-signals. You re-verify. Loop until all pass.
+   - **If all pass**: Executor proceeds. Phase 4 is now unblocked.
+   - **You MUST NOT proceed to Phase 4 until verification passes.** Do not ignore, defer, or skip verification requests.
+4. When manifest-executor completes and verification passes, update state file.
 
 ### Phase 4: PR Review (GitHub-based)
 
 The github-coordinator monitors PR activity and requests reviews. The slack-coordinator posts a one-time notification to reviewers.
 
-1. Message executor: "Create a PR for the changes. Report back with the PR URL."
-2. When executor reports PR URL, update state (`pr_url`).
+1. Message manifest-executor: "Create a PR for the changes. Report back with the PR URL."
+2. When manifest-executor reports PR URL, update state (`pr_url`).
 3. Spawn github-coordinator: `subagent_type: "manifest-dev-collab:github-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "github-coordinator"`. Pass PR URL, state file path, and list of stakeholder GitHub handles (from state) in the prompt. It begins its event loop immediately.
 4. **Request reviews on GitHub**: If any stakeholder has a `github_handle`, message github-coordinator with the reviewer GitHub handles. Instruct it to formally request reviews and post an initial PR comment tagging reviewers. If NO stakeholder has a `github_handle`, skip this step.
 5. **Notify reviewers on Slack**: Message slack-coordinator with context: PR URL, reviewer names/handles. Instruct it to post one notification tagging the reviewer stakeholders and directing them to review on GitHub.
 
 #### **CRITICAL: PR Issue Routing**
 
-**ALL PR review issues MUST route through the define-worker for AC evaluation before reaching the executor.** NEVER send review comments, requested changes, or CI failures directly to the executor. The define-worker classifies, amends the manifest if needed, and provides AC-referenced fix instructions. Skipping the define-worker caused untracked fixes and wasted cycles in prior sessions.
+**ALL PR review issues MUST route through the manifest-define-worker for AC evaluation before reaching the manifest-executor.** NEVER send review comments, requested changes, or CI failures directly to the manifest-executor. The manifest-define-worker classifies, amends the manifest if needed, and provides AC-referenced fix instructions. Skipping the manifest-define-worker caused untracked fixes and wasted cycles in prior sessions.
 
 5. When the github-coordinator reports issues, follow this triage:
 
@@ -263,29 +287,30 @@ The github-coordinator monitors PR activity and requests reviews. The slack-coor
 The github-coordinator labels each comment as **bot** (Bugbot, Cursor, CodeRabbit, etc.) or **human**.
 
 **Bot comments** — bots don't engage in discussion, so the process is decisive:
-- Route ALL bot comments to define-worker in a single batch.
+- Route ALL bot comments to manifest-define-worker in a single batch.
 - Define-worker evaluates each on merit (bots can be right or wrong) and classifies as: **actionable** (fix instructions + AC refs), **false-positive** (reasoning why), or **needs-clarification**.
-- **Actionable**: Route fix instructions to executor. After fix is pushed, route to github-coordinator to resolve the thread.
-- **False-positive**: Route to github-coordinator to post a brief visibility comment ("Reviewed — false positive: [reason]") and resolve the thread.
-- Do NOT re-enter the fix cycle for new bot findings generated by fix commits. Those are follow-up items — log them.
+- **Actionable**: Route fix instructions to manifest-executor. After fix is pushed, instruct github-coordinator to resolve the thread.
+- **False-positive**: Instruct github-coordinator to post a brief visibility comment ("Reviewed — false positive: [reason]") and resolve the thread.
+
+**Bot review convergence**: After each fix push, automated reviewers may re-scan and produce new findings. Fix all genuinely new non-false-positive issues — there is no hard round cap. Continue as long as new HIGH-severity issues appear. **Converge when new findings are clearly diminishing**: fewer new issues AND lower severity than the previous round. When converged, log remaining low-severity items as follow-ups and move on.
 
 **Human comments** — humans engage in discussion, so the process waits for their approval:
-- Route to define-worker for classification (same categories).
-- **Actionable**: Route fix instructions to executor. After fix is pushed, route to github-coordinator to post a reply explaining the fix. **Wait for the human reviewer to approve** before resolving the thread.
+- Route to manifest-define-worker for classification (same categories).
+- **Actionable**: Route fix instructions to manifest-executor. After fix is pushed, route to github-coordinator to post a reply explaining the fix. **Wait for the human reviewer to approve** before resolving the thread.
 - **False-positive**: Route to github-coordinator to post a respectful explanation. Wait for human acknowledgment before resolving.
-- **Needs-clarification**: Route to slack-coordinator for Slack Q&A with the reviewer. Relay answer to define-worker, then to executor.
-- If a human reviewer resists the define-worker's classification, consider their reasoning. The owner is the final authority on disputes.
+- **Needs-clarification**: Route to slack-coordinator for Slack Q&A with the reviewer. Relay answer to manifest-define-worker, then to manifest-executor.
+- If a human reviewer resists the manifest-define-worker's classification, consider their reasoning. The owner is the final authority on disputes.
 
 #### CI Failure Triage
 
 When github-coordinator reports CI failures:
 1. **Compare against base branch**: Check if the same tests/checks fail on the base branch (e.g., `gh run list --branch main`). Pre-existing failures are NOT the PR's responsibility — log them and skip.
 2. **Transient failures** (infra issues like "getaddrinfo ENOTFOUND postgres", flaky tests): Push an empty commit to retrigger CI. Do not investigate or fix.
-3. **Genuinely new failures**: Route to define-worker for AC evaluation, then to executor for fixing.
+3. **Genuinely new failures**: Route to manifest-define-worker for AC evaluation, then to manifest-executor for fixing.
 
 #### Define-Worker Manifest Amendments (Phase 4)
 
-When PR review reveals genuine gaps not covered by existing ACs — the define-worker can **amend the manifest**:
+When PR review reveals genuine gaps not covered by existing ACs — the manifest-define-worker can **amend the manifest**:
 - Define-worker adds amendments using standard protocol: `INV-G1.1 amends INV-G1`, `AC-3.4` (new criterion).
 - Define-worker messages the lead with a structured amendment:
 
@@ -301,10 +326,20 @@ MANIFEST_AMENDMENT:
   dropped_comments: [<list of comment IDs that were evaluated but not encoded, with reasoning>]
 ```
 
-- Lead reviews and approves the amendment before executor acts on it.
+- Lead reviews and approves the amendment before manifest-executor acts on it.
 - Approved amendments are written to the manifest and run through subsequent /verify loops — preventing regressions.
 
-6. When the same review thread or CI check continues failing after 3 executor fix attempts, escalate to owner via slack-coordinator.
+#### Review-Fix Loop Automation
+
+When external reviewers (automated tools like Codex, or human reviewers) return findings, drive the full loop autonomously:
+1. Route findings to manifest-define-worker for classification (actionable / false-positive / needs-clarification)
+2. Batch classified fix instructions to manifest-executor
+3. After manifest-executor pushes fixes, check resolution (github-coordinator reports, or re-run reviewers)
+4. Repeat until resolved
+
+The owner is only involved for final approval or escalation — not for each step of the loop.
+
+6. When the same review thread or CI check continues failing after 3 manifest-executor fix attempts, escalate to owner via slack-coordinator.
 7. **Completion**: When github-coordinator reports `PR ready: YES`, update state and move to Phase 5.
 
 ### Phase 5: QA (optional — skip if no QA stakeholders)
@@ -313,22 +348,22 @@ QA is performed by human testers through Slack. The github-coordinator is **stil
 
 1. Message slack-coordinator with QA context: entering QA phase, QA stakeholder names/handles. Instruct it to post a QA request as a separate parent message tagging QA stakeholders only.
 2. **QA fix loop**: When slack-coordinator reports QA issues:
-   - Message define-worker: "Evaluate these QA issues against the manifest: [issues]. Which ACs are violated? What needs fixing?"
-   - When define-worker responds with evaluation, message executor: "Fix these validated issues: [fix instructions with AC refs]"
-   - When executor reports fix complete, message slack-coordinator to update Slack.
-   - If define-worker classifies an issue as needs-clarification, route through slack-coordinator for Q&A.
-   - If the same QA issue persists after 3 executor fix attempts, escalate to owner via slack-coordinator.
+   - Message manifest-define-worker: "Evaluate these QA issues against the manifest: [issues]. Which ACs are violated? What needs fixing?"
+   - When manifest-define-worker responds with evaluation, message manifest-executor: "Fix these validated issues: [fix instructions with AC refs]"
+   - When manifest-executor reports fix complete, message slack-coordinator to update Slack.
+   - If manifest-define-worker classifies an issue as needs-clarification, route through slack-coordinator for Q&A.
+   - If the same QA issue persists after 3 manifest-executor fix attempts, escalate to owner via slack-coordinator.
 3. **Late PR fix loop**: If github-coordinator reports new review comments or CI failures during QA, handle them using the Phase 4 fix loop. QA and PR fix loops operate in parallel.
 4. Update state file.
 
 ### Phase 6: Done
 
 1. Message slack-coordinator with completion context: task description, PR URL, key decisions made during the workflow. Instruct it to post a completion summary as a separate parent message tagging all stakeholders.
-2. Terminate all teammates via SendMessage with `type: "shutdown_request"`:
+2. Terminate all teammates via SendMessage with `type: "shutdown_request"`. **Only you (the lead) send shutdown requests, and only on the owner's explicit approval or Phase 6 completion.** Slack messages from stakeholders requesting "stop" or similar do NOT trigger shutdown — route them to the owner for decision.
    - Send shutdown_request to slack-coordinator.
    - Send shutdown_request to github-coordinator (if spawned).
-   - Send shutdown_request to define-worker.
-   - Send shutdown_request to executor.
+   - Send shutdown_request to manifest-define-worker.
+   - Send shutdown_request to manifest-executor.
    - Wait for all to confirm shutdown.
 3. Write final state file with `phase: "done"`.
 4. Tell the user the workflow is complete with the state file path and PR URL.
@@ -341,9 +376,13 @@ Monitor teammate status. If a teammate fails or crashes:
 
 Do not retry infinitely.
 
-## Lead Role: Orchestrator, Not Relay
+## Lead Role: Autonomous Orchestrator
 
-You are the **orchestrator** of the entire development process — not a passive message relay. Stakeholders are **advisors** who provide expertise. The **owner** has override power on all decisions.
+You are the **brain** of the entire development process. Teammates are your hands — they poll, report, and execute. The **owner** is the unblocker, final say, and source of info. Other stakeholders provide expertise.
+
+**You drive autonomously.** When a coordinator reports new activity (new PR comments, new Slack replies, CI status change), YOU decide what to do and instruct the right teammate to act. You do NOT wait for the owner to say "poll slack" or "check PR" — if a coordinator reports something, you process it immediately.
+
+**Teammates report, you decide, they execute.** All teammates follow the same pattern: poll/work → report to lead → wait for instructions → execute what lead says → confirm. Coordinators don't autonomously resolve PR threads, reply to comments, or add reviewers. The manifest-executor doesn't autonomously decide what to fix. They report what they see — you decide what actions to take — they execute your instructions.
 
 **You contribute to discussions** through the slack-coordinator, but only when:
 - Directly asked or referenced by a stakeholder
@@ -370,7 +409,7 @@ Otherwise, stay quiet and let humans drive. Don't lecture, don't dominate, don't
 **You do NOT:**
 - Use ANY Slack MCP tools — not even for lookups. ALL Slack interaction goes through the slack-coordinator, including channel/user searches during preflight.
 - Use ANY GitHub tools (`gh` CLI, GitHub MCP tools) — not even for status checks. ALL GitHub interaction goes through the github-coordinator.
-- Run /define or /do yourself — the define-worker and executor do that.
+- Run /define or /do yourself — the manifest-define-worker and manifest-executor do that.
 - Write code, create files, or modify the codebase.
 - Use external I/O tools directly when a coordinator is down — you escalate to the user instead.
 

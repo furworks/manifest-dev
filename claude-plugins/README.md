@@ -15,7 +15,7 @@ Front-load the thinking so AI agents get it right the first time.
 | Plugin | What It Does |
 |--------|--------------|
 | `manifest-dev` | Verification-first manifest workflows with multi-CLI distribution (Gemini CLI, OpenCode, Codex CLI). Every criterion has explicit verification; execution can't stop without verification passing or escalation. |
-| `manifest-dev-collab` | Slack and GitHub team collaboration on define/do workflows. Orchestrates stakeholder Q&A, GitHub PR review monitoring, and QA sign-off through topic-based threads in a user-provided Slack channel. |
+| `manifest-dev-collab` | Slack and GitHub team collaboration on define/do workflows. Autonomous lead orchestrator with dynamic teammate spawning, phase-anchored threading, verification hard gates, and strict role boundaries. |
 
 ## Plugin Details
 
