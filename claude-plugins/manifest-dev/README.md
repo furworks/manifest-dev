@@ -101,6 +101,7 @@ The manifest has three moving parts:
 |-------|-------------|
 | `/define` | Interviews you, builds an executable manifest with verification criteria. `--interview minimal\|autonomous\|thorough` controls questioning depth (default: thorough). |
 | `/do` | Works through the manifest autonomously, verifies everything passes |
+| `/auto` | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do` in one command. Supports `--mode` pass-through to `/do`. |
 | `/verify` | Runs all verifiers in parallel (you rarely call this directly; `/do` handles it) |
 | `/done` | Prints what got done and what was verified |
 | `/escalate` | When something's blocked, surfaces the issue for you to decide |
