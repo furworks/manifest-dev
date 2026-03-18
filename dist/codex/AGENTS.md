@@ -9,6 +9,8 @@ This project uses a **define -> do -> verify -> done** workflow:
 3. **verify** -- Spawns parallel verification agents to check acceptance criteria and invariants against the implementation.
 4. **done** -- Completion marker. Summarizes execution, notes any deviations, and closes the workflow.
 
+**Shortcut**: **auto** -- End-to-end autonomous execution that chains /define (autonomous interview) and /do into a single command. Use when you want to define and execute a task without manual intervention during planning.
+
 Skills handle the workflow orchestration. Agents listed below are specialized verification subagents spawned by the `verify` skill and supporting skills.
 
 > **Codex CLI note**: On Codex, these agents are approximated using TOML config stubs in `agents/`. Codex agents have 6 default tools (`shell_command`, `apply_patch`, `update_plan`, `request_user_input`, `web_search`, `view_image`) plus experimental tools (`read_file`, `list_dir`, `grep_files`) that may be available depending on model configuration. Review agents use `sandbox_mode = "read-only"` to enforce read-only behavior.
@@ -93,7 +95,7 @@ Analyzes `define` session transcripts to extract user preference patterns -- wha
 
 ## How to Use on Codex CLI
 
-1. **Installed skills are namespaced** -- Use `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, and `$learn-define-patterns-manifest-dev` via the Agent Skills Open Standard
+1. **Installed skills are namespaced** -- Use `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, `$auto-manifest-dev`, and `$learn-define-patterns-manifest-dev` via the Agent Skills Open Standard
 2. **Multi-agent system** -- Enable with `[features] multi_agent = true` in `.codex/config.toml`. TOML stubs in `agents/` configure per-role behavior.
 3. **Review agents are read-only** -- All review agents use `sandbox_mode = "read-only"` to prevent accidental modifications
 4. **Spawn agents by role** -- When multi-agent is enabled, Codex can spawn agents with specific roles matching the TOML config names (e.g., `code-bugs-reviewer-manifest-dev`)

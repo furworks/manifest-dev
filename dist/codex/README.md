@@ -6,7 +6,7 @@ Verification-first manifest workflows adapted for Codex CLI. Define tasks, execu
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| Skills | 6 | Full compatibility (Agent Skills Open Standard) |
+| Skills | 7 | Full compatibility (Agent Skills Open Standard) |
 | Agents | 12 TOML stubs + reference AGENTS.md | Multi-agent config + bundled reference guide |
 | Execution rules | 1 | Starlark .rules file |
 | Config | 1 | Multi-agent TOML config |
@@ -21,6 +21,7 @@ Verification-first manifest workflows adapted for Codex CLI. Define tasks, execu
 | **verify** | Spawns parallel verification agents for acceptance criteria |
 | **done** | Completion marker with execution summary |
 | **escalate** | Structured escalation with evidence |
+| **auto** | End-to-end autonomous execution: /define + /do in one command |
 | **learn-define-patterns** | Extracts user preference patterns from /define sessions |
 
 ### AGENTS.md
@@ -67,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/c
 
 Installs skills, agent TOML stubs, execution rules, and config into `~/.codex/` by default, or `$CODEX_HOME` if set. It does not write `AGENTS.md`. Run again to update. Existing `config.toml` is backed up and merged with the manifest-dev sections.
 
-After install, invoke the namespaced skills directly on Codex: `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, and `$learn-define-patterns-manifest-dev`.
+After install, invoke the namespaced skills directly on Codex: `$define-manifest-dev`, `$do-manifest-dev`, `$verify-manifest-dev`, `$done-manifest-dev`, `$escalate-manifest-dev`, `$auto-manifest-dev`, and `$learn-define-patterns-manifest-dev`.
 
 ### Uninstall
 
@@ -117,7 +118,7 @@ rm -rf "$TMP_DIR"
 
 | Feature | Claude Code | Codex CLI | Notes |
 |---------|-------------|-----------|-------|
-| Skills (define/do/verify/done/escalate/learn) | Full | Full | Agent Skills Open Standard |
+| Skills (define/do/verify/done/escalate/auto/learn) | Full | Full | Agent Skills Open Standard |
 | Default tools | 15+ specialized | 6 default | shell_command, apply_patch, update_plan, request_user_input, web_search, view_image |
 | Experimental tools | N/A | 3 gated | read_file, list_dir, grep_files (model-dependent) |
 | Multi-agent tools | Agent, Task*, SendMessage | spawn_agent, send_input, wait, close_agent | Requires Feature::Collab flag |
@@ -172,6 +173,8 @@ dist/codex/
 │   │       ├── BUDGET_MODES.md
 │   │       └── COLLABORATION_MODE.md
 │   ├── verify/
+│   │   └── SKILL.md
+│   ├── auto/
 │   │   └── SKILL.md
 │   ├── done/
 │   │   └── SKILL.md

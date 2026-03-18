@@ -27,6 +27,7 @@ SKILLS = [
     "escalate",
     "define",
     "verify",
+    "auto",
     "done",
     "do",
 ]

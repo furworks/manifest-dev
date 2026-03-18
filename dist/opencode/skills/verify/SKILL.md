@@ -34,7 +34,7 @@ Mode defaults to `thorough` if not provided.
 | `codebase` | Code pattern checks | criteria-checker |
 | `subagent` | Specialized reviewer agents | Named agent (e.g., code-bugs-reviewer) |
 | `research` | External info (API docs, dependencies) | criteria-checker |
-| `manual` | Set aside for human verification | `escalate` skill |
+| `manual` | Set aside for human verification | /escalate |
 
 Note: criteria-checker handles any automated verification requiring commands, file analysis, reasoning, or web research.
 
@@ -46,7 +46,7 @@ Note: criteria-checker handles any automated verification requiring commands, fi
 | Acceptance Criteria | AC-{D}.{N} | Deliverable incomplete |
 | Process Guidance | PG-{N} | Not verified (guidance only) |
 
-Note: PG-* items guide HOW to work. Followed during execution by the `do` skill, not checked by `verify`.
+Note: PG-* items guide HOW to work. Followed during /do, not checked by /verify.
 
 ## Agent Failures
 
@@ -58,7 +58,7 @@ When `--mode` is not `thorough`, these rules override default behavior:
 
 | Mode | Parallelism | Criteria-checker model | Quality gate reviewers |
 |------|-------------|----------------------|----------------------|
-| efficient | Sequential (one at a time) | inherit | SKIPPED for deliverable-level ACs |
+| efficient | Sequential (one at a time) | haiku | SKIPPED for deliverable-level ACs |
 | balanced | Batched (max 4 concurrent) | inherit | inherit |
 | thorough | All at once (default) | inherit | inherit |
 
@@ -76,8 +76,8 @@ When `--mode` is not `thorough`, these rules override default behavior:
 |-----------|--------|
 | Any Global Invariant failed | Return all failures, globals highlighted |
 | Any AC failed | Return failures grouped by deliverable |
-| All automated pass, manual exists | Return manual criteria, hint to call the `escalate` skill |
-| All pass | Call the `done` skill |
+| All automated pass, manual exists | Return manual criteria, hint to call /escalate |
+| All pass | Call /done |
 
 ## Output Format
 
@@ -88,9 +88,9 @@ Report verification results grouped by Global Invariants first, then by Delivera
 - Verification method
 - Failure details: location, expected vs actual, fix hint
 
-**On success with manual** - List manual criteria with how-to-verify from manifest, suggest the `escalate` skill.
+**On success with manual** - List manual criteria with how-to-verify from manifest, suggest /escalate.
 
-**On full success** - Call the `done` skill.
+**On full success** - Call /done.
 
 ## Collaboration Mode
 

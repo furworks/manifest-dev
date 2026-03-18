@@ -1,17 +1,17 @@
 # manifest-dev for OpenCode CLI
 
-Verification-first manifest workflows for OpenCode. Use the `/define`, `/do`, and `/learn-define-patterns` commands, and let the workflow invoke the `verify`, `done`, and `escalate` skills as needed.
+Verification-first manifest workflows for OpenCode. Use the `/define`, `/do`, `/auto`, and `/learn-define-patterns` commands, and let the workflow invoke the `verify`, `done`, and `escalate` skills as needed.
 
 ## Components
 
 | Type | Count | Description |
 |------|-------|-------------|
-| Skills | 6 | define, do, done, escalate, learn-define-patterns, verify |
+| Skills | 7 | auto, define, do, done, escalate, learn-define-patterns, verify |
 | Agents | 12 | criteria-checker, 8 code reviewers, manifest-verifier, context-file-adherence-reviewer, define-session-analyzer |
-| Commands | 3 | /define, /do, /learn-define-patterns |
+| Commands | 4 | /auto, /define, /do, /learn-define-patterns |
 | Plugin | 1 | OpenCode hook plugin implementing pretool-verify, stop-do, post-compact, and todo tracking |
 
-Only `/define`, `/do`, and `/learn-define-patterns` are exposed as user commands. The `verify`, `done`, and `escalate` skills remain internal workflow steps.
+Only `/auto`, `/define`, `/do`, and `/learn-define-patterns` are exposed as user commands. The `verify`, `done`, and `escalate` skills remain internal workflow steps.
 
 ## Install
 
@@ -67,9 +67,9 @@ cp /tmp/manifest-dev/dist/opencode/plugins/HOOK_SPEC.md .opencode/plugins/manife
 
 | Feature | Claude Code | OpenCode | Notes |
 |---------|------------|----------|-------|
-| Skills (define, do, verify, done, escalate, learn-define-patterns) | Native | Native | Skills copy unchanged; OpenCode reads `.claude/skills/` natively |
+| Skills (auto, define, do, verify, done, escalate, learn-define-patterns) | Native | Native | Skills copy unchanged; OpenCode reads `.claude/skills/` natively |
 | Agents (12 code reviewers + orchestration) | Native | Converted | Frontmatter converted to OpenCode format (boolean tools, mode, temperature) |
-| Commands (/define, /do, /learn-define-patterns) | Skills with `user-invocable: true` | `.opencode/commands/*.md` | Commands invoke the corresponding skill |
+| Commands (/auto, /define, /do, /learn-define-patterns) | Skills with `user-invocable: true` | `.opencode/commands/*.md` | Commands invoke the corresponding skill |
 | Hook: pretool-verify (context injection) | Python PreToolUse + `additionalContext` | `experimental.chat.system.transform` + `output.system.push()` | Implemented in the bundled plugin |
 | Hook: stop-do (block premature stop) | Python Stop hook + `decision: block` | `session.idle` (fire-and-forget) | **Cannot block** -- best-effort workaround via `client.session.prompt()` (fragile) |
 | Hook: post-compact (context recovery) | Python PreCompact + `additionalContext` | `experimental.session.compacting` + `output.context.push()` | Implemented in the bundled plugin |
@@ -135,14 +135,16 @@ dist/opencode/
     context-file-adherence-reviewer.md
     manifest-verifier.md
     define-session-analyzer.md
-  commands/              # 3 user-invoked commands
+  commands/              # 4 user-invoked commands
+    auto.md
     define.md
     do.md
     learn-define-patterns.md
   plugins/
     index.ts             # OpenCode hook plugin source (installed as plugins/manifest-dev.ts)
     HOOK_SPEC.md         # Behavioral specification / maintenance reference
-  skills/                # 6 skills (copied unchanged from source)
+  skills/                # 7 skills (copied unchanged from source)
+    auto/
     define/
     do/
     done/

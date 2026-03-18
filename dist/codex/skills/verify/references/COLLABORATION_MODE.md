@@ -7,14 +7,14 @@ When `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, verification delegates to th
 **Do NOT spawn agents or run verification checks.** In team mode, the executor teammate cannot spawn other teammates (Claude Code limitation). Instead:
 
 1. Extract all criteria (INV-G* and AC-*) from the manifest with their verification methods.
-2. Return the full criteria list to the calling `do` skill indicating delegation is needed.
-3. The `do` skill will send the VERIFICATION_REQUEST to the lead via SendMessage. You do not send messages yourself.
+2. Return the full criteria list to the calling skill (/do) indicating delegation is needed.
+3. /do will send the VERIFICATION_REQUEST to the lead via SendMessage. You do not send messages yourself.
 
-**Why `do` sends, not `verify`**: `verify` runs as a nested skill inside `do`. SendMessage may not be reliably available in a skill-within-a-skill context. `do`, running directly in the teammate context, has SendMessage access.
+**Why /do sends, not /verify**: /verify runs as a nested skill inside /do. SendMessage may not be reliably available in a skill-within-a-skill context. /do, running directly in the teammate context, has SendMessage access.
 
 ## VERIFICATION_REQUEST Format
 
-The criteria list you return to the `do` skill should contain all information the lead needs to spawn verification teammates:
+The criteria list you return to /do should contain all information the lead needs to spawn verification teammates:
 
 ```
 VERIFICATION_REQUEST:

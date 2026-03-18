@@ -4,7 +4,7 @@ Base guidance for all code-change tasks (features, bugs, refactors).
 
 ## Quality Gates
 
-AGENTS.md may specify project-specific preferences.
+CLAUDE.md may specify project-specific preferences.
 
 | Aspect | Agent | Threshold |
 |--------|-------|-----------|
@@ -16,11 +16,11 @@ AGENTS.md may specify project-specific preferences.
 | Testability | code-testability-reviewer | no MEDIUM+ |
 | Documentation | docs-reviewer | no MEDIUM+ |
 | Design fitness | code-design-reviewer | no MEDIUM+ |
-| AGENTS.md adherence | context-file-adherence-reviewer | no MEDIUM+ |
+| CLAUDE.md adherence | context-file-adherence-reviewer | no MEDIUM+ |
 
 ## Project Gates
 
-AGENTS.md specifies project gates (typecheck, lint, test, format). These become Global Invariants.
+CLAUDE.md specifies project gates (typecheck, lint, test, format). These become Global Invariants.
 
 ## E2E Verification
 
@@ -43,7 +43,14 @@ Manual only when automated E2E is truly not feasible and user confirms no test d
 - **Error swallowed** - failure silent, no logging, bad state persists; probe: error paths tested? observability?
 - **Config mismatch** - feature flags, env vars differ across environments; probe: config parity?
 - **Observability blindspot** - works but can't tell when it breaks in prod; probe: metrics? alerts? logs?
+- **E2E verification gap** - unit gates pass, integration fails; probe: integration points without test coverage? cross-service dependencies?
 
 ## Multi-Repo
 
 When spanning repos: per-repo project gates differ, cross-repo contracts need verification, scope reviewers to changed files per repo.
+
+## Defaults
+
+*Domain best practices for this task type.*
+
+- **E2E verification report** — Default to a report file with test scenarios, results, and evidence per scenario

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-PreToolUse hook that reminds Claude to read manifest/log before invoking the verify skill.
+PreToolUse hook that reminds Claude to read manifest/log for verification.
 
-When the verify skill is about to be called, this hook adds a system reminder to ensure
+When /verify is about to be called, this hook adds a system reminder to ensure
 the manifest and execution log are in full context for accurate verification.
 This is especially important after long sessions where manifest details may have
 drifted from memory.
@@ -17,14 +17,14 @@ import sys
 
 from hook_utils import build_system_reminder
 
-VERIFY_CONTEXT_REMINDER = """VERIFICATION CONTEXT CHECK: You are about to invoke the verify skill.
+VERIFY_CONTEXT_REMINDER = """VERIFICATION CONTEXT CHECK: You are about to run /verify.
 
 Arguments: {verify_args}
 
 BEFORE spawning verifiers, read the manifest and execution log in FULL if not recently loaded. You need ALL acceptance criteria (AC-*) and global invariants (INV-G*) in context to spawn the correct verifiers."""
 
 
-VERIFY_CONTEXT_REMINDER_MINIMAL = """VERIFICATION CONTEXT CHECK: You are about to invoke the verify skill.
+VERIFY_CONTEXT_REMINDER_MINIMAL = """VERIFICATION CONTEXT CHECK: You are about to run /verify.
 
 BEFORE spawning verifiers, read the manifest and execution log in FULL if not recently loaded. You need ALL acceptance criteria (AC-*) and global invariants (INV-G*) in context to spawn the correct verifiers."""
 

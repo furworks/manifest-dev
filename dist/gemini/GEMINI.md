@@ -16,12 +16,13 @@ The core loop: **define -> do -> verify -> done/escalate**
 
 ## Components
 
-### Skills (6)
+### Skills (7)
 
 Skills live in `skills/{skill-name}/SKILL.md`. Gemini activates them via `activate_skill`; this extension does not rely on user-facing slash commands.
 
 | Skill | Description |
 |-------|-------------|
+| `auto` | End-to-end autonomous execution: define then do in one command |
 | `define` | Interactive interview producing a verification manifest |
 | `do` | Execute implementation against a manifest |
 | `verify` | Parallel verification of manifest criteria |

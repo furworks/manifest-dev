@@ -19,13 +19,13 @@ Execution modes control verification intensity across the manifest-dev workflow 
 
 **Efficient mode**: When a criterion fails twice, auto-escalate that criterion's verifier to use more thorough checking. Track total escalations — after 3 in a single /do run, suggest to the user: "Efficient mode is escalating frequently. Consider switching to balanced." This prevents runaway costs from repeated escalation.
 
-**Balanced mode**: When the fix-verify loop limit (2) is hit, escalate via the `escalate` skill. The fix isn't converging — human judgment needed.
+**Balanced mode**: When the fix-verify loop limit (2) is hit, escalate via /escalate. The fix isn't converging — human judgment needed.
 
 **Thorough mode**: No escalation mechanism. Unlimited loops, full model capability.
 
 ## Verification Parallelism
 
-These override the `verify` skill's default "launch all verifiers in a single message" rule:
+These override /verify's default "launch all verifiers in a single message" rule:
 
 - **efficient**: Launch verifiers one at a time. Minimizes concurrent quota usage.
 - **balanced**: Launch in batches of max 4 concurrent verifiers. When any batch completes, launch the next batch.

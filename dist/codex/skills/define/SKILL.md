@@ -55,7 +55,7 @@ Domain-specific guidance available in:
 - **Resolvable** (tables/checklists: risks, scenarios, trade-offs) — resolve via interview, encode as INV/AC or explicitly skip.
 - **Compressed awareness** (bold-labeled one-line domain summaries, not tables/checklists) — informs your probing; no resolution needed.
 - **Process guidance hints** (counter-instinctive practices) — practices LLMs would get wrong without explicit guidance. Two modes: **candidates** (labeled as PG candidates, presented as batch after scenarios, user selects) and **defaults** (`## Defaults` section, included in manifest without probing, user reviews manifest and removes if not applicable). Both become PG-* in the manifest.
-- **Reference files** (`references/*.md`) — detailed lookup data for the `verify` skill's agents. Do not load during the interview.
+- **Reference files** (`references/*.md`) — detailed lookup data for `/verify` agents. Do not load during the interview.
 
 **Encode quality gates and Defaults immediately after reading task files — before the interview.** Log each as `- [x]` RESOLVED.
 
@@ -156,6 +156,7 @@ Read full log before synthesis. Unresolved `- [ ]` items must be addressed first
 **Confirm understanding periodically** - Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct?" This catches interpretation drift early—a misunderstanding in round 2 compounds through round 8 if never checked.
 
 **Batch related questions** - Group related questions into a single turn rather than asking one at a time. Batching keeps momentum and reduces round-trips without sacrificing depth. Each batch should cover a coherent topic area—don't mix unrelated concerns in one batch.
+
 **Stop when converged** - Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
 
 **Insights become criteria** - Domain grounding findings, outside view findings, pre-mortem risks, non-obvious discoveries → convert to INV-G* or AC-*. Don't include insights that aren't encoded as criteria. This applies equally to Resolvable task file content — risks and scenario dispositions must be traceable to manifest criteria or they're aspirational, not enforced.
@@ -174,7 +175,7 @@ After defining deliverables, probe for **initial** implementation direction. Ski
 
 **Risk Areas** - Pre-mortem outputs. "What could cause this to fail? Candidates: [R1], [R2], [R3]." Each risk has detection criteria. Not exhaustive—focus on likely/high-impact.
 
-**Trade-offs** - Decision criteria for competing concerns. "When facing [tension], priority? [A] vs [B]?" Format: `[T-N] A vs B → Prefer A because X`. Enables autonomous adjustment during execution by the `do` skill.
+**Trade-offs** - Decision criteria for competing concerns. "When facing [tension], priority? [A] vs [B]?" Format: `[T-N] A vs B → Prefer A because X`. Enables autonomous adjustment during /do.
 
 **When to include Approach**: Multi-deliverable tasks, unfamiliar domains, architectural decisions, high-risk implementations. The interview naturally reveals if it's needed.
 
@@ -408,12 +409,12 @@ Three categories, each covering **output** or **process**:
 
 | Type | Format | Example | Used By |
 |------|--------|---------|---------|
-| Global Invariant | INV-G{N} | INV-G1, INV-G2 | `verify` skill (verified) |
-| Process Guidance | PG-{N} | PG-1, PG-2 | `do` skill (followed) |
-| Risk Area | R-{N} | R-1, R-2 | `do` skill (watched) |
-| Trade-off | T-{N} | T-1, T-2 | `do` skill (consulted) |
-| Known Assumption | ASM-{N} | ASM-1, ASM-2 | `verify` skill (audited) |
-| Acceptance Criteria | AC-{D}.{N} | AC-1.1, AC-2.3 | `verify` skill (verified) |
+| Global Invariant | INV-G{N} | INV-G1, INV-G2 | /verify (verified) |
+| Process Guidance | PG-{N} | PG-1, PG-2 | /do (followed) |
+| Risk Area | R-{N} | R-1, R-2 | /do (watched) |
+| Trade-off | T-{N} | T-1, T-2 | /do (consulted) |
+| Known Assumption | ASM-{N} | ASM-1, ASM-2 | /verify (audited) |
+| Acceptance Criteria | AC-{D}.{N} | AC-1.1, AC-2.3 | /verify (verified) |
 
 ## Amendment Protocol
 
@@ -465,7 +466,7 @@ Before asking for approval, output a scannable summary that enables full manifes
 **After presenting the summary**, wait for the user's response. User responses mean:
 - **Approval** (e.g., "looks good", "approved") → proceed to Complete
 - **Feedback** (e.g., "also add X", "change Y", "use Z skill in process") → revise the manifest, re-present summary. Do not implement.
-- **Explicit invocation of the `do` skill** → `define` is done; `do` takes over
+- **Explicit /do invocation** → /define is done; /do takes over
 
 ## Collaboration Mode
 
@@ -473,13 +474,12 @@ When `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, read `references/COLLABORATI
 
 ## Complete
 
-The `define` skill ends here. Output the manifest path and stop.
+/define ends here. Output the manifest path and stop.
 
 ```text
 Manifest complete: /tmp/manifest-{timestamp}.md
 
-Next step: invoke the `do` skill with the manifest path above.
-If iterating on prior work, include the existing log file path as the second argument.
+To execute: /do /tmp/manifest-{timestamp}.md [log-file-path if iterating]
 ```
 
-If this was an iteration on a previous manifest that had an execution log, mention that existing log file path in the next-step suggestion.
+If this was an iteration on a previous manifest that had an execution log, include the log file path in the suggestion.

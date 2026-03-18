@@ -6,7 +6,7 @@ Verification-first manifest workflows for Gemini CLI, delivered as extension-man
 
 | Type | Count | Details |
 |------|-------|---------|
-| Skills | 6 | define, do, verify, done, escalate, learn-define-patterns |
+| Skills | 7 | auto, define, do, verify, done, escalate, learn-define-patterns |
 | Agents | 12 | criteria-checker, manifest-verifier, 8 code reviewers, docs-reviewer, define-session-analyzer |
 | Hooks | 3 | pretool-verify, stop-do-enforcement, post-compact-recovery |
 
@@ -56,7 +56,7 @@ If you install via `gemini extensions install` or `gemini extensions link` inste
 
 | Feature | Claude Code | Gemini CLI | Notes |
 |---------|------------|------------|-------|
-| Skills (6) | Full | Full | Copied unchanged; `name` + `description` frontmatter only |
+| Skills (7) | Full | Full | Copied unchanged; `name` + `description` frontmatter only |
 | Agents (12) | Full | Full | Frontmatter converted (tool mapping, added kind/temperature/max_turns/timeout_mins) |
 | Hooks (3) | Full | Full | Adapter translates protocol; exit codes, matchers, transcript format handled |
 | Subagent spawning | `Agent` tool | Named tool per agent | Each agent becomes a callable tool by its registered name |

@@ -43,15 +43,15 @@ If input includes a log file path (iteration on previous work): **treat it as so
 
 **Log after every action** - Write to execution log immediately after each AC attempt. No exceptions. This is disaster recovery—if context is lost, the log is the only record of what happened.
 
-**Must invoke the `verify` skill** - Can't declare done without verification. Invoke the `verify` skill with the manifest, log paths, and the resolved mode: `/verify <manifest> <log> --mode <level>`.
+**Must call /verify** - Can't declare done without verification. Invoke manifest-dev:verify with manifest, log paths, and the resolved mode: `/verify <manifest> <log> --mode <level>`.
 
 **Escalation boundary** - Escalate when: (1) ACs can't be met as written (contract broken), (2) user requests a pause mid-workflow, (3) you discover an AC or invariant should be amended (use "Proposed Amendment" escalation type), or (4) mode-specific fix-verify loop limit is reached (see `references/BUDGET_MODES.md`). If ACs remain achievable as written and no user interrupt, continue autonomously. Approach pivots don't require escalation — log adjustments with rationale and continue.
 
 **Mode-aware loop tracking** - Track fix-verify iteration count and escalation count in the execution log. When mode limits are reached, follow the escalation rules in `references/BUDGET_MODES.md`. In efficient mode, also track total escalations and suggest mode switch after 3.
 
-**Stop requires escalation** - During `do`, you cannot stop without either invoking `verify` and reaching `done`, or invoking the `escalate` skill. If you need to pause (user requested, waiting on external action), use the `escalate` skill with "User-Requested Pause" format. Short outputs like "Done." or "Waiting." will be blocked.
+**Stop requires /escalate** - During /do, you cannot stop without calling /verify→/done or /escalate. If you need to pause (user requested, waiting on external action), call /escalate with "User-Requested Pause" format. Short outputs like "Done." or "Waiting." will be blocked.
 
-**Refresh before verify** - Read the full execution log before invoking the `verify` skill to restore context.
+**Refresh before verify** - Read full execution log before calling /verify to restore context.
 
 **Refresh between deliverables** - Before starting a new deliverable, re-read the manifest's deliverable section and relevant execution log entries. Context degrades gradually across a long session — don't rely on what you remember from D1 when starting D3.
 

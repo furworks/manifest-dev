@@ -156,7 +156,7 @@ User explicitly asked to stop mid-workflow (e.g., "commit so I can deploy", "sto
 - Remaining: [ACs not started]
 
 ### To Resume
-[How to continue - e.g., resume with the `do` skill using the manifest and log paths, or specific next steps]
+[How to continue - e.g., "/do <manifest> <log>" or specific next steps]
 ```
 
 **When to use**: User interrupts workflow for legitimate reasons (deploy, review, break). Not a blocker—just a handoff.
