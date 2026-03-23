@@ -294,11 +294,19 @@ verify:
   model: inherit
   prompt: "Review for DRY violations and coupling issues"
 
+# Slow/expensive verification runs in a later phase
+verify:
+  method: bash
+  phase: 2
+  command: "curl -s https://staging.example.com/health"
+
 # Manual verification
 verify:
   method: manual
   instructions: "Verify the login flow works in staging"
 ```
+
+Criteria support a `phase:` field (numeric, default 1). `/verify` runs phases in ascending order — faster checks first, slower/expensive ones only after earlier phases pass. This avoids wasting e2e deploy cycles when cheaper checks are still failing.
 
 ## Multi-CLI Support
 
@@ -329,7 +337,7 @@ The Claude Code plugin is the source of truth. Per-CLI distributions under `dist
 | `/define` | User-invoked | Interviews you, classifies task type, probes for latent criteria, outputs manifest with verification methods |
 | `/do` | User-invoked | Executes against manifest. Follows execution order, watches for risks, logs progress for disaster recovery |
 | `/auto` | User-invoked | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do`. Supports `--mode` pass-through |
-| `/verify` | Internal | Spawns parallel verifiers for all criteria. Routes to `criteria-checker` agents based on verification method |
+| `/verify` | Internal | Spawns verifiers for all criteria, phased by iteration speed (fast checks first, e2e/deploy-dependent later). Routes to `criteria-checker` agents based on verification method |
 | `/done` | Internal | Prints hierarchical completion summary mirroring manifest structure |
 | `/escalate` | Internal | Structured escalation when blockers need human intervention. Requires evidence: 3+ attempts, failure reasons, hypothesis, resolution options |
 | `/learn-define-patterns` | User-invoked | Analyzes recent /define sessions, extracts user preference patterns, writes them to CLAUDE.md for future /define sessions |

@@ -76,6 +76,8 @@ The manifest has three moving parts:
 ## 3. Global Invariants (The Constitution)
 - [INV-G1] Description | Verify: [method]
 - [INV-G2] Description | Verify: [method]
+  - E2e tests encode as Global Invariants (one per test case), not deliverable ACs.
+    They verify the whole system, not individual deliverables.
 
 ## 4. Deliverables (The Work)
 
@@ -95,6 +97,8 @@ The manifest has three moving parts:
 | Trade-off | T-{N} | Decision criteria for adjustment | /do (consulted) |
 | Acceptance Criteria | AC-{D}.{N} | Deliverable completion | /verify (verified) |
 
+Criteria verify blocks support an optional `phase:` field (numeric, default 1). Lower phases run first; later phases (e2e, manual) only run after earlier phases pass.
+
 ## Skills
 
 | Skill | Description |
@@ -102,7 +106,7 @@ The manifest has three moving parts:
 | `/define` | Interviews you, builds an executable manifest with verification criteria. `--interview minimal\|autonomous\|thorough` controls questioning depth (default: thorough). |
 | `/do` | Works through the manifest autonomously, verifies everything passes |
 | `/auto` | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do` in one command. Supports `--mode` pass-through to `/do`. |
-| `/verify` | Runs all verifiers in parallel (you rarely call this directly; `/do` handles it) |
+| `/verify` | Runs verifiers phased by iteration speed — fast checks first, e2e/deploy-dependent later. Only advances to the next phase when the current one passes. (You rarely call this directly; `/do` handles it.) |
 | `/done` | Prints what got done and what was verified |
 | `/escalate` | When something's blocked, surfaces the issue for you to decide |
 | `/learn-define-patterns` | Analyzes recent /define sessions, extracts user preference patterns, writes them to CLAUDE.md |
