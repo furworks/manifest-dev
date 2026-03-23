@@ -181,7 +181,7 @@ SUBAGENT_REQUEST:
 
 **Your response as lead:**
 1. Spawn the subagent via Agent tool with `team_name` set to the current team. Instruct the subagent to message `target_teammate` directly with its full results, and return only a brief summary to you.
-2. Log the request and summary to `/tmp/collab-subagent-log-{run_id}.md`.
+2. Log the request and summary to `/tmp/orchestrate-subagent-log-{run_id}.md`.
 3. Launch multiple subagents in parallel using `run_in_background` when possible.
 
 **Feasibility test:** On the first subagent launch, verify the subagent can message a teammate directly. If it fails, switch to file-based handoff for all subsequent launches.
@@ -242,7 +242,7 @@ Re-read the state file before each phase transition to guard against context com
 
 ## Lead Memento
 
-Log all subagent interactions to `/tmp/collab-subagent-log-{run_id}.md`. Format:
+Log all subagent interactions to `/tmp/orchestrate-subagent-log-{run_id}.md`. Format:
 ```
 ## [timestamp] Subagent: <type> for <worker>
 Request: <brief description>
