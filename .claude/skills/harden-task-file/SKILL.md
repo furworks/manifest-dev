@@ -102,5 +102,5 @@ A concern appears once, in its most natural section. When the same concern appea
 
 Done when:
 - Orthogonality analysis finds no new uncovered dimensions
-- Prompt reviewer finds no high-severity issues
+- Prompt reviewer finds no MEDIUM+ issues
 - User confirms satisfaction
