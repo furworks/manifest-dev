@@ -19,7 +19,8 @@ Platform-agnostic collaborative workflow orchestration.
 | Platform | Coordinator | Description |
 |----------|------------|-------------|
 | `github` (default) | github-coordinator (sonnet) | Full GitHub PR monitoring with bot/human labeling, CI triage. |
-| `none` | None | Skip PR review and QA phases entirely. |
+| `gitlab` | gitlab-coordinator (sonnet) | Full GitLab MR monitoring with approvals, notes, discussions, pipeline status. |
+| `none` | None | Skip PR/MR review and QA phases entirely. |
 | `custom` | LLM-generated | Lead composes coordinator from `--review-platform-details`. |
 
 **Team composition:**
@@ -28,7 +29,7 @@ Platform-agnostic collaborative workflow orchestration.
 |----------|-------|------|---------|
 | **messaging coordinator** | sonnet | Platform-specific messaging I/O (if medium ≠ local) | Phase 0 |
 | **manifest-define-worker** | default | Runs `/define` with TEAM_CONTEXT. Persists as manifest authority for QA evaluation. | Phase 0 |
-| **manifest-executor** | default | Runs `/do` with TEAM_CONTEXT. Code implementation only. Creates PR. | Phase 0 |
+| **manifest-executor** | default | Runs `/do` with TEAM_CONTEXT. Code implementation only. Creates PR/MR. | Phase 0 |
 | **review coordinator** | sonnet | Platform-specific review I/O (if review-platform ≠ none) | Phase 4 |
 | *ad-hoc teammates* | varies | Lead spawns on-the-fly for tasks that don't fit existing roles. | As needed |
 
@@ -45,6 +46,7 @@ Workers (define-worker, executor) are **medium-blind** — they message the lead
 
 **Review-platform-specific:**
 - `github`: GitHub access via `gh` CLI (authenticated) or GitHub MCP server.
+- `gitlab`: GitLab access via `glab` CLI (authenticated) or GitLab MCP server.
 - `custom`: Depends on `--review-platform-details`.
 
 ## Usage
@@ -59,11 +61,14 @@ Workers (define-worker, executor) are **medium-blind** — they message the lead
 # Custom medium
 /orchestrate --medium custom --medium-details "We use Mattermost at chat.example.com" add rate limiting
 
-# No review (skip PR phases)
+# GitLab MR review
+/orchestrate --review-platform gitlab add rate limiting to the API
+
+# No review (skip PR/MR phases)
 /orchestrate --review-platform none add rate limiting to the API
 
 # Custom review platform
-/orchestrate --review-platform custom --review-platform-details "GitLab at gitlab.example.com" add rate limiting
+/orchestrate --review-platform custom --review-platform-details "Gitea at gitea.example.com" add rate limiting
 ```
 
 **Additional flags:**

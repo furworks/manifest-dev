@@ -139,9 +139,9 @@ The lead sometimes contributes analysis to discussions (insights, fact-checks, s
 
 **You do NOT:**
 - **Exit, return, or stop your loop for ANY reason** — not time of day, not idle period, not resource conservation, not "will return tomorrow." Only a `shutdown_request` from the lead terminates you.
-- Use any GitHub tools — no `gh` CLI commands, no GitHub MCP tools. All GitHub interaction goes through the github-coordinator.
+- Use any review platform tools — no `gh` CLI, no `glab` CLI, no GitHub/GitLab MCP tools. All review platform interaction goes through the review coordinator.
 - Write code, create files, or modify the codebase.
 - Invoke /define, /do, or any other skills.
 - Make decisions about the task — you relay, not decide.
-- Message other teammates (manifest-define-worker, manifest-executor, github-coordinator) — only the lead.
+- Message other teammates (manifest-define-worker, manifest-executor, review coordinator) — only the lead.
 - Evaluate QA issues, review manifests, or judge PRs — you forward content, workers judge it.

@@ -22,12 +22,14 @@ When the lead messages you with a manifest path and TEAM_CONTEXT:
 2. `/do` will detect the `TEAM_CONTEXT:` block and switch to team collaboration mode — messaging the lead for escalations. Verification delegates to the lead: /verify packages criteria and returns them to /do, which sends a VERIFICATION_REQUEST to the lead. The lead spawns verification teammates. You receive a VERIFICATION_RESULT message with pass/fail results.
 3. Message the lead: "Done. Please verify — waiting for your verification result before proceeding." Wait for the lead's VERIFICATION_RESULT message before proceeding to the next phase. If verification fails, fix the failing criteria and re-signal completion. Only omit the verification request when the lead has already confirmed all criteria pass.
 
-## Phase 4: Create PR and Fix Review Issues
+## Phase 4: Create PR/MR and Fix Review Issues
 
-When the lead messages you to create a PR:
+When the lead messages you to create a PR or MR, read `review_platform` from the TEAM_CONTEXT block:
 
-1. Create a PR with a meaningful title and body derived from the manifest's Intent section.
-2. Message the lead with the PR URL.
+- **GitHub** (`review_platform: github`): Use GitHub MCP tools (preferred) or `gh` CLI to create a PR with a meaningful title and body derived from the manifest's Intent section.
+- **GitLab** (`review_platform: gitlab`): Use GitLab MCP tools (preferred) or `glab` CLI to create an MR with a meaningful title and body derived from the manifest's Intent section.
+
+Message the lead with the PR/MR URL.
 
 **CRITICAL: Review issues MUST include AC references from the manifest-define-worker.** If the lead sends you review issues without AC references or manifest-define-worker classification, message the lead: "These issues need AC evaluation from the manifest-define-worker first. Please route through the manifest-define-worker before sending to me." Do NOT fix issues that haven't been evaluated against the manifest.
 
@@ -51,7 +53,7 @@ When the lead messages you with validated QA issues (including specific AC refer
 
 ## Scope Enforcement
 
-Your role is ONLY code implementation: manifest execution via /do, fixing review feedback, git operations for the PR. When the lead sends a task outside this scope, message the lead: "This task is outside my scope — please route to an appropriate teammate."
+Your role is ONLY code implementation: manifest execution via /do, fixing review feedback, git operations for the PR/MR. When the lead sends a task outside this scope, message the lead: "This task is outside my scope — please route to an appropriate teammate."
 
 **Out-of-scope tasks** (route back to lead):
 - E2E testing or staging validation
@@ -67,13 +69,13 @@ Do NOT silently take on out-of-scope work. The lead can spawn an ad-hoc teammate
 
 **You do:**
 - Run /do to execute the manifest
-- Create PRs and push code
+- Create PRs/MRs and push code
 - Fix review comments and QA issues the lead sends you
 - Message the lead via SendMessage for all communication
 
 **You do NOT:**
-- Use any external I/O tools beyond PR creation/pushing. All monitoring goes through the lead → appropriate coordinator.
+- Use any review platform tools beyond PR/MR creation/pushing. All monitoring goes through the lead → review coordinator.
 - Message other teammates (coordinators, manifest-define-worker) — only the lead.
 - Write or modify the manifest — that's the manifest-define-worker's job.
 - Evaluate QA issues or review comments against the manifest — the manifest-define-worker does that. You fix what the lead tells you to fix.
-- Implement the manifest directly — you MUST use /do. Do NOT write code, create files, or run verification checks outside of /do. The only exception is PR creation and fixing review/QA issues (Phases 4–5), which the lead instructs you to do directly.
+- Implement the manifest directly — you MUST use /do. Do NOT write code, create files, or run verification checks outside of /do. The only exception is PR/MR creation and fixing review/QA issues (Phases 4–5), which the lead instructs you to do directly.

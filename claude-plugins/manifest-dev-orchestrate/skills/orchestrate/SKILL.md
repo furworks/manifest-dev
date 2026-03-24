@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: 'Platform-agnostic collaborative define/do workflow orchestration. Supports any messaging medium (local, Slack, custom) and any review platform (GitHub, none, custom). Intent-based lead orchestrator spawns specialized teammates via hub-and-spoke messaging. Trigger terms: orchestrate, collaborate, team define, team workflow, stakeholder review.'
+description: 'Platform-agnostic collaborative define/do workflow orchestration. Supports any messaging medium (local, Slack, custom) and any review platform (GitHub, GitLab, none, custom). Intent-based lead orchestrator spawns specialized teammates via hub-and-spoke messaging. Trigger terms: orchestrate, collaborate, team define, team workflow, stakeholder review.'
 ---
 
 # /orchestrate - Platform-Agnostic Collaborative Workflow Orchestration
@@ -9,9 +9,9 @@ Orchestrate a full define → do → PR → review → QA → done workflow. You
 
 `$ARGUMENTS` = task description (what to build/change), with optional flags:
 - `--medium <type>` — messaging medium: `local` (default), `slack`, or `custom`
-- `--review-platform <type>` — review platform: `github` (default), `none`, or `custom`
+- `--review-platform <type>` — review platform: `github` (default), `gitlab`, `none`, or `custom`
 - `--medium-details "<description>"` — required when `--medium custom`. Configuration context describing the messaging platform (e.g., "We use Mattermost at chat.example.com"). Treated as context for coordinator prompt generation — never executed or passed to shell commands.
-- `--review-platform-details "<description>"` — required when `--review-platform custom`. Configuration context describing the review platform (e.g., "GitLab at gitlab.example.com").
+- `--review-platform-details "<description>"` — required when `--review-platform custom`. Configuration context describing the review platform (e.g., "Gitea at gitea.example.com").
 - `--resume <state-file-path>` — resume an interrupted workflow
 - `--interview <level>` — forwarded to `/define` (controls interview depth: `minimal | autonomous | thorough`)
 - `--mode <level>` — forwarded to `/do` (controls verification intensity: `efficient | balanced | thorough`)
@@ -29,6 +29,7 @@ Validate flags before proceeding:
 - `--medium custom` without `--medium-details` → error: "Custom medium requires --medium-details describing your messaging platform."
 - `--review-platform custom` without `--review-platform-details` → error: "Custom review platform requires --review-platform-details describing your review system."
 - `--medium <unknown>` (not in mapping table) → error: "Unknown medium '<value>'. Valid options: local, slack, custom. Use --medium custom --medium-details '...' for unsupported platforms."
+- `--review-platform <unknown>` (not in mapping table) → error: "Unknown review platform '<value>'. Valid options: github, gitlab, none, custom. Use --review-platform custom --review-platform-details '...' for unsupported platforms."
 - `--medium slack` without Slack MCP server configured → error: "Slack medium requires Slack MCP server. Configure it with: send_message, read_channel, read_thread, search_channels, search_users, read_user_profile."
 - `--auto` is a boolean flag (no value). If followed by what looks like a value (not another flag or the task description), treat the next token as part of the task description — `--auto` consumes no argument.
 
@@ -44,6 +45,7 @@ Validate flags before proceeding:
 
 **Review-platform-specific prerequisites** (checked at runtime based on `--review-platform`):
 - `github`: GitHub access via `gh` CLI (authenticated) or GitHub MCP server
+- `gitlab`: GitLab access via `glab` CLI (authenticated) or GitLab MCP server
 - `none`: No additional prerequisites
 - `custom`: Depends on `--review-platform-details`
 
@@ -65,7 +67,7 @@ All teammate communication flows through you (the lead). Teammates **only** mess
 **Medium-dependent routing:**
 - **With messaging coordinator** (slack, custom): manifest-define-worker → lead → messaging coordinator (for stakeholder Q&A). Coordinator → lead → workers (relaying stakeholder answers).
 - **Local mode** (no messaging coordinator): manifest-define-worker → lead → AskUserQuestion (direct terminal interaction). You handle stakeholder Q&A synchronously.
-- **With review coordinator** (github, custom): github-coordinator → lead → workers (relaying PR review feedback).
+- **With review coordinator** (github, gitlab, custom): review coordinator → lead → workers (relaying PR/MR review feedback).
 - **Exception**: Subagents you spawn can message the requesting worker directly (see Subagent Bridge).
 
 ## User Communication After Phase 0
@@ -96,6 +98,8 @@ Each coordinator runs a **self-contained event loop** — once kicked off, it po
 
 **GitHub-specific** (`--review-platform github`): Uses github-coordinator.
 
+**GitLab-specific** (`--review-platform gitlab`): Uses gitlab-coordinator.
+
 ### Coordinator Polling Model
 - **Responsive polling**: Coordinators poll frequently and check for lead messages between sleep cycles.
 - **Lean diffs only**: Coordinators track last-seen state and only read new content. Reports contain diffs, not full state.
@@ -124,7 +128,8 @@ If any coordinator fails to respond after 2 messages (goes idle without acting o
 | `--review-platform` | Review Coordinator | Spawn Phase | Notes |
 |---------------------|--------------------|-------------|-------|
 | `github` (default) | `manifest-dev-orchestrate:github-coordinator` (model: sonnet) | Phase 4 | Requires `gh` CLI or GitHub MCP |
-| `none` | **None** — skip PR review and QA phases | N/A | Phase 4 and Phase 5 are skipped entirely |
+| `gitlab` | `manifest-dev-orchestrate:gitlab-coordinator` (model: sonnet) | Phase 4 | Requires `glab` CLI or GitLab MCP |
+| `none` | **None** — skip PR/MR review and QA phases | N/A | Phase 4 and Phase 5 are skipped entirely |
 | `custom` | **LLM-generated** from `--review-platform-details` (model: sonnet) | Phase 4 | Lead composes coordinator prompt from the details description. |
 
 ## Team Composition
@@ -161,9 +166,12 @@ When messaging manifest-define-worker or manifest-executor to invoke /define or 
 TEAM_CONTEXT:
   lead: <your-agent-name>
   role: define|execute
+  review_platform: github|gitlab|custom|none
 ```
 
 This tells the skill to message the lead (you) instead of using AskUserQuestion. TEAM_CONTEXT changes the **communication channel** (how questions are routed), NOT the **interview style** (whether questions are asked). Interview style is controlled solely by the `--interview` flag. Workers are medium-blind — they message the lead only, with no awareness of which coordinator exists or what messaging platform is in use. You route to the appropriate coordinator (or handle directly in local mode).
+
+The `review_platform` field tells the manifest-executor which VCS to target when creating PRs/MRs (github → `gh` CLI, gitlab → `glab` CLI).
 
 ## Subagent Bridge Protocol
 
@@ -207,7 +215,7 @@ Re-read the state file before each phase transition to guard against context com
     "details": "<--medium-details value or null>"
   },
   "review_platform": {
-    "type": "github|none|custom",
+    "type": "github|gitlab|none|custom",
     "details": "<--review-platform-details value or null>"
   },
   "medium_state": {
@@ -219,7 +227,7 @@ Re-read the state file before each phase transition to guard against context com
   },
   "owner_handle": "<@owner or owner name>",
   "stakeholders": [
-    {"handle": "<@handle>", "name": "<name>", "role": "<role>", "is_qa": false, "github_handle": "<gh-user or null>"}
+    {"handle": "<@handle>", "name": "<name>", "role": "<role>", "is_qa": false, "review_platform_handle": "<review-platform-username or null>"}
   ],
   "manifest_path": null,
   "pr_url": null,
@@ -258,6 +266,7 @@ Delivery: Direct message to <worker> | File at <path>
 If `$ARGUMENTS` starts with `--resume`:
 1. Read the state file at the provided path.
 2. Restore `medium` and `review_platform` config from state file. Restore flags from `state.flags` (default to `{"auto": false, "interview": null, "mode": null}` if the key is missing). If `--auto`, `--medium`, `--review-platform`, `--interview`, or `--mode` flags are also provided alongside `--resume`, they override the stored values. When `auto` is true (from state or override), read `references/AUTO_MODE.md` and apply its behavioral deltas.
+   - **Review platform override guard**: If `--review-platform` is provided as an override AND the state file's `phase` is Phase 4 or later AND `pr_url` is set, reject with error: "Cannot change review platform after PR/MR has been created. The existing PR/MR at [pr_url] was created for [stored review_platform]. Resume without --review-platform to continue with the original platform."
 3. Create the team (spawn teammates via orchestration backend), then re-spawn workers (manifest-define-worker, manifest-executor) with existing context in their spawn prompts.
 4. If `medium.type` ≠ `local`, spawn the appropriate messaging coordinator using the medium mapping table and `medium_state` from the state file.
 5. If resuming from Phase 4 or later and `pr_url` is set, and `review_platform.type` ≠ `none`, spawn the appropriate review coordinator with the PR URL from the state file.
@@ -276,8 +285,8 @@ If `$ARGUMENTS` starts with `--resume`:
 ### Phase 0: Preflight (Lead alone — no team yet)
 
 1. **Gather context** via AskUserQuestion:
-   - **If medium ≠ local**: What is the messaging channel/room? Who are the stakeholders? (names, handles, roles/expertise, GitHub usernames if they'll review PRs) Which stakeholders handle QA (if any)?
-   - **If medium = local**: Who are the stakeholders? (names, roles/expertise, GitHub usernames if they'll review PRs) Which handle QA (if any)?
+   - **If medium ≠ local**: What is the messaging channel/room? Who are the stakeholders? (names, handles, roles/expertise, review platform usernames if they'll review PRs/MRs) Which stakeholders handle QA (if any)?
+   - **If medium = local**: Who are the stakeholders? (names, roles/expertise, review platform usernames if they'll review PRs/MRs) Which handle QA (if any)?
    - **If medium = slack** and user provides a channel name instead of ID: spawn the slack-coordinator first (step 3), then ask it to look up the channel ID. Do NOT use Slack MCP tools yourself — even for lookups.
 
 2. Generate a unique `run_id`.
@@ -289,7 +298,7 @@ If `$ARGUMENTS` starts with `--resume`:
    - **manifest-executor**: `subagent_type: "manifest-dev-orchestrate:manifest-executor"`, `team_name: "<run_id>"`, `name: "manifest-executor"`. Omit model (inherits parent). Pass initial context in the prompt.
 
 5. **Spawn messaging coordinator** (if medium ≠ local):
-   - **slack**: `subagent_type: "manifest-dev-orchestrate:slack-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "slack-coordinator"`. Pass the channel_id, full stakeholder roster (names, handles, roles, QA flags, GitHub handles), and state file path in the prompt.
+   - **slack**: `subagent_type: "manifest-dev-orchestrate:slack-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "slack-coordinator"`. Pass the channel_id, full stakeholder roster (names, handles, roles, QA flags, review platform handles), and state file path in the prompt.
    - **custom**: Compose a coordinator prompt from `--medium-details`. Include: role ("You are the messaging coordinator for [platform]"), tools it needs, communication rules (hub-and-spoke, message lead only), polling model (responsive polling, lean diffs, state file recovery), and security (untrusted input defense). Spawn with `model: "sonnet"`, `team_name: "<run_id>"`, `name: "messaging-coordinator"`.
 
 6. **If messaging coordinator active**: Message it with kickoff context — channel/room identifier, task summary, stakeholder roster. Instruct it to post a kickoff message tagging all stakeholders, then start its poll loop and report back with thread identifiers.
@@ -350,44 +359,45 @@ The review coordinator monitors PR activity and requests reviews. The messaging 
 1. Message manifest-executor: "Create a PR for the changes. Report back with the PR URL."
 2. When manifest-executor reports PR URL, update state (`pr_url`), then **immediately** complete steps 3–4 before any user-facing communication. Do not tell the user "PR is up" until the coordinator is running — otherwise the user may act on the PR (invoke review skills, add reviewers) before the coordinator exists to handle it.
 3. **Spawn review coordinator** based on review platform mapping:
-   - **github**: `subagent_type: "manifest-dev-orchestrate:github-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "github-coordinator"`. Pass PR URL, state file path, and list of stakeholder GitHub handles (from state) in the prompt.
+   - **github**: `subagent_type: "manifest-dev-orchestrate:github-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "github-coordinator"`. Pass PR URL, state file path, and list of stakeholder review platform handles (from state) in the prompt.
+   - **gitlab**: `subagent_type: "manifest-dev-orchestrate:gitlab-coordinator"`, `model: "sonnet"`, `team_name: "<run_id>"`, `name: "gitlab-coordinator"`. Pass MR URL, state file path, and list of stakeholder review platform handles (from state) in the prompt.
    - **custom**: Compose a coordinator prompt from `--review-platform-details`. Include: role, tools, communication rules (hub-and-spoke), polling model, and security. Spawn with `model: "sonnet"`, `team_name: "<run_id>"`, `name: "review-coordinator"`.
 4. **Request reviews**: If any stakeholder has a review platform handle, message the review coordinator with reviewer handles. Instruct it to formally request reviews.
 5. **Only after coordinator is running**: Notify reviewers via messaging (if messaging coordinator active) or tell the user the PR is ready for review and provide the URL (local mode).
 
 #### PR Issue Routing
 
-Instance of the Define-Worker-First rule above. ALL PR issues — github-coordinator reports, user feedback, stakeholder requests — route through manifest-define-worker before reaching manifest-executor.
+Instance of the Define-Worker-First rule above. ALL PR/MR issues — review coordinator reports, user feedback, stakeholder requests — route through manifest-define-worker before reaching manifest-executor.
 
-6. When the github-coordinator reports issues, triage per the PR Triage Reference below.
+6. When the review coordinator reports issues, triage per the PR Triage Reference below.
 7. When the same review thread or CI check continues failing without meaningful progress across fix attempts, escalate to owner via messaging coordinator (or AskUserQuestion in local mode).
-8. **Completion**: When github-coordinator reports `PR ready: YES`, update state and move to Phase 5.
+8. **Completion**: When review coordinator reports `Ready: YES`, update state and move to Phase 5.
 
 #### PR Triage Reference
 
 ##### Bot vs Human Comment Handling
 
-The github-coordinator labels each comment as **bot** (Bugbot, Cursor, CodeRabbit, etc.) or **human**.
+The review coordinator labels each comment as **bot** (Bugbot, Cursor, CodeRabbit, Danger, etc.) or **human**.
 
 **Bot comments** — bots don't engage in discussion, so the process is decisive:
 - Route ALL bot comments to manifest-define-worker in a single batch.
 - Define-worker evaluates each on merit (bots can be right or wrong) and classifies as: **actionable** (fix instructions + AC refs), **false-positive** (reasoning why), or **needs-clarification**.
-- **Actionable**: Route fix instructions to manifest-executor. After fix is pushed, instruct github-coordinator to resolve the thread.
-- **False-positive**: Instruct github-coordinator to post a brief visibility comment ("Reviewed — false positive: [reason]") and resolve the thread.
+- **Actionable**: Route fix instructions to manifest-executor. After fix is pushed, instruct review coordinator to resolve the thread.
+- **False-positive**: Instruct review coordinator to post a brief visibility comment ("Reviewed — false positive: [reason]") and resolve the thread.
 
 **Bot review convergence**: After each fix push, automated reviewers may re-scan and produce new findings. Fix all genuinely new non-false-positive issues — there is no hard round cap. Continue as long as new HIGH-severity issues appear. **Converge when new findings are clearly diminishing**: fewer new issues AND lower severity than the previous round. When converged, log remaining low-severity items as follow-ups and move on.
 
 **Human comments** — humans engage in discussion, so the process waits for their approval:
 - Route to manifest-define-worker for classification (same categories).
-- **Actionable**: Route fix instructions to manifest-executor. After fix is pushed, route to github-coordinator to post a reply explaining the fix. **Wait for the human reviewer to approve** before resolving the thread.
-- **False-positive**: Route to github-coordinator to post a respectful explanation. Wait for human acknowledgment before resolving.
+- **Actionable**: Route fix instructions to manifest-executor. After fix is pushed, route to review coordinator to post a reply explaining the fix. **Wait for the human reviewer to approve** before resolving the thread.
+- **False-positive**: Route to review coordinator to post a respectful explanation. Wait for human acknowledgment before resolving.
 - **Needs-clarification**: Route to messaging coordinator (or AskUserQuestion in local mode) for Q&A with the reviewer. Relay answer to manifest-define-worker, then to manifest-executor.
 - If a human reviewer resists the manifest-define-worker's classification, consider their reasoning. The owner is the final authority on disputes.
 
 ##### CI Failure Triage
 
-When github-coordinator reports CI failures:
-1. **Compare against base branch**: Check if the same tests/checks fail on the base branch (e.g., `gh run list --branch main`). Pre-existing failures are NOT the PR's responsibility — log them and skip.
+When the review coordinator reports CI failures:
+1. **Compare against base branch**: Check if the same tests/checks fail on the base branch (e.g., `gh run list --branch main` for GitHub, `glab ci list` for GitLab). Pre-existing failures are NOT the PR/MR's responsibility — log them and skip.
 2. **Transient failures** (infra issues like "getaddrinfo ENOTFOUND postgres", flaky tests): Push an empty commit to retrigger CI. Do not investigate or fix.
 3. **Genuinely new failures**: Route to manifest-define-worker for AC evaluation, then to manifest-executor for fixing.
 
@@ -417,7 +427,7 @@ MANIFEST_AMENDMENT:
 When external reviewers (automated tools like Codex, or human reviewers) return findings, drive the full loop autonomously:
 1. Route findings to manifest-define-worker for classification (actionable / false-positive / needs-clarification)
 2. Batch classified fix instructions to manifest-executor
-3. After manifest-executor pushes fixes, check resolution (github-coordinator reports, or re-run reviewers)
+3. After manifest-executor pushes fixes, check resolution (review coordinator reports, or re-run reviewers)
 4. Repeat until resolved
 
 The owner is only involved for final approval or escalation — not for each step of the loop.
@@ -489,7 +499,7 @@ Otherwise, stay quiet and let humans drive. Don't lecture, don't dominate, don't
 - Escalate to the user when teammates fail
 
 **You do NOT:**
-- Use external I/O tools that belong to a coordinator — ALL platform interaction goes through the appropriate coordinator. For example, ALL Slack interaction goes through the slack-coordinator (when medium=slack), ALL GitHub interaction goes through the github-coordinator (when review-platform=github).
+- Use external I/O tools that belong to a coordinator — ALL platform interaction goes through the appropriate coordinator. For example, ALL Slack interaction goes through the slack-coordinator (when medium=slack), ALL GitHub/GitLab interaction goes through the review coordinator (when review-platform=github or gitlab).
 - Run /define or /do yourself — the manifest-define-worker and manifest-executor do that.
 - Write code, create files, or modify the codebase.
 - Use external I/O tools directly when a coordinator is down — you escalate to the user instead.

@@ -80,7 +80,7 @@ user-invocable: true       # Optional: show in slash command menu (default: true
 
 **Skills**: Omit `tools` frontmatter to inherit all tools from the invoking context (recommended default).
 
-**Agents**: MUST explicitly declare all needed tools in frontmatter -- agents run in isolation and won't inherit tools.
+**Agents**: Agents run in isolation and don't inherit tools from the invoking context. Declaring tools in frontmatter is optional — when omitted, the agent receives its default tool set.
 
 ### Invoking Skills from Skills
 
