@@ -127,4 +127,4 @@ Report verification results grouped by phase, then by Global Invariants first, t
 
 ## Collaboration Mode
 
-When `--medium` is not `local`, or when `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, read `references/COLLABORATION_MODE.md` for routing rules. If neither condition is met, ignore this — all other sections apply as written.
+When `--medium` is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. If medium is `local` (default), ignore this — all other sections apply as written.

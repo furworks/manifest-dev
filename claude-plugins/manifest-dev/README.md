@@ -190,9 +190,9 @@ These run in parallel during `/verify`:
 
 ## Collaboration Mode
 
-`/define` supports `--medium local|slack` (default: local). When `--medium slack`, questions route through Slack MCP tools instead of AskUserQuestion. The medium is encoded in the manifest's Intent section so `/do` knows the communication channel for updates and escalations.
+`/define` supports `--medium <platform>` (default: local). When a non-local medium is specified (e.g., `--medium slack`, `--medium discord`), questions route through that platform's tools instead of AskUserQuestion. The medium is encoded in the manifest's Intent section so `/do` knows the communication channel for updates and escalations. Accepts any value — the LLM adapts to whatever medium is specified.
 
-Both `/define` and `/do` also support a team collaboration mode activated by passing a `TEAM_CONTEXT` block in arguments (used by multi-agent orchestration). Full instructions live in `references/COLLABORATION_MODE.md` under each skill (progressive disclosure — only loaded when collab or non-local medium is active).
+Full routing instructions live in `references/COLLABORATION_MODE.md` under each skill (progressive disclosure — only loaded when medium is non-local).
 
 ## Multi-CLI Distribution
 

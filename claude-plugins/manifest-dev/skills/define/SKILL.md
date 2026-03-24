@@ -26,7 +26,7 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough"
 
-Parse `--medium` from arguments (can appear anywhere). Valid values: `local`, `slack`. Default: `local`. Invalid value → error and halt: "Invalid medium '<value>'. Valid mediums: local | slack"
+Parse `--medium` from arguments (can appear anywhere). Accepts any value — the LLM adapts to whatever medium is specified (e.g., `slack`, `discord`, `email`, `teams`). Default: `local` (AskUserQuestion). When a task file exists for the medium (e.g., `tasks/workflow/messaging/SLACK.md` for slack), load it for platform-specific probing fuel.
 
 When medium is not `local`: read `references/COLLABORATION_MODE.md` for routing rules. The medium is encoded in the manifest's Intent section as `Medium: <value>` so `/do` knows the communication channel.
 
@@ -368,7 +368,7 @@ Three categories, each covering **output** or **process**:
 - **Goal:** [High-level purpose]
 - **Mental Model:** [Key concepts to understand]
 - **Mode:** efficient | balanced | thorough *(optional, default: thorough — controls verification intensity during /do)*
-- **Medium:** local | slack *(optional, default: local — controls communication channel for /do escalations and updates)*
+- **Medium:** local | &lt;any platform&gt; *(optional, default: local — controls communication channel for /do escalations and updates)*
 
 ## 2. Approach (Complex Tasks Only)
 *Initial direction, not rigid plan. Provides enough to start confidently; expect adjustment when reality diverges.*
@@ -495,7 +495,7 @@ Before asking for approval, output a scannable summary that enables full manifes
 
 ## Collaboration Mode
 
-When `--medium` is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. When `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, also read `references/COLLABORATION_MODE.md` for full collaboration mode instructions. If neither condition is met, ignore this — all other sections apply as written.
+When `--medium` is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. If medium is `local` (default), ignore this — all other sections apply as written.
 
 ## Complete
 

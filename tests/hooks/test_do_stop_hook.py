@@ -3,6 +3,7 @@ Tests for manifest-dev stop_do_hook.
 
 Tests the stop hook that enforces verification-first workflow for /do.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,10 +16,7 @@ import pytest
 
 # Add manifest-dev hooks directory to path
 EXPERIMENTAL_HOOKS_DIR = (
-    Path(__file__).parent.parent.parent
-    / "claude-plugins"
-    / "manifest-dev"
-    / "hooks"
+    Path(__file__).parent.parent.parent / "claude-plugins" / "manifest-dev" / "hooks"
 )
 
 
@@ -114,7 +112,10 @@ def assistant_skill_escalate() -> dict[str, Any]:
                 {
                     "type": "tool_use",
                     "name": "Skill",
-                    "input": {"skill": "manifest-dev:escalate", "args": "AC-5 blocking"},
+                    "input": {
+                        "skill": "manifest-dev:escalate",
+                        "args": "AC-5 blocking",
+                    },
                 }
             ]
         },
@@ -183,11 +184,13 @@ class TestStopHookAllowing:
         assistant_skill_done: dict[str, Any],
     ):
         """Stop should be allowed when /done exists after /do."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            assistant_skill_verify,
-            assistant_skill_done,
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                assistant_skill_verify,
+                assistant_skill_done,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -204,11 +207,13 @@ class TestStopHookAllowing:
         assistant_skill_escalate: dict[str, Any],
     ):
         """Stop should be allowed when /escalate exists after /do."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            assistant_skill_verify,
-            assistant_skill_escalate,
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                assistant_skill_verify,
+                assistant_skill_escalate,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -221,9 +226,9 @@ class TestStopHookAllowing:
         temp_transcript,
     ):
         """Stop should be allowed when no /do in transcript."""
-        transcript_path = temp_transcript([
-            {"type": "user", "message": {"content": "Hello"}}
-        ])
+        transcript_path = temp_transcript(
+            [{"type": "user", "message": {"content": "Hello"}}]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -249,11 +254,13 @@ class TestStopHookFreshStack:
                 "content": "<command-name>/manifest-dev:do</command-name> /tmp/define2.md"
             },
         }
-        transcript_path = temp_transcript([
-            user_do_command,
-            assistant_skill_done,
-            second_do,  # New /do, no /done after
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                assistant_skill_done,
+                second_do,  # New /do, no /done after
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -278,7 +285,12 @@ class TestStopHookApiErrors:
             "type": "assistant",
             "isApiErrorMessage": True,
             "message": {
-                "content": [{"type": "text", "text": "API Error: Repeated 529 Overloaded errors"}]
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "API Error: Repeated 529 Overloaded errors",
+                    }
+                ]
             },
         }
         transcript_path = temp_transcript([user_do_command, api_error_message])
@@ -300,7 +312,12 @@ class TestStopHookApiErrors:
             "type": "assistant",
             "isApiErrorMessage": True,
             "message": {
-                "content": [{"type": "text", "text": "API Error: Repeated 529 Overloaded errors"}]
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "API Error: Repeated 529 Overloaded errors",
+                    }
+                ]
             },
         }
         # Normal assistant message after API error (recovery)
@@ -310,7 +327,9 @@ class TestStopHookApiErrors:
                 "content": [{"type": "text", "text": "Continuing with the work..."}]
             },
         }
-        transcript_path = temp_transcript([user_do_command, api_error_message, normal_message])
+        transcript_path = temp_transcript(
+            [user_do_command, api_error_message, normal_message]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -411,16 +430,30 @@ class TestStopHookLoopDetection:
         user_do_command: dict[str, Any],
     ):
         """Substantial output should reset the loop counter."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            # Two short outputs
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-            # Substantial output breaks the pattern
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "x" * 150}]}},
-            # Only one short output after substantial
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                # Two short outputs
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+                # Substantial output breaks the pattern
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "x" * 150}]},
+                },
+                # Only one short output after substantial
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -436,24 +469,39 @@ class TestStopHookLoopDetection:
         user_do_command: dict[str, Any],
     ):
         """Non-Skill tool use should reset the loop counter."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            # Two short outputs
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-            # Tool use (not Skill) breaks the pattern
-            {
-                "type": "assistant",
-                "message": {
-                    "content": [
-                        {"type": "text", "text": "Let me check"},
-                        {"type": "tool_use", "name": "Read", "input": {"path": "/tmp/foo"}},
-                    ]
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                # Two short outputs
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
                 },
-            },
-            # Only one short output after tool use
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-        ])
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+                # Tool use (not Skill) breaks the pattern
+                {
+                    "type": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "Let me check"},
+                            {
+                                "type": "tool_use",
+                                "name": "Read",
+                                "input": {"path": "/tmp/foo"},
+                            },
+                        ]
+                    },
+                },
+                # Only one short output after tool use
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -469,21 +517,33 @@ class TestStopHookLoopDetection:
         user_do_command: dict[str, Any],
     ):
         """Calling /escalate (via Skill) should allow stop regardless of loop pattern."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            # Short outputs with an escalate call in the middle
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-            {
-                "type": "assistant",
-                "message": {
-                    "content": [
-                        {"type": "text", "text": "x"},
-                        {"type": "tool_use", "name": "Skill", "input": {"skill": "escalate"}},
-                    ]
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                # Short outputs with an escalate call in the middle
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
                 },
-            },
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-        ])
+                {
+                    "type": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "x"},
+                            {
+                                "type": "tool_use",
+                                "name": "Skill",
+                                "input": {"skill": "escalate"},
+                            },
+                        ]
+                    },
+                },
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -499,22 +559,34 @@ class TestStopHookLoopDetection:
         user_do_command: dict[str, Any],
     ):
         """Skill tool use for non-completion skills should not reset loop counter."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            # Three short outputs with a non-escalate Skill call
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-            {
-                "type": "assistant",
-                "message": {
-                    "content": [
-                        {"type": "text", "text": "x"},
-                        # Some other skill, not escalate/done
-                        {"type": "tool_use", "name": "Skill", "input": {"skill": "some-other-skill"}},
-                    ]
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                # Three short outputs with a non-escalate Skill call
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
                 },
-            },
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": "."}]}},
-        ])
+                {
+                    "type": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "x"},
+                            # Some other skill, not escalate/done
+                            {
+                                "type": "tool_use",
+                                "name": "Skill",
+                                "input": {"skill": "some-other-skill"},
+                            },
+                        ]
+                    },
+                },
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "."}]},
+                },
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -640,11 +712,13 @@ class TestStopHookInvocationPatterns:
                 ]
             },
         }
-        transcript_path = temp_transcript([
-            user_do_command_line,
-            ismeta_expansion,
-            assistant_skill_done,
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command_line,
+                ismeta_expansion,
+                assistant_skill_done,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -683,13 +757,15 @@ class TestStopHookInvocationPatterns:
                 ]
             },
         }
-        transcript_path = temp_transcript([
-            first_do,
-            assistant_skill_done,  # Complete first /do
-            second_do_command,
-            second_do_ismeta,
-            # No /done for second /do
-        ])
+        transcript_path = temp_transcript(
+            [
+                first_do,
+                assistant_skill_done,  # Complete first /do
+                second_do_command,
+                second_do_ismeta,
+                # No /done for second /do
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -776,69 +852,52 @@ class TestStopHookEdgeCases:
         assert result is None
 
 
-class TestStopHookTeamMode:
-    """Tests for team-mode verification delegation behavior."""
+class TestStopHookCollabMode:
+    """Tests for non-local medium collaboration mode behavior."""
 
-    @pytest.fixture
-    def user_do_with_team_context(self) -> dict[str, Any]:
-        """User message invoking /do with TEAM_CONTEXT."""
-        return {
-            "type": "user",
-            "message": {
-                "content": (
-                    "<command-name>/manifest-dev:do</command-name>"
-                    "<command-args>/tmp/manifest.md "
-                    "TEAM_CONTEXT:\n  lead: team-lead\n  coordinator: slack-coordinator\n  role: execute"
-                    "</command-args>"
-                )
-            },
-        }
-
-    def test_allows_verify_with_team_context(
+    def test_allows_verify_with_medium_slack(
         self,
         experimental_hook_path: Path,
         temp_transcript,
         assistant_skill_verify: dict[str, Any],
     ):
-        """In team mode, /do + /verify should ALLOW stop (verification delegated to lead)."""
-        user_do_team = {
+        """With --medium slack, /do + /verify should ALLOW stop (escalation posted to medium)."""
+        user_do_medium = {
             "type": "user",
             "message": {
                 "content": (
                     "<command-name>/manifest-dev:do</command-name>"
-                    "<command-args>/tmp/manifest.md "
-                    "TEAM_CONTEXT:\n  lead: team-lead\n  coordinator: slack-coordinator\n  role: execute"
+                    "<command-args>/tmp/manifest.md --medium slack"
                     "</command-args>"
                 )
             },
         }
-        transcript_path = temp_transcript([user_do_team, assistant_skill_verify])
+        transcript_path = temp_transcript([user_do_medium, assistant_skill_verify])
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
 
         assert result is not None
         assert result["decision"] == "allow"
-        assert "team" in result["reason"].lower() or "delegat" in result["reason"].lower()
+        assert "medium" in result["reason"].lower()
 
-    def test_blocks_without_verify_even_in_team_mode(
+    def test_blocks_without_verify_even_with_medium(
         self,
         experimental_hook_path: Path,
         temp_transcript,
     ):
-        """In team mode, /do without /verify should still BLOCK."""
-        user_do_team = {
+        """With --medium slack, /do without /verify should still BLOCK."""
+        user_do_medium = {
             "type": "user",
             "message": {
                 "content": (
                     "<command-name>/manifest-dev:do</command-name>"
-                    "<command-args>/tmp/manifest.md "
-                    "TEAM_CONTEXT:\n  lead: team-lead\n  coordinator: slack-coordinator\n  role: execute"
+                    "<command-args>/tmp/manifest.md --medium slack"
                     "</command-args>"
                 )
             },
         }
-        transcript_path = temp_transcript([user_do_team])
+        transcript_path = temp_transcript([user_do_medium])
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -846,14 +905,14 @@ class TestStopHookTeamMode:
         assert result is not None
         assert result["decision"] == "block"
 
-    def test_still_blocks_verify_without_team_context(
+    def test_still_blocks_verify_without_medium(
         self,
         experimental_hook_path: Path,
         temp_transcript,
         user_do_command: dict[str, Any],
         assistant_skill_verify: dict[str, Any],
     ):
-        """Without TEAM_CONTEXT, /do + /verify should still BLOCK (solo mode behavior unchanged)."""
+        """Without --medium, /do + /verify should still BLOCK (local mode behavior unchanged)."""
         transcript_path = temp_transcript([user_do_command, assistant_skill_verify])
         hook_input = {"transcript_path": transcript_path}
 
@@ -862,14 +921,14 @@ class TestStopHookTeamMode:
         assert result is not None
         assert result["decision"] == "block"
 
-    def test_team_context_via_skill_tool_call(
+    def test_medium_via_skill_tool_call(
         self,
         experimental_hook_path: Path,
         temp_transcript,
         assistant_skill_verify: dict[str, Any],
     ):
-        """Should detect TEAM_CONTEXT in Skill tool call args."""
-        assistant_do_with_team = {
+        """Should detect --medium in Skill tool call args."""
+        assistant_do_with_medium = {
             "type": "assistant",
             "message": {
                 "content": [
@@ -878,19 +937,46 @@ class TestStopHookTeamMode:
                         "name": "Skill",
                         "input": {
                             "skill": "manifest-dev:do",
-                            "args": "/tmp/manifest.md TEAM_CONTEXT:\n  lead: team-lead",
+                            "args": "/tmp/manifest.md --medium discord",
                         },
                     }
                 ]
             },
         }
-        transcript_path = temp_transcript([assistant_do_with_team, assistant_skill_verify])
+        transcript_path = temp_transcript(
+            [assistant_do_with_medium, assistant_skill_verify]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
 
         assert result is not None
         assert result["decision"] == "allow"
+
+    def test_medium_local_does_not_trigger_collab(
+        self,
+        experimental_hook_path: Path,
+        temp_transcript,
+        assistant_skill_verify: dict[str, Any],
+    ):
+        """--medium local should NOT trigger collab mode (same as no --medium)."""
+        user_do_local = {
+            "type": "user",
+            "message": {
+                "content": (
+                    "<command-name>/manifest-dev:do</command-name>"
+                    "<command-args>/tmp/manifest.md --medium local"
+                    "</command-args>"
+                )
+            },
+        }
+        transcript_path = temp_transcript([user_do_local, assistant_skill_verify])
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook(experimental_hook_path, hook_input)
+
+        assert result is not None
+        assert result["decision"] == "block"
 
 
 class TestStopHookInterruptHandling:
@@ -985,10 +1071,12 @@ class TestStopHookInterruptHandling:
         user_interrupt: dict[str, Any],
     ):
         """Stop should be allowed when /do was invoked but immediately interrupted."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            user_interrupt,
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                user_interrupt,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1005,11 +1093,13 @@ class TestStopHookInterruptHandling:
         user_interrupt: dict[str, Any],
     ):
         """Stop should still block when /do was interrupted AFTER assistant started processing."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            assistant_working,  # Assistant started /do work
-            user_interrupt,  # User interrupts mid-execution
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                assistant_working,  # Assistant started /do work
+                user_interrupt,  # User interrupts mid-execution
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1035,11 +1125,13 @@ class TestStopHookInterruptHandling:
                 )
             },
         }
-        transcript_path = temp_transcript([
-            user_do_command,
-            user_interrupt,  # First /do cancelled
-            second_do,  # New /do invocation
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                user_interrupt,  # First /do cancelled
+                second_do,  # New /do invocation
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1082,13 +1174,15 @@ class TestStopHookInterruptHandling:
                 ]
             },
         }
-        transcript_path = temp_transcript([
-            user_do_command,  # /do command (line 944 in session)
-            ismeta_do,  # isMeta expansion (line 945)
-            user_interrupt,  # Interrupt (line 948)
-            user_regular_message,  # Regular message (line 950)
-            assistant_working,  # Assistant works on /define (lines 952+)
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,  # /do command (line 944 in session)
+                ismeta_do,  # isMeta expansion (line 945)
+                user_interrupt,  # Interrupt (line 948)
+                user_regular_message,  # Regular message (line 950)
+                assistant_working,  # Assistant works on /define (lines 952+)
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1105,19 +1199,21 @@ class TestStopHookInterruptHandling:
         user_regular_message: dict[str, Any],
     ):
         """Stop should be allowed after interrupted /do followed by regular conversation."""
-        transcript_path = temp_transcript([
-            user_do_command,
-            user_interrupt,
-            user_regular_message,
-            {
-                "type": "assistant",
-                "message": {
-                    "content": [
-                        {"type": "text", "text": "Sure, I'll help with that."}
-                    ]
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                user_interrupt,
+                user_regular_message,
+                {
+                    "type": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "Sure, I'll help with that."}
+                        ]
+                    },
                 },
-            },
-        ])
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1142,12 +1238,14 @@ class TestStopHookInterruptHandling:
                 )
             },
         }
-        transcript_path = temp_transcript([
-            user_do_command,
-            user_interrupt,  # First /do cancelled
-            second_do,
-            user_interrupt,  # Second /do cancelled
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                user_interrupt,  # First /do cancelled
+                second_do,
+                user_interrupt,  # Second /do cancelled
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1167,10 +1265,12 @@ class TestStopHookInterruptHandling:
         Pattern 1 (assistant Skill tool_use) means the assistant is already processing,
         so the interrupt is mid-execution, not a cancellation.
         """
-        transcript_path = temp_transcript([
-            assistant_skill_do,
-            user_interrupt,
-        ])
+        transcript_path = temp_transcript(
+            [
+                assistant_skill_do,
+                user_interrupt,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1196,11 +1296,13 @@ class TestStopHookInterruptHandling:
                 )
             },
         }
-        transcript_path = temp_transcript([
-            user_do_short,
-            ismeta_do_expansion,
-            user_interrupt,
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_short,
+                ismeta_do_expansion,
+                user_interrupt,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1226,12 +1328,14 @@ class TestStopHookInterruptHandling:
                 )
             },
         }
-        transcript_path = temp_transcript([
-            user_do_command,
-            user_interrupt,  # First /do cancelled
-            second_do,  # New /do
-            assistant_skill_done,  # Properly completed
-        ])
+        transcript_path = temp_transcript(
+            [
+                user_do_command,
+                user_interrupt,  # First /do cancelled
+                second_do,  # New /do
+                assistant_skill_done,  # Properly completed
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)
@@ -1246,16 +1350,16 @@ class TestStopHookInterruptHandling:
         user_interrupt: dict[str, Any],
     ):
         """Interrupt without any /do should not affect anything."""
-        transcript_path = temp_transcript([
-            {"type": "user", "message": {"content": "Hello"}},
-            {
-                "type": "assistant",
-                "message": {
-                    "content": [{"type": "text", "text": "Hi there!"}]
+        transcript_path = temp_transcript(
+            [
+                {"type": "user", "message": {"content": "Hello"}},
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "Hi there!"}]},
                 },
-            },
-            user_interrupt,
-        ])
+                user_interrupt,
+            ]
+        )
         hook_input = {"transcript_path": transcript_path}
 
         result = run_hook(experimental_hook_path, hook_input)

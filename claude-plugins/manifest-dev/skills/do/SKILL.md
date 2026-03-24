@@ -67,4 +67,4 @@ Externalize progress to survive context loss. The log IS the disaster recovery m
 
 ## Collaboration Mode
 
-When the manifest's `Medium:` field is not `local`, or when `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, read `references/COLLABORATION_MODE.md` for routing rules. If neither condition is met, ignore this — all other sections apply as written.
+When the manifest's `Medium:` field is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. If medium is `local` (default) or absent, ignore this — all other sections apply as written.

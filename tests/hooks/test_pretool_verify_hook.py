@@ -12,8 +12,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 # Path to the hooks directory
 HOOKS_DIR = (
     Path(__file__).parent.parent.parent / "claude-plugins" / "manifest-dev" / "hooks"

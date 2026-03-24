@@ -325,8 +325,7 @@ The Claude Code plugin is the source of truth. Per-CLI distributions under `dist
 
 | Plugin | Description |
 |--------|-------------|
-| `manifest-dev` | Core manifest workflows: `/define`, `/do`, `/verify`, review agents, workflow hooks. Includes workflow task files for PR review, CI, Slack collaboration, and QA lifecycle support via `--medium`. |
-| `manifest-dev-orchestrate` | **DEPRECATED** — Superseded by workflow task files in manifest-dev. Use `/define --medium slack` + `/do` instead. Original: multi-agent orchestration via `/orchestrate`. |
+| `manifest-dev` | Core manifest workflows: `/define`, `/do`, `/verify`, review agents, workflow hooks. Includes workflow task files for PR review, CI, collaboration, and QA lifecycle support via `--medium`. |
 
 ## Plugin Architecture
 

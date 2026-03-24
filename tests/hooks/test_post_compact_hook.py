@@ -117,7 +117,10 @@ def assistant_skill_escalate() -> dict[str, Any]:
                 {
                     "type": "tool_use",
                     "name": "Skill",
-                    "input": {"skill": "manifest-dev:escalate", "args": "AC-5 blocking"},
+                    "input": {
+                        "skill": "manifest-dev:escalate",
+                        "args": "AC-5 blocking",
+                    },
                 }
             ]
         },
@@ -402,9 +405,7 @@ class TestPostCompactHookEdgeCases:
         lines = [
             {
                 "type": "user",
-                "message": {
-                    "content": "<command-name>/manifest-dev:do</command-name>"
-                },
+                "message": {"content": "<command-name>/manifest-dev:do</command-name>"},
             }
         ]
         result = run_post_compact_hook(transcript_lines=lines, tmp_path=tmp_path)
