@@ -1,6 +1,28 @@
 # manifest-dev-orchestrate
 
+> **DEPRECATED**: This plugin is superseded by workflow task files in the `manifest-dev` plugin. The single-threaded `/define` + `/do` approach with workflow-aware manifests replaces multi-agent orchestration. See [Migration Guide](#migration-guide) below.
+
 Platform-agnostic collaborative workflow orchestration.
+
+## Migration Guide
+
+The orchestrate plugin coordinated 5 agents across 7 phases. The replacement uses composable task files that teach `/define` to produce workflow-aware manifests, which `/do` executes single-threaded.
+
+| Orchestrate concept | manifest-dev equivalent |
+|---|---|
+| `/orchestrate` command | `/define` with `--medium slack` (or local) |
+| Phases 0-6 | Manifest phases (Phase 1: local checks, Phase 2: CI, Phase 3: review, Phase 4: QA) |
+| slack-coordinator | Direct Slack MCP usage via `--medium slack` |
+| github-coordinator | criteria-checker agent verifying PR/CI/review ACs |
+| manifest-define-worker | `/define` directly |
+| manifest-executor | `/do` directly |
+| Bot/human comment triage | GITHUB.md Defaults → manifest PG items |
+| CI failure triage | GITHUB.md Defaults → manifest PG items |
+| QA phase | WORKFLOW.md + COLLABORATION.md probing |
+| `--auto` flag | Use `/define --interview autonomous` + `/do` |
+| State file / resume | Execution log + re-invoke `/do` with log path |
+
+**Why**: LLMs work best single-threaded — one context window with full implementation knowledge beats five agents with fragmented context.
 
 ## What It Does
 

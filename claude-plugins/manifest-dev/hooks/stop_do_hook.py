@@ -10,7 +10,7 @@ Decision matrix:
 - No /do: ALLOW (not in flow)
 - /do + /done: ALLOW (verified complete)
 - /do + /escalate: ALLOW (properly escalated)
-- /do + /verify + TEAM_CONTEXT: ALLOW (verification delegated to lead)
+- /do + /verify + TEAM_CONTEXT or --medium: ALLOW (verification delegated to lead/Slack)
 - /do only: BLOCK (must verify first)
 - /do + /verify only: BLOCK (verify returned failures, keep working)
 """

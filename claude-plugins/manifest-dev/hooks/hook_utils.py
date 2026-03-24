@@ -22,7 +22,7 @@ class DoFlowState:
     has_done: bool  # /done was called after last /do
     has_escalate: bool  # /escalate was called after last /do
     do_args: str | None  # raw arguments from /do invocation
-    has_team_context: bool  # /do args contain TEAM_CONTEXT block
+    has_team_context: bool  # /do args contain TEAM_CONTEXT block or --medium non-local
 
 
 def build_system_reminder(content: str) -> str:
@@ -375,7 +375,9 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
                         do_turn_has_response = False
                         if args:
                             do_args = args
-                            has_team_context = "TEAM_CONTEXT" in args
+                            has_team_context = (
+                                "TEAM_CONTEXT" in args or "--medium slack" in args
+                            )
 
                     # For assistant Skill tool calls (Pattern 1), the /do
                     # invocation IS an assistant message — mark as responded.

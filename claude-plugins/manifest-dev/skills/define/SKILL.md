@@ -22,9 +22,13 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 ## Input
 
-`$ARGUMENTS` = task description, optionally with context/research and `--interview <level>`
+`$ARGUMENTS` = task description, optionally with context/research, `--interview <level>`, and `--medium <type>`
 
 Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough"
+
+Parse `--medium` from arguments (can appear anywhere). Valid values: `local`, `slack`. Default: `local`. Invalid value → error and halt: "Invalid medium '<value>'. Valid mediums: local | slack"
+
+When medium is not `local`: read `references/COLLABORATION_MODE.md` for routing rules. The medium is encoded in the manifest's Intent section as `Medium: <value>` so `/do` knows the communication channel.
 
 If no arguments provided, ask: "What would you like to build or change?"
 
@@ -43,8 +47,15 @@ Domain-specific guidance available in:
 | **Document** | Specs, proposals, reports, formal docs (base: Writing) | `tasks/DOCUMENT.md` |
 | **Research** | Investigations, analyses, comparisons | `tasks/research/RESEARCH.md` |
 | **Blog** | Blog posts, articles, tutorials (base: Writing) | `tasks/BLOG.md` |
+| **Workflow** | Multi-step process, review/approval/CI/collaboration, external dependencies, `--medium` flag present | `tasks/workflow/WORKFLOW.md` |
+| **Collaboration** | Team/stakeholders/multiple people, `--medium` non-local | `tasks/workflow/COLLABORATION.md` |
+| **Slack** | `--medium slack` | `tasks/workflow/messaging/SLACK.md` |
+| **GitHub Review** | Default for code tasks with workflow (CODING + WORKFLOW), or explicit GitHub/PR mention | `tasks/workflow/code-review/GITHUB.md` |
+| **GitLab Review** | GitLab, MR, merge request, `--review-platform gitlab` | `tasks/workflow/code-review/GITLAB.md` |
 
 **Composition**: Code-change tasks combine CODING.md (base quality gates) with domain-specific guidance. Text-authoring tasks combine WRITING.md (base prose quality) with content-type guidance—a "blog post" benefits from both WRITING.md and BLOG.md, a "technical proposal" from both WRITING.md and DOCUMENT.md. Research tasks compose RESEARCH.md (base research methodology) with source-type files—when web research is identified as relevant, load `tasks/research/sources/SOURCE_WEB.md` alongside `tasks/research/RESEARCH.md`. RESEARCH.md's Data Sources table lists available source files and probes which sources apply. Domains aren't mutually exclusive—a "bug fix that requires refactoring" benefits from both BUG.md and REFACTOR.md. Related domains compound coverage.
+
+**Workflow composition** is orthogonal to domain composition—workflow files add the process/lifecycle dimension (produce → review → approve → deliver), while domain files add the quality dimension (code quality, prose quality, etc.). A dev workflow composes CODING + FEATURE + WORKFLOW + GITHUB. A blog with Slack review composes WRITING + BLOG + WORKFLOW + COLLABORATION + SLACK. Workflow files are only loaded when workflow indicators are present—a solo dev task with no review/CI/collaboration gets no workflow files. GitHub Review is the default code review platform for any CODING + WORKFLOW composition; it is only suppressed when another platform is specified (`--review-platform gitlab`) or review is explicitly excluded (`--review-platform none`).
 
 **Exception**: PROMPTING tasks do NOT compose with CODING.md unless the task also changes executable code. PROMPTING.md has its own quality gates (prompt-reviewer, clarity, structure, etc.). When a task changes both prompts AND code, apply both PROMPTING.md and CODING.md gates, scoping each to the relevant files.
 
@@ -357,6 +368,7 @@ Three categories, each covering **output** or **process**:
 - **Goal:** [High-level purpose]
 - **Mental Model:** [Key concepts to understand]
 - **Mode:** efficient | balanced | thorough *(optional, default: thorough — controls verification intensity during /do)*
+- **Medium:** local | slack *(optional, default: local — controls communication channel for /do escalations and updates)*
 
 ## 2. Approach (Complex Tasks Only)
 *Initial direction, not rigid plan. Provides enough to start confidently; expect adjustment when reality diverges.*
@@ -483,7 +495,7 @@ Before asking for approval, output a scannable summary that enables full manifes
 
 ## Collaboration Mode
 
-When `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, read `references/COLLABORATION_MODE.md` for full collaboration mode instructions. If no `TEAM_CONTEXT:` block is present, ignore this — all other sections apply as written.
+When `--medium` is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. When `$ARGUMENTS` contains a `TEAM_CONTEXT:` block, also read `references/COLLABORATION_MODE.md` for full collaboration mode instructions. If neither condition is met, ignore this — all other sections apply as written.
 
 ## Complete
 
