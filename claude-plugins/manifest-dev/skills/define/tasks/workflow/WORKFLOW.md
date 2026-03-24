@@ -6,7 +6,7 @@ Base guidance for tasks with a multi-step lifecycle: produce → review → appr
 
 | Aspect | Agent | Threshold |
 |--------|-------|-----------|
-| Phase assignment | criteria-checker | Fast local checks in early phases; expensive external gates (CI, review approval, QA sign-off) in later phases. No external wait in Phase 1. |
+| Phase assignment | criteria-checker | Phases ordered by iteration speed: fast local checks (lint, tests, reviewers) → E2E/integration tests (before PR — may require deployment to staging; if so, monitor deploy readiness, run tests, fix failures autonomously) → CI on PR → review approval → QA. No external wait in Phase 1. |
 | Lifecycle coverage | criteria-checker | Every lifecycle stage (produce, review, approve) has at least one AC or INV-G with verification |
 
 ## Risks
@@ -18,6 +18,7 @@ Base guidance for tasks with a multi-step lifecycle: produce → review → appr
 ## Scenario Prompts
 
 - **Review rejection after passing verification** — all automated checks pass but human reviewer rejects for reasons not covered by ACs; probe: what would a reviewer check that automated gates don't?
+- **E2E requires deployment** — E2E/integration tests need a running environment (staging, preview, local docker); probe: does E2E need a deployment? which environment? how to monitor deploy readiness before running tests?
 - **Phase 3 context decay** — by review phase, implementation context has degraded; probe: how complex is this task? will review handling need full implementation context?
 
 ## Trade-offs
