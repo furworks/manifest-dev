@@ -42,6 +42,8 @@ Use `slack_read_channel` and `slack_read_thread` for polling.
 
 **Lean polling**: Track `last_seen_ts` per thread. Each poll reads only messages after that timestamp. Report **diffs only** — new replies, new reactions, new parent messages. Never re-read and relay content you've already reported. Update `last_seen_ts` after each successful poll. This prevents context explosion in long sessions.
 
+**Relay full message text.** When relaying stakeholder messages, include the verbatim message content, who posted it, and which thread — not paraphrased summaries. The lead routes these to workers who need the exact wording.
+
 **Reaction monitoring**: Detect and relay ALL reactions on tracked threads. Report: reaction emoji, who reacted, and which message it's on. The lead decides what reactions mean.
 
 **State file recovery**: On context compression or respawn, read the state file (path provided at spawn time) to recover: channel_id, thread list with `last_seen_ts`, and stakeholder roster. **Skip the channel lookup** — you already have the channel_id from the state file. Resume polling from where you left off.

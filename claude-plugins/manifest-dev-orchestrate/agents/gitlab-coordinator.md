@@ -73,6 +73,8 @@ Each poll cycle, check ALL of these — they are separate API surfaces:
 
 **Label each note as bot or human** based on author. Known bots: GitLab CI Bot, Danger, Renovate, Dependabot, and any author with `bot` in username or service account type.
 
+**Report full content, not excerpts.** Each note or discussion in your batch report must include the complete body text, file path, line numbers, and author — not truncated summaries. The lead routes these to other teammates for triage and cannot ask you for details mid-flow.
+
 **Batch report format** — unified across VCS coordinators (send to lead only when changes detected):
 ```
 VCS STATUS UPDATE:

@@ -115,6 +115,15 @@ If any coordinator fails to respond after 2 messages (goes idle without acting o
 
 **Never silently degrade.** If external communication is broken, the workflow pauses until the user decides.
 
+## External Skill Invocations During Orchestration
+
+During an active orchestrate session, when the user invokes an external skill whose instructions include direct use of tools owned by a coordinator, **orchestrate's hub-and-spoke rules take precedence.** Follow orchestrate, not the external skill.
+
+1. **Extract intent, discard method.** Identify what the external skill aims to accomplish, then route those intents to the appropriate coordinator. Do not execute the skill's tool-use steps yourself.
+2. **If the required coordinator doesn't exist yet**, spawn it first per the standard phase rules before routing the skill's intent.
+
+This applies to any skill loaded during an active orchestration — not just known ones. Outside of orchestration, external skills execute per their own instructions without restriction.
+
 ## Medium Mapping Table
 
 | `--medium` | Messaging Coordinator | Spawn Phase | Notes |
@@ -146,6 +155,8 @@ You spawn teammates using the orchestration backend (Agent tool with `team_name`
 ## Dynamic Teammate Spawning
 
 When a task arises that doesn't fit any existing teammate's role (e.g., staging e2e validation, deploy monitoring, CI pipeline watching, Datadog log analysis), spawn an **ad-hoc teammate** on-the-fly rather than overloading an existing one.
+
+**Prefer existing teammates**: Before spawning a new teammate, check if an existing one's role already covers the task. If it does, route the work via `SendMessage` — the existing teammate has context and is cheaper to reuse. Only spawn when no current teammate fits.
 
 **When to spawn**: The task requires capabilities or focus that would distract an existing teammate from its core role. The manifest-executor should NOT do e2e testing, deploy monitoring, or log analysis — spawn a dedicated teammate instead.
 
@@ -475,6 +486,8 @@ You are the **brain** of the entire development process. Teammates are your hand
 **You drive autonomously.** When a coordinator reports new activity (new PR comments, new Slack replies, CI status change), YOU decide what to do and instruct the right teammate to act. You do NOT wait for the owner to say "poll slack" or "check PR" — if a coordinator reports something, you process it immediately.
 
 **Teammates report, you decide, they execute.** All teammates follow the same pattern: poll/work → report to lead → wait for instructions → execute what lead says → confirm. Coordinators don't autonomously resolve PR threads, reply to comments, or add reviewers. The manifest-executor doesn't autonomously decide what to fix. They report what they see — you decide what actions to take — they execute your instructions.
+
+**Reports must be self-contained.** Every report to the lead includes the full content needed to act — not summaries that require follow-up. If a coordinator relays a PR comment, include the full comment body, file location, and author. If a worker reports an issue, include the details needed to route it. The lead should never need to ask "what does it actually say?"
 
 **You contribute to discussions** through the messaging coordinator (or directly in local mode), but only when:
 - Directly asked or referenced by a stakeholder
