@@ -825,6 +825,33 @@ class TestStopHookCollabMode:
         assert result is not None
         assert result["decision"] == "block"
 
+    def test_medium_local_prefix_is_collab(
+        self,
+        temp_transcript,
+        assistant_skill_verify: dict[str, Any],
+    ):
+        """--medium local-dev should trigger collab mode (not a false negative)."""
+        user_do_local_dev = {
+            "type": "user",
+            "message": {
+                "content": (
+                    "<command-name>/manifest-dev:do</command-name>"
+                    "<command-args>/tmp/manifest.md --medium local-dev"
+                    "</command-args>"
+                )
+            },
+        }
+        transcript_path = temp_transcript(
+            [user_do_local_dev, assistant_skill_verify]
+        )
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook("stop_do_hook.py", hook_input)
+
+        # local-dev is NOT "local" — it should be treated as collab mode
+        assert result is not None
+        assert result["decision"] == "allow"
+
 
 class TestStopHookInterruptHandling:
     """Tests for user interrupt handling during /do workflow.

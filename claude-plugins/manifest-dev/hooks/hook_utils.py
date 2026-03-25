@@ -347,8 +347,8 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
                         do_turn_has_response = False
                         if args:
                             do_args = args
-                            has_collab_mode = (
-                                "--medium" in args and "--medium local" not in args
+                            has_collab_mode = bool(
+                                re.search(r"--medium\s+(?!local(?:\s|$))\S+", args)
                             )
 
                     # For assistant Skill tool calls (Pattern 1), the /do
