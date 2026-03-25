@@ -21,6 +21,7 @@ class DoFlowState:
     has_verify: bool  # /verify was called after last /do
     has_done: bool  # /done was called after last /do
     has_escalate: bool  # /escalate was called after last /do
+    has_self_amendment: bool  # last /escalate was Self-Amendment (not blocking/pause)
     do_args: str | None  # raw arguments from /do invocation
     has_collab_mode: bool  # /do uses non-local medium (--medium not local)
 
@@ -309,6 +310,7 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
     has_verify = False
     has_done = False
     has_escalate = False
+    has_self_amendment = False
     do_args: str | None = None
     has_collab_mode = False
     # Tracks whether assistant has responded since the last /do invocation.
@@ -344,6 +346,7 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
                         has_verify = False
                         has_done = False
                         has_escalate = False
+                        has_self_amendment = False
                         do_turn_has_response = False
                         if args:
                             do_args = args
@@ -380,6 +383,12 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
 
                 if has_do and was_skill_invoked(data, "escalate"):
                     has_escalate = True
+                    # Detect Self-Amendment by checking escalate args
+                    esc_args = get_skill_call_args(data, "escalate")
+                    if not esc_args:
+                        esc_args = extract_user_command_args(data, "escalate")
+                    if esc_args and "self-amendment" in esc_args.lower():
+                        has_self_amendment = True
 
     except OSError:
         return DoFlowState(
@@ -387,6 +396,7 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
             has_verify=False,
             has_done=False,
             has_escalate=False,
+            has_self_amendment=False,
             do_args=None,
             has_collab_mode=False,
         )
@@ -396,6 +406,7 @@ def parse_do_flow(transcript_path: str) -> DoFlowState:
         has_verify=has_verify,
         has_done=has_done,
         has_escalate=has_escalate,
+        has_self_amendment=has_self_amendment,
         do_args=do_args,
         has_collab_mode=has_collab_mode,
     )

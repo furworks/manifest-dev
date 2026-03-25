@@ -77,16 +77,6 @@
         ]
       },
       {
-        "matcher": "TodoWrite",
-        "description": "Remind to update execution log after todo update during /do",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/posttool_log_hook.py"
-          }
-        ]
-      },
-      {
         "matcher": "Skill",
         "description": "Remind to update execution log after workflow skill calls during /do",
         "hooks": [

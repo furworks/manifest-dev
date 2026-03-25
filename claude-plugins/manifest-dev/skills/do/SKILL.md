@@ -69,7 +69,7 @@ Externalize progress to survive context loss. The log IS the disaster recovery m
 
 **When to trigger** — User input or a PR review comment changes scope: new requirements, contradicted ACs, missing coverage. Clarifications and confirmations are NOT amendments — only act when the manifest's criteria themselves need to change.
 
-**Amendment flow** — Amend the manifest autonomously via Self-Amendment escalation and `/define --amend`, then resume with the updated manifest and existing log. Log the trigger before amending. No human wait — the entire cycle is autonomous.
+**Amendment flow** — Amend the manifest autonomously via Self-Amendment escalation and `/define --amend <manifest-path> --from-do`, then resume with the updated manifest and existing log. Log the trigger before amending. No human wait — the entire cycle is autonomous.
 
 **PR review comments** — Same trigger. During the review phase, a comment that contradicts or extends the manifest is an amendment trigger.
 

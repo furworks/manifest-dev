@@ -93,6 +93,43 @@ class TestStopHookAllowing:
 
         assert result is None
 
+    def test_blocks_with_self_amendment_escalate(
+        self,
+        temp_transcript,
+        user_do_command: dict[str, Any],
+    ):
+        """Stop should be BLOCKED after Self-Amendment escalation.
+
+        Self-Amendment is a mechanical exit that requires /define --amend
+        before stopping. Unlike blocking/pause escalations, the workflow
+        must continue autonomously.
+        """
+        self_amendment_escalate = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Skill",
+                        "input": {
+                            "skill": "manifest-dev:escalate",
+                            "args": "Self-Amendment",
+                        },
+                    }
+                ]
+            },
+        }
+        transcript_path = temp_transcript(
+            [user_do_command, self_amendment_escalate]
+        )
+        hook_input = {"transcript_path": transcript_path}
+
+        result = run_hook("stop_do_hook.py", hook_input)
+
+        assert result is not None
+        assert result["decision"] == "block"
+        assert "self-amendment" in result["reason"].lower()
+
     def test_allows_no_do(
         self,
         temp_transcript,

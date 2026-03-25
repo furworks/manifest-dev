@@ -30,7 +30,7 @@ Parse `--medium` from arguments (can appear anywhere). Accepts any value — the
 
 When medium is not `local`: read `references/COLLABORATION_MODE.md` for routing rules. The medium is encoded in the manifest's Intent section as `Medium: <value>` so `/do` knows the communication channel.
 
-Parse `--amend <manifest-path>` from arguments (can appear anywhere). When present, /define operates on the existing manifest at the given path — see Amendment Mode section below.
+Parse `--amend <manifest-path>` from arguments (can appear anywhere). When present, /define operates on the existing manifest at the given path — see Amendment Mode section below. `--from-do` flag (optional, used with `--amend`) signals the autonomous fast path — no user approval gates.
 
 If no arguments provided, ask: "What would you like to build or change?"
 

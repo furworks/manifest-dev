@@ -54,8 +54,23 @@ def main() -> None:
     if state.has_done:
         sys.exit(0)
 
-    # /escalate was called - properly escalated, allow stop
-    if state.has_escalate:
+    # /escalate was called — but Self-Amendment must continue to /define --amend
+    if state.has_escalate and not state.has_self_amendment:
+        sys.exit(0)
+
+    # Self-Amendment escalation — block stop, must continue to /define --amend
+    if state.has_self_amendment:
+        output = {
+            "decision": "block",
+            "reason": "Self-Amendment in progress",
+            "systemMessage": (
+                "Stop blocked: Self-Amendment escalation requires "
+                "/define --amend before stopping. Invoke "
+                "/define --amend <manifest-path> to update the manifest, "
+                "then resume /do."
+            ),
+        }
+        print(json.dumps(output))
         sys.exit(0)
 
     # Non-local medium: /verify was called and escalation posted to the medium.

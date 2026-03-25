@@ -290,11 +290,13 @@ class TestSelfAmendmentCycle:
         )
         assert log_reminder is not None
 
-        # Stop allowed after /escalate (mechanical exit)
+        # Stop BLOCKED after Self-Amendment — must continue to /define --amend
         stop_result = run_stop_hook(transcript)
-        assert stop_result is None
+        assert stop_result is not None
+        assert stop_result["decision"] == "block"
+        assert "self-amendment" in stop_result["reason"].lower()
 
-        # But prompt_submit still fires — /do hasn't ended via /done
+        # prompt_submit still fires — /do hasn't ended via /done
         amendment = run_prompt_submit(transcript)
         assert amendment is not None
 
@@ -302,7 +304,7 @@ class TestSelfAmendmentCycle:
         log_for_define = run_posttool_log(
             "Skill",
             transcript,
-            {"skill": "manifest-dev:define", "args": "--amend /tmp/manifest.md"},
+            {"skill": "manifest-dev:define", "args": "--amend /tmp/manifest.md --from-do"},
         )
         assert log_for_define is not None  # define IS a workflow skill
 
@@ -687,8 +689,8 @@ class TestEscalateTypesNotDistinguished:
         stop_result = run_stop_hook(transcript)
         assert stop_result is None  # allowed
 
-    def test_self_amendment_escalate_allows_stop(self, tmp_path: Path):
-        """Self-Amendment escalation allows stop."""
+    def test_self_amendment_escalate_blocks_stop(self, tmp_path: Path):
+        """Self-Amendment escalation blocks stop — must continue to /define --amend."""
         transcript = make_transcript(
             tmp_path,
             [
@@ -698,7 +700,8 @@ class TestEscalateTypesNotDistinguished:
             ],
         )
         stop_result = run_stop_hook(transcript)
-        assert stop_result is None  # allowed
+        assert stop_result is not None
+        assert stop_result["decision"] == "block"
 
     def test_pause_escalate_allows_stop(self, tmp_path: Path):
         """User-Requested Pause escalation allows stop."""
