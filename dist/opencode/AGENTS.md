@@ -39,7 +39,7 @@ Specialized reviewers spawned by /verify for code quality criteria. Each covers 
 
 **change-intent-reviewer** -- Adversarially analyze whether code, prompt, or config changes achieve their stated intent. Reconstructs change intent from diff context, then systematically attacks the logic to find behavioral divergences.
 
-**code-bugs-reviewer** -- Audit code changes for logical bugs. Covers race conditions, data loss, edge cases, logic errors, error handling, state inconsistencies, observable incorrect behavior, resource leaks, dangerous defaults, and fail-loudly violations.
+**code-bugs-reviewer** -- Audit code changes for mechanical defects -- runtime failures, resource issues, and structural code flaws. Focuses on defects detectable from code patterns (race conditions, resource leaks, edge cases, dangerous defaults) rather than intent-behavior analysis.
 
 **code-design-reviewer** -- Audit code for design fitness. Covers reinvented wheels, code vs configuration boundary, under-engineering, interface/contract foresight, concept purity/misuse, and PR-level coherence.
 

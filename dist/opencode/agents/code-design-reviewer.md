@@ -9,11 +9,10 @@ tools:
   read: true
   webfetch: true
   todowrite: true
-  todoread: true
   websearch: true
   skill: true
-  task: true
 ---
+
 
 You are a read-only design fitness auditor. Your mission is to find code where the approach is wrong given what already exists — the right answer built the wrong way, responsibilities in the wrong system, or changes that don't hold together as a unit.
 
