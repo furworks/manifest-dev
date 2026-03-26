@@ -174,7 +174,7 @@ The do session doesn't need to remember the define conversation. The manifest is
 
 ## What /define Produces
 
-The interview classifies your task (Code, Writing, Document, Blog, Research) and loads task-specific guidance. It probes for your latent criteria, the standards you hold but wouldn't think to spell out. A `manifest-verifier` agent validates the manifest for gaps before output.
+The interview classifies your task (Feature, Bug, Refactor, Prompting, Writing, Document, Blog, Research) and loads task-specific guidance. It probes for your latent criteria, the standards you hold but wouldn't think to spell out. A `manifest-verifier` agent validates the manifest for gaps before output.
 
 <details>
 <summary><strong>Example manifest</strong></summary>
@@ -373,6 +373,8 @@ Hooks enforce workflow integrity. The AI can't skip steps:
 | `stop_do_hook` | Stop command | Blocks premature stopping. Can't stop without verification passing or proper escalation. |
 | `post_compact_hook` | Session compaction | Restores /do workflow context after compaction. Reminds to re-read manifest and log. |
 | `pretool_verify_hook` | `/verify` invocation | Ensures manifest and log are in context before spawning verifiers. |
+| `posttool_log_hook` | Task progress | Reminds to update execution log after task updates, task creation, or workflow skill calls during `/do`. |
+| `prompt_submit_hook` | User input during `/do` | Detects manifest amendments when user provides input during `/do` — enables the autonomous Self-Amendment flow. |
 
 ### Task-Specific Guidance
 
@@ -388,6 +390,18 @@ Hooks enforce workflow integrity. The AI can't skip steps:
 | **Document** | `tasks/DOCUMENT.md` + `WRITING.md` | Structure completeness, consistency |
 | **Blog** | `tasks/BLOG.md` + `WRITING.md` | Engagement, SEO |
 | **Research** | `tasks/research/RESEARCH.md` + source files | Source-agnostic research methodology. Source-specific guidance in `tasks/research/sources/` |
+
+**Workflow task files** add a process/lifecycle dimension orthogonal to the domain files above:
+
+| Task Type | Guidance | When Loaded |
+|-----------|----------|-------------|
+| **Workflow** | `tasks/workflow/WORKFLOW.md` | Multi-step process, review/approval/CI, external deps, `--medium` flag |
+| **Collaboration** | `tasks/workflow/COLLABORATION.md` | Team/stakeholders, `--medium` non-local |
+| **Slack** | `tasks/workflow/messaging/SLACK.md` | `--medium slack` |
+| **GitHub Review** | `tasks/workflow/code-review/GITHUB.md` | Default for code + workflow, or explicit GitHub/PR |
+| **GitLab Review** | `tasks/workflow/code-review/GITLAB.md` | GitLab, MR, `--review-platform gitlab` |
+
+A dev workflow with review composes: CODING + FEATURE + WORKFLOW + GITHUB. Workflow files are only loaded when workflow indicators are present — solo dev tasks with no review get no workflow files.
 
 ## Development
 
