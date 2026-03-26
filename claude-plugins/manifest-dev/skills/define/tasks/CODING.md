@@ -6,10 +6,12 @@ Base guidance for all code-change tasks (features, bugs, refactors).
 
 CLAUDE.md may specify project-specific preferences.
 
+### Base Gates (always applicable)
+
 | Aspect | Agent | Threshold |
 |--------|-------|-----------|
-| Bug detection | code-bugs-reviewer | no MEDIUM+ |
-| Type safety | type-safety-reviewer | no MEDIUM+ |
+| Intent analysis | change-intent-reviewer | no MEDIUM+ |
+| Mechanical bug detection | code-bugs-reviewer | no MEDIUM+ |
 | Maintainability | code-maintainability-reviewer | no MEDIUM+ |
 | Simplicity | code-simplicity-reviewer | no MEDIUM+ |
 | Test coverage | code-coverage-reviewer | no MEDIUM+ |
@@ -17,6 +19,13 @@ CLAUDE.md may specify project-specific preferences.
 | Documentation | docs-reviewer | no MEDIUM+ |
 | Design fitness | code-design-reviewer | no MEDIUM+ |
 | CLAUDE.md adherence | context-file-adherence-reviewer | no MEDIUM+ |
+
+### Conditional Gates (when applicable)
+
+| Aspect | Agent | Threshold | Condition |
+|--------|-------|-----------|-----------|
+| Contract correctness | contracts-reviewer | no MEDIUM+ | When code calls external/internal APIs, changes public interfaces, or crosses service boundaries |
+| Type safety | type-safety-reviewer | no MEDIUM+ | When using typed languages (TypeScript, Python with type hints, Java/Kotlin, Go, Rust, C#) |
 
 ## Project Gates
 

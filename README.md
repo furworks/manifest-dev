@@ -349,7 +349,9 @@ Built-in agents for quality verification via `subagent` method:
 |-------|-------|
 | `criteria-checker` | Core verifier: validates single criterion using bash/codebase/subagent/research methods |
 | `manifest-verifier` | Validates manifest completeness during `/define` |
-| `code-bugs-reviewer` | Race conditions, data loss, edge cases, logic errors, resource leaks |
+| `change-intent-reviewer` | Adversarial intent analysis: reconstructs change intent, finds behavioral divergences across code, prompts, and config |
+| `contracts-reviewer` | Bidirectional API/interface contract verification with evidence from docs and codebase |
+| `code-bugs-reviewer` | Mechanical code defects: race conditions, data loss, edge cases, resource leaks, dangerous defaults |
 | `code-maintainability-reviewer` | DRY violations, coupling, cohesion, dead code, consistency |
 | `code-design-reviewer` | Design fitness: reinvented wheels, code vs configuration boundary, under-engineering, interface foresight, PR coherence |
 | `code-simplicity-reviewer` | Over-engineering, premature optimization, cognitive complexity |
