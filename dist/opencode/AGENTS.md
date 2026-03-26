@@ -25,7 +25,7 @@ Verification-first manifest workflows. Plan work thoroughly, execute against cri
 5. **/escalate** surfaces blocking issues with structured evidence (called when stuck)
 6. **/auto** chains /define and /do into a single autonomous flow -- defines the task without user interview, auto-approves the manifest, and immediately executes
 
-## Agents (12)
+## Agents (14)
 
 ### Verification Orchestration
 
@@ -33,9 +33,11 @@ Verification-first manifest workflows. Plan work thoroughly, execute against cri
 
 **manifest-verifier** -- Reviews /define manifests for gaps and outputs actionable continuation steps. Returns specific questions to ask and areas to probe so the interview can continue. Invoked at the end of /define before user approval.
 
-### Code Review Suite (8 agents)
+### Code Review Suite (10 agents)
 
 Specialized reviewers spawned by /verify for code quality criteria. Each covers an orthogonal domain with strict out-of-scope boundaries to prevent overlap.
+
+**change-intent-reviewer** -- Adversarially analyze whether code, prompt, or config changes achieve their stated intent. Reconstructs change intent from diff context, then systematically attacks the logic to find behavioral divergences.
 
 **code-bugs-reviewer** -- Audit code changes for logical bugs. Covers race conditions, data loss, edge cases, logic errors, error handling, state inconsistencies, observable incorrect behavior, resource leaks, dangerous defaults, and fail-loudly violations.
 
@@ -48,6 +50,8 @@ Specialized reviewers spawned by /verify for code quality criteria. Each covers 
 **code-coverage-reviewer** -- Verify code changes have adequate test coverage. Identifies missing test files, untested functions, untested branches, missing error path coverage, and missing edge case coverage.
 
 **code-testability-reviewer** -- Audit code for testability issues. Identifies excessive mocking requirements, business logic buried in IO, non-deterministic inputs, and tight coupling that makes verification hard.
+
+**contracts-reviewer** -- Verify API and interface contract correctness with evidence. Checks both outbound (code calls external/internal APIs correctly per documentation) and inbound (changes don't break consumers of your interfaces).
 
 **type-safety-reviewer** -- Audit code for type safety across typed languages. Identifies any/unknown abuse, invalid states representable, type narrowing gaps, generic type issues, nullability problems, and discriminated union anti-patterns.
 
