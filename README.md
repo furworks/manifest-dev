@@ -373,6 +373,8 @@ Hooks enforce workflow integrity. The AI can't skip steps:
 | `stop_do_hook` | Stop command | Blocks premature stopping. Can't stop without verification passing or proper escalation. |
 | `post_compact_hook` | Session compaction | Restores /do workflow context after compaction. Reminds to re-read manifest and log. |
 | `pretool_verify_hook` | `/verify` invocation | Ensures manifest and log are in context before spawning verifiers. |
+| `posttool_log_hook` | Task progress | Reminds to update execution log after task updates, task creation, or workflow skill calls during `/do`. |
+| `prompt_submit_hook` | User input during `/do` | Detects manifest amendments when user provides input during `/do` — enables the autonomous Self-Amendment flow. |
 
 ### Task-Specific Guidance
 

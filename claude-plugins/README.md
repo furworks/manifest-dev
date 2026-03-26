@@ -15,7 +15,6 @@ Front-load the thinking so AI agents get it right the first time.
 | Plugin | What It Does |
 |--------|--------------|
 | `manifest-dev` | Verification-first manifest workflows with phased verification (fast checks first, e2e/deploy-dependent later) and multi-CLI distribution (Gemini CLI, OpenCode, Codex CLI). Every criterion has explicit verification; execution can't stop without verification passing or escalation. |
-| `manifest-dev-orchestrate` | Platform-agnostic collaborative workflow orchestration. Supports any messaging medium (local, Slack, custom) and any review platform (GitHub, GitLab, none, custom). Intent-based lead orchestrator with hub-and-spoke teammate coordination. |
 
 ## Plugin Details
 
@@ -31,22 +30,11 @@ Manifest-driven workflows separating **what to build** (Deliverables) from **rul
 
 **Internal skills:** `/verify`, `/done`, `/escalate`
 
-**Review agents:** `change-intent-reviewer`, `contracts-reviewer`, `code-bugs-reviewer`, `code-design-reviewer`, `code-maintainability-reviewer`, `code-simplicity-reviewer`, `code-testability-reviewer`, `code-coverage-reviewer`, `type-safety-reviewer`, `docs-reviewer`, `context-file-adherence-reviewer`
+**Review agents:** `criteria-checker`, `manifest-verifier`, `define-session-analyzer`, `change-intent-reviewer`, `contracts-reviewer`, `code-bugs-reviewer`, `code-design-reviewer`, `code-maintainability-reviewer`, `code-simplicity-reviewer`, `code-testability-reviewer`, `code-coverage-reviewer`, `type-safety-reviewer`, `docs-reviewer`, `context-file-adherence-reviewer`
 
-**Hooks** prevent premature stopping -- can't stop without verification passing or proper escalation.
+**Hooks** enforce workflow integrity: prevent premature stopping, restore context after compaction, nudge manifest reads before verification, track execution log updates, and detect manifest amendments during `/do`.
 
 **Task guidance** with domain-specific quality gates, risks, and scenarios. Reference material in `tasks/references/research/` provides detailed evidence for `/verify` agents. Collaboration mode instructions in `skills/*/references/COLLABORATION_MODE.md` (progressive disclosure — only loaded when collab is active).
-
-### manifest-dev-orchestrate
-
-Platform-agnostic collaborative workflow orchestration. Replaces Slack-specific assumptions with configurable mediums and review platforms.
-
-**Core skill:**
-- `/orchestrate` - Platform-agnostic lead orchestrator for collaborative define/do workflows. Supports `--medium local|slack|custom` and `--review-platform github|gitlab|none|custom`. Defaults to local + GitHub.
-
-**Agents:** `slack-coordinator` (Slack I/O), `github-coordinator` (GitHub PR I/O), `gitlab-coordinator` (GitLab MR I/O), `manifest-define-worker` (/define + manifest authority), `manifest-executor` (/do + PR/MR + QA fixes)
-
-**Prerequisites:** `manifest-dev` plugin installed, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var. Medium/review-platform specific prerequisites depend on flags.
 
 ## Contributing
 
