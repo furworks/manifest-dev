@@ -54,9 +54,9 @@ Comprehensive maintainability audit focusing on code organization: DRY violation
 **Codex approximation**: Use `shell_command` for broad codebase searches (grep for patterns, find for structure). Cross-reference changed code against existing patterns.
 
 ### code-coverage-reviewer
-Verifies that code changes have adequate test coverage. Analyzes the diff between current branch and main, identifies logic changes, and reports coverage gaps with specific recommendations for what tests to write.
+Verifies that code changes have adequate test coverage by proactively enumerating edge cases from the code's logic. Analyzes the diff, derives specific test scenarios with concrete inputs and expected outputs, and reports coverage gaps.
 
-**Codex approximation**: Use `shell_command` to run `git diff`, identify changed logic, then search for corresponding test files. Run test suites if available to check coverage.
+**Codex approximation**: Use `shell_command` to run `git diff`, identify changed logic, then search for corresponding test files. Derive concrete test scenarios from code paths. Run test suites if available to check coverage.
 
 ### code-testability-reviewer
 Identifies testability issues -- code requiring excessive mocking, business logic buried in IO operations, non-deterministic inputs, hidden dependencies, and tight coupling that makes verification difficult. Suggests structural improvements to reduce test friction.

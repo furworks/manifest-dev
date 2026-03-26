@@ -43,7 +43,7 @@ Agents run as subagents callable by tool name. The installer enables `"experimen
 | `code-design-reviewer` | Design fitness -- right approach given what exists |
 | `code-simplicity-reviewer` | Unnecessary complexity, over-engineering |
 | `code-maintainability-reviewer` | DRY, coupling, cohesion, consistency, dead code |
-| `code-coverage-reviewer` | Test coverage gaps for changed code |
+| `code-coverage-reviewer` | Test coverage with proactive edge case enumeration |
 | `code-testability-reviewer` | Testability design -- mock friction, logic buried in IO |
 | `contracts-reviewer` | API and interface contract correctness with evidence |
 | `type-safety-reviewer` | Type holes, invalid states, narrowing gaps |

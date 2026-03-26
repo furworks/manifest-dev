@@ -47,7 +47,7 @@ Specialized reviewers spawned by /verify for code quality criteria. Each covers 
 
 **code-maintainability-reviewer** -- Audit code for maintainability. Covers DRY violations, structural complexity, dead code, consistency, concept drift, boundary leakage, migration debt, coupling, cohesion, temporal coupling, linter suppression abuse, extensibility risk, and contract surface issues.
 
-**code-coverage-reviewer** -- Verify code changes have adequate test coverage. Identifies missing test files, untested functions, untested branches, missing error path coverage, and missing edge case coverage.
+**code-coverage-reviewer** -- Verify code changes have adequate test coverage by proactively enumerating edge cases from the code's logic. Derives specific test scenarios with concrete inputs and expected outputs, and reports coverage gaps.
 
 **code-testability-reviewer** -- Audit code for testability issues. Identifies excessive mocking requirements, business logic buried in IO, non-deterministic inputs, and tight coupling that makes verification hard.
 
