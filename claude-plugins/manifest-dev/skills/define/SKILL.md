@@ -22,7 +22,7 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 ## Input
 
-`$ARGUMENTS` = task description, optionally with context/research, `--interview <level>`, `--medium <type>`, and `--amend <manifest-path>`
+`$ARGUMENTS` = task description, optionally with context/research, `--interview <level>`, `--medium <type>`, `--amend <manifest-path>`, and `--visualize`
 
 Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough"
 
@@ -31,6 +31,8 @@ Parse `--medium` from arguments (can appear anywhere). Accepts any value — the
 When medium is not `local`: read `references/COLLABORATION_MODE.md` for routing rules. The medium is encoded in the manifest's Intent section as `Medium: <value>` so `/do` knows the communication channel.
 
 Parse `--amend <manifest-path>` from arguments (can appear anywhere). When present, /define operates on the existing manifest at the given path — see Amendment Mode section below. `--from-do` flag (optional, used with `--amend`) signals the autonomous fast path — no user approval gates.
+
+Parse `--visualize` from arguments (can appear anywhere). Boolean flag (no value). Default: off. When present and medium is `local`: read `references/VISUALIZE_MODE.md` for visualization setup and update instructions. When medium is not `local`, `--visualize` is silently ignored (user isn't at a terminal).
 
 If no arguments provided, ask: "What would you like to build or change?"
 
