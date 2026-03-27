@@ -16,6 +16,21 @@ Two content pillars, both updated after each interview step:
 
 **Question rationale** — For each question asked, a brief explanation of what risk, failure scenario, or complexity it's probing. "I'm asking about X because [concrete scenario where ignoring X causes failure]." The user understands WHY, not just WHAT.
 
+## Experience
+
+**Visual mood**: A calm thinking space — muted palette, generous whitespace, clear typographic hierarchy. The visualization complements the terminal without competing for attention. It should feel like a focused companion, not a control panel.
+
+**Progress and momentum**: As the interview advances, explored areas should feel increasingly solid and clear. The user should sense "we're getting somewhere" — fog lifting, coverage growing, gaps narrowing. This rewards engagement and encourages the user to volunteer information proactively.
+
+**Seamless updates**: Content flows in naturally after each interview step. No jarring page reloads, no flashing, no layout jumps. The page feels alive and continuous — updated, not rebuilt.
+
+## Avoid
+
+- **Wall of text** — rationale as dense paragraphs nobody reads. Use structure, not prose.
+- **Information overload** — showing everything at once. Reveal progressively as the interview unfolds.
+- **Clinical sterility** — technically correct but lifeless. Craft matters — the visualization should feel like something a human designed, not a debug dump.
+- **Jarring transitions** — full page reloads, content jumping, scroll position lost. Updates should feel invisible.
+
 ## Lifecycle
 
 **Setup**: Make the visualization accessible to the user during the interview session. Working files belong in `/tmp/`.
@@ -30,4 +45,4 @@ Two content pillars, both updated after each interview step:
 
 - The interview drives the pace. Visualization updates must not delay questions.
 - No external templating dependencies.
-- The visualization should look polished and visually clean — readable typography, clear hierarchy, not a raw debug view.
+- The visualization should feel crafted — something the user enjoys glancing at, not tolerates.
