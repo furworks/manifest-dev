@@ -1,4 +1,4 @@
-# Execution Mode: Thorough (Default)
+# Execution Mode: Thorough
 
 Full verification depth. No shortcuts — every criterion verified, unlimited fix cycles, full model capability.
 

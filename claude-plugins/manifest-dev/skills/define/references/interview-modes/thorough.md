@@ -1,4 +1,4 @@
-# Interview Mode: Thorough (Default)
+# Interview Mode: Thorough
 
 User decides everything. You drive the interview — generate concrete candidates, learn from user reactions.
 
