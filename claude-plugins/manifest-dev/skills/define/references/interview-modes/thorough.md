@@ -33,7 +33,7 @@ Domain Grounding reveals context that makes Outside View specific. Outside View 
 
 ## Checkpoint Behavior
 
-Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct?" This catches interpretation drift early — a misunderstanding in round 2 compounds through round 8 if never checked.
+Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct? Anything I'm missing?" This catches interpretation drift early and invites contribution — a misunderstanding in round 2 compounds through round 8 if never checked.
 
 ## Finding Sharing
 
@@ -51,4 +51,4 @@ When presenting a logged scenario to the user: "I'm imagining this failing becau
 
 ## Convergence
 
-Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
+Err on more probing. Apply SKILL.md's convergence checklist strictly. Only then, if very confident further questions would yield nothing new, move to synthesis.
