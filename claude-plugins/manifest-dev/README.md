@@ -103,7 +103,7 @@ Criteria verify blocks support an optional `phase:` field (numeric, default 1). 
 
 | Skill | Description |
 |-------|-------------|
-| `/define` | Interviews you, builds an executable manifest with verification criteria. `--interview minimal\|autonomous\|thorough` controls questioning depth (default: thorough). `--visualize` launches a local web companion showing reasoning transparency and coverage map. |
+| `/define` | Interviews you, builds an executable manifest with verification criteria. `--interview minimal\|autonomous\|thorough\|collaborative` controls interview style (default: thorough). `--visualize` launches a local web companion showing reasoning transparency and coverage map. |
 | `/do` | Works through the manifest autonomously, verifies everything passes |
 | `/auto` | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do` in one command. Supports `--mode` pass-through. |
 | `/verify` | Runs verifiers phased by iteration speed — fast checks first, e2e/deploy-dependent later. Only advances to the next phase when the current one passes. (You rarely call this directly; `/do` handles it.) |
@@ -121,7 +121,7 @@ Criteria verify blocks support an optional `phase:` field (numeric, default 1). 
 | **balanced** | Same models, limited parallelism (max 4), limited fix loops (max 2) |
 | **efficient** | Haiku for verification, skips reviewer agents, sequential, max 1 fix loop |
 
-See `skills/do/references/BUDGET_MODES.md` for full routing table and escalation rules.
+See `skills/do/references/execution-modes/` for per-mode behavioral details.
 
 ### Task-Specific Guidance
 
@@ -190,11 +190,16 @@ These run in parallel during `/verify`:
 | `context-file-adherence-reviewer` | Verifies code changes comply with CLAUDE.md instructions and project standards |
 | `docs-reviewer` | Audits documentation accuracy against recent code changes |
 
-## Collaboration Mode
+## Medium Routing
 
-`/define` supports `--medium <platform>` (default: local). When a non-local medium is specified (e.g., `--medium slack`, `--medium discord`), questions route through that platform's tools instead of AskUserQuestion. The medium is encoded in the manifest's Intent section so `/do` knows the communication channel for updates and escalations. Accepts any value — the LLM adapts to whatever medium is specified.
+`/define` supports `--medium <platform>` (default: local). The medium determines how the interview interacts with users — which tool to use, how to post questions, how to poll for responses. Each supported medium has a messaging file in `references/messaging/`:
 
-Full routing instructions live in `references/COLLABORATION_MODE.md` under each skill (progressive disclosure — only loaded when medium is non-local).
+- `local` (default): `LOCAL.md` — terminal interaction via AskUserQuestion
+- `slack`: `SLACK.md` — Slack MCP tools for posting and polling
+
+Other medium values get inline fallback guidance in the routing section.
+
+The medium is encoded in the manifest's Intent section so `/do` and `/verify` know the communication channel for updates and results. `/do` and `/verify` handle non-local medium behavior inline (posting updates, results, escalations).
 
 ## Multi-CLI Distribution
 

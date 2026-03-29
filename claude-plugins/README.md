@@ -24,7 +24,7 @@ Front-load the thinking so AI agents get it right the first time.
 Manifest-driven workflows separating **what to build** (Deliverables) from **rules to follow** (Global Invariants).
 
 **Core skills:**
-- `/define` - Verification-first requirements builder with proactive interview. Supports `--interview minimal|autonomous|thorough` (default: thorough) to control questioning depth.
+- `/define` - Verification-first requirements builder with proactive interview. Supports `--interview minimal|autonomous|thorough|collaborative` (default: thorough) to control questioning depth.
 - `/do` - Autonomous execution with enforced verification gates. Iterates deliverables, satisfies ACs, calls /verify.
 
 **Other skills:** `/auto` - End-to-end autonomous `/define` → auto-approve → `/do` in a single command | `/learn-define-patterns` - Analyzes past /define sessions and writes preference patterns to CLAUDE.md
@@ -35,7 +35,7 @@ Manifest-driven workflows separating **what to build** (Deliverables) from **rul
 
 **Hooks** enforce workflow integrity: prevent premature stopping, restore context after compaction, nudge manifest reads before verification, track execution log updates, and detect manifest amendments during `/do`.
 
-**Task guidance** with domain-specific quality gates, risks, and scenarios. Reference material in `tasks/references/research/` provides detailed evidence for `/verify` agents. Collaboration mode instructions in `skills/*/references/COLLABORATION_MODE.md` (progressive disclosure — only loaded when collab is active).
+**Task guidance** with domain-specific quality gates, risks, and scenarios. Reference material in `tasks/references/research/` provides detailed evidence for `/verify` agents. Medium-specific messaging files in `references/messaging/` (LOCAL.md, SLACK.md) define interaction mechanics per platform.
 
 ### manifest-dev-tools
 
