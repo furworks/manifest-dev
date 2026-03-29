@@ -8,7 +8,7 @@ All decisions go through the user. Generate options, present them, and encode ba
 
 ## Question Format
 
-All questions use the active medium's question format. Never ask open-ended questions — they're cognitively demanding. Present concrete options the user can accept, reject, or adjust.
+All questions present structured options. Never ask open-ended questions — they're cognitively demanding. Present concrete options the user can accept, reject, or adjust.
 
 **Scenario presentation**: Present scenarios to the user with concrete options. The scenario itself triggers thinking, but don't ask open-ended questions — offer dispositions to choose from:
 
@@ -37,7 +37,7 @@ Before transitioning to a new topic area or after resolving a cluster of related
 
 ## Finding Sharing
 
-Exploration results are presented as conclusions with options. Share what you found, then offer choices for how to encode it. "I found X — should this be a hard constraint?" with concrete options via the active medium's question format.
+Exploration results are presented as conclusions with options. Share what you found, then offer choices for how to encode it. "I found X — should this be a hard constraint?" with concrete options.
 
 ## Log Entry Format
 

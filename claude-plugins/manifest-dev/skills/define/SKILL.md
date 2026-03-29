@@ -140,10 +140,10 @@ Follow the loaded interview mode's rules for question format, flow structure, ch
 
 ## Constraints
 
-**Decisions go through the active medium's question format** - Questions that lock manifest content (encoding decisions, scope boundaries, trade-offs) use the active medium's question format (2-4 options, one marked "(Recommended)"). The active interview mode defines the full interaction style — when to present options, how to share findings, and how to discuss before locking.
+**Decisions lock through structured options** - Questions that lock manifest content (encoding decisions, scope boundaries, trade-offs) present 2-4 concrete options, one marked "(Recommended)". The messaging file defines the tool; the interview mode defines when to present options, how to share findings, and how to discuss before locking.
 
 **Resolve all Resolvable task file structures** — After reading task files, extract every Resolvable table and checklist (risk lists, scenario prompts, trade-offs) and log each as a pending item. Quality gates and `## Defaults` are not Resolvable — auto-include them (quality gates as INV-G*, Defaults as PG-*), omitting clearly inapplicable ones with logged reasoning. Resolve each Resolvable item by either:
-1. **Present to user** for selection via the active medium's question format — selected items encoded as INV-G* or AC-*, unselected items explicitly scoped out
+1. **Present to user** for selection with structured options — selected items encoded as INV-G* or AC-*, unselected items explicitly scoped out
 2. **Skip with logged justification** — when a structure genuinely doesn't apply to this task, log why (e.g., "CODING.md concurrency risk: single-threaded CLI tool, no concurrent access")
 
 Don't defer to synthesis — these are structural decisions that compound when missed. The flexibility is in justifying what to skip, not in whether to engage.
@@ -503,8 +503,7 @@ Before asking for approval, output a scannable summary that enables full manifes
 
 Load the messaging file for the resolved medium:
 - `local` (default): read `references/messaging/LOCAL.md`
-- `slack`: read `references/messaging/SLACK_MESSAGING.md`
-- Any other value: read `references/messaging/GENERIC.md`
+- Any non-local value: read `references/messaging/REMOTE.md`
 
 The messaging file defines HOW to interact (tool, format, polling). The interview mode file defines WHAT to interact about (questions, flow, convergence).
 

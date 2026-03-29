@@ -1,6 +1,6 @@
-# GENERIC Messaging — Non-Local Medium Interaction
+# REMOTE Messaging — Non-Local Medium Interaction
 
-Interaction mechanics for any non-local medium not covered by a specific messaging file. Adapt to the platform using available MCP tools, CLI commands, or whatever the environment provides.
+Interaction mechanics for any non-local medium. Adapt to the platform using available MCP tools, CLI commands, or whatever the environment provides. For Slack, use slack_send_message, slack_read_thread, etc.
 
 ## Interaction Tool
 
