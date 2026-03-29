@@ -388,11 +388,11 @@ class TestCompactionRecovery:
         assert stop_result["decision"] == "block"
 
 
-class TestCollabModeLifecycle:
-    """/do with --medium slack → hooks detect collab mode correctly."""
+class TestMediumRoutingLifecycle:
+    """/do with --medium slack → hooks detect non-local medium correctly."""
 
-    def test_collab_mode_detected_across_hooks(self, tmp_path: Path):
-        """All hooks should work correctly in collab mode."""
+    def test_medium_routing_detected_across_hooks(self, tmp_path: Path):
+        """All hooks should work correctly with non-local medium."""
         transcript = make_transcript(
             tmp_path,
             [
@@ -408,13 +408,13 @@ class TestCollabModeLifecycle:
         amendment = run_prompt_submit(transcript)
         assert amendment is not None
 
-        # Stop blocked before verify (even in collab mode)
+        # Stop blocked before verify (even with non-local medium)
         stop_result = run_stop_hook(transcript)
         assert stop_result is not None
         assert stop_result["decision"] == "block"
 
-    def test_collab_mode_allows_stop_after_verify(self, tmp_path: Path):
-        """In collab mode, stop is allowed after /verify (escalation posted to medium)."""
+    def test_medium_routing_allows_stop_after_verify(self, tmp_path: Path):
+        """With non-local medium, stop is allowed after /verify (escalation posted to medium)."""
         transcript = make_transcript(
             tmp_path,
             [

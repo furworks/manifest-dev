@@ -8,7 +8,7 @@ Use `AskUserQuestion` for all decision-locking interactions. This is the tool th
 
 ## Format Constraints
 
-- 2-4 numbered options per question, one marked "(Recommended)"
+- Numbered options per question, one marked "(Recommended)" — count constraint defined in SKILL.md
 - Never ask open-ended questions — present concrete options the user can accept, reject, or adjust
 - Checkpoints and finding-sharing use normal conversation (not AskUserQuestion) — only lock decisions with the tool
 

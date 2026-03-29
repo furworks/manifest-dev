@@ -8,7 +8,7 @@ Post questions to the Slack channel using `slack_send_message` with numbered opt
 
 ## Format Constraints
 
-- 2-4 numbered options per question, one marked "(Recommended)"
+- Numbered options per question, one marked "(Recommended)" — count constraint defined in SKILL.md
 
 ## Channel Bootstrap
 
