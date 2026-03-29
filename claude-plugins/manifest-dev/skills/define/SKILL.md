@@ -24,7 +24,7 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 `$ARGUMENTS` = task description, optionally with context/research, `--interview <level>`, `--medium <type>`, `--amend <manifest-path>`, and `--visualize`
 
-Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough"
+Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`, `collaborative`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough | collaborative"
 
 Parse `--medium` from arguments (can appear anywhere). Accepts any value — the LLM adapts to whatever medium is specified (e.g., `slack`, `discord`, `email`, `teams`). Default: `local` (AskUserQuestion). When a task file exists for the medium (e.g., `tasks/workflow/messaging/SLACK.md` for slack), load it for platform-specific probing fuel.
 
@@ -98,7 +98,7 @@ Scope deliverables and verification to repo context. Cross-repo invariants get e
 
 1. **Verifiable** - Every Invariant and AC has a verification method (bash, subagent, manual). Constraints that can't be verified from output go in Process Guidance.
 
-2. **Validated** - You drive the interview. Generate concrete candidates; learn from user reactions.
+2. **Validated** - Generate concrete candidates; learn from user reactions. The interview mode defines how findings are shared and decisions are made — see the active interview mode file for behavioral specifics.
 
 3. **Domain-grounded** - Understand the domain before probing. Task files add angles to consider; exploration reveals patterns/constraints. Latent criteria emerge from domain understanding—you can't surface what you don't know.
 
@@ -110,7 +110,7 @@ Scope deliverables and verification to repo context. Cross-repo invariants get e
 
 ## Interview Flow
 
-Domain Grounding → Outside View → Pre-Mortem → Backcasting → Adversarial Self-Review (skip for simple tasks). Protocols are sequential—each feeds the next. Domain Grounding reveals context that makes Outside View specific. Outside View establishes base rates that make Pre-Mortem grounded. Pre-Mortem surfaces failures that Backcasting complements with positive dependencies.
+The interview covers these protocols: Domain Grounding, Outside View, Pre-Mortem, Backcasting, Adversarial Self-Review (skip for simple tasks). The active interview mode defines the flow structure — whether protocols run sequentially, interleaved, or organically. See the interview mode file for flow specifics.
 
 ## Complexity Triage
 
@@ -128,11 +128,18 @@ When uncertain, default to Standard. User can signal "enough" to compress at any
 
 Resolve interview style from `--interview` argument → default `thorough`.
 
-If style is not `thorough`: read `references/INTERVIEW_STYLES.md` for style routing, auto-decided item encoding, and dynamic style shift rules. Follow those rules for the remainder of this /define run.
+Read `references/INTERVIEW_STYLES.md` for the style routing table, auto-decided item encoding, and dynamic style shift rules.
+
+Load the interview mode file for behavioral specifics:
+- `thorough` (default): read `references/interview-modes/thorough.md`
+- `collaborative`: read `references/interview-modes/collaborative.md`
+- `minimal`, `autonomous`: behavior defined in `references/INTERVIEW_STYLES.md` (compact — no separate mode file)
+
+Follow the loaded interview mode's rules for question format, flow structure, checkpoint behavior, finding-sharing, and convergence for the remainder of this /define run.
 
 ## Constraints
 
-**All questions use AskUserQuestion** - Every user question goes through AskUserQuestion (tool limit: 2-4 options), one marked "(Recommended)". Never ask open-ended questions—they're cognitively demanding. Present concrete options the user can accept, reject, or adjust.
+**All questions go through AskUserQuestion** - Every question to the user goes through AskUserQuestion (tool limit: 2-4 options), one marked "(Recommended)". The active interview mode defines question format, discussion style, and presentation behavior.
 
 **Resolve all Resolvable task file structures** — After reading task files, extract every Resolvable table and checklist (risk lists, scenario prompts, trade-offs) and log each as a pending item. Quality gates and `## Defaults` are not Resolvable — auto-include them (quality gates as INV-G*, Defaults as PG-*), omitting clearly inapplicable ones with logged reasoning. Resolve each Resolvable item by either:
 1. **Present to user** for selection via AskUserQuestion — selected items encoded as INV-G* or AC-*, unselected items explicitly scoped out
@@ -172,11 +179,11 @@ Log pending items as they emerge — from any source:
 
 Read full log before synthesis. Unresolved `- [ ]` items must be addressed first.
 
-**Confirm understanding periodically** - Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct?" This catches interpretation drift early—a misunderstanding in round 2 compounds through round 8 if never checked.
+**Confirm understanding periodically** - Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding. The active interview mode defines the checkpoint format — how understanding is shared and what invitation for contribution is offered.
 
 **Batch related questions** - Group related questions into a single turn rather than asking one at a time. Batching keeps momentum and reduces round-trips without sacrificing depth. Each batch should cover a coherent topic area—don't mix unrelated concerns in one batch.
 
-**Stop when converged** - Err on more probing. Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Only then, if very confident further questions would yield nothing new, move to synthesis. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override.
+**Stop when converged** - Convergence requires: domain grounded (pre-mortem scenarios are project-specific, not generic), pre-mortem scenarios logged with dispositions (see Pre-Mortem Protocol), edge cases probed, no unresolved `- [ ]` items in the log, quality gates from task files encoded as INV-G* (or omitted with logged reasoning), Defaults encoded as PG-*, and no obvious areas left unexplored. Remaining low-impact unknowns that don't warrant further probing are recorded as Known Assumptions in the manifest. User can signal "enough" to override. The active interview mode defines convergence style — how aggressively to probe and when to move to synthesis.
 
 **Insights become criteria** - Domain grounding findings, outside view findings, pre-mortem risks, non-obvious discoveries → convert to INV-G* or AC-*. Don't include insights that aren't encoded as criteria. This applies equally to Resolvable task file content — risks and scenario dispositions must be traceable to manifest criteria or they're aspirational, not enforced.
 
@@ -282,14 +289,9 @@ Task files add domain-specific failure scenarios. Use them as fuel for imaginati
 
 For each relevant dimension, generate concrete failure scenarios. Be specific—"something breaks" is useless; "the scheduler runs a job twice when the server restarts mid-execution" is actionable.
 
-**Present scenarios to the user with concrete options.** The scenario itself triggers thinking, but don't ask open-ended questions—offer dispositions to choose from:
+**Present scenarios and resolve dispositions.** The active interview mode defines how scenarios are presented — question format, discussion style, and how the user engages with dispositions. Be specific with scenarios — "something breaks" is useless; concrete failures are actionable.
 
-- Weak: "Are there any race conditions we should worry about?"
-- Strong: "I'm imagining two users submitting orders simultaneously and both getting the same order number. How should we handle this?" → Options: "Real risk - add to invariants (Recommended)", "Not possible (single-threaded)", "Already handled (describe how)", "Out of scope for this task"
-
-The concrete scenario helps users recognize whether it applies. The options reduce cognitive load—users pick a disposition rather than formulating a response.
-
-**Mental model alignment**: Before finalizing deliverables, present your understanding and check for mismatch: "Here's what 'done' looks like: [concrete description]. Does this match your expectation?" → Options: "Yes, that's right (Recommended)", "Mostly, but also need [X]", "No, I expected [different thing]". Mismatches are latent criteria—expectations they didn't state.
+**Mental model alignment**: Before finalizing deliverables, check for mismatch between your understanding and the user's expectation. Mismatches are latent criteria — expectations they didn't state. The active interview mode defines the format for this alignment check.
 
 When logging scenarios, capture what matters:
 - **What fails** (the specific scenario)
@@ -301,10 +303,10 @@ Example log entry:
 DIMENSION: Timing
 SCENARIO: Feature works in dev but rate limits hit in production due to external API calls
 LIKELIHOOD: Medium | IMPACT: High
-- [ ] Ask user: External API rate limits → Options: "Real risk - add to invariants (Recommended)", "No external APIs", "APIs exist, limits known and safe", "Out of scope"
+- [ ] Ask user: External API rate limits — resolve disposition
 ```
 
-When presenting to user: "I'm imagining this failing because we hit external API rate limits in production. How does this apply?" → Options as above.
+Present scenarios and resolve dispositions. The active interview mode defines how scenarios are presented — question format, discussion style, and how the user engages with dispositions.
 
 ### Scenario Disposition
 
@@ -338,7 +340,7 @@ Focus on implicit assumptions:
 - What user behavior are you assuming?
 - What needs to stay stable that could change?
 
-For each positive dependency, present to user with disposition options: "This assumes [X] remains stable. How should we handle?" → Options: "Safe assumption - log as Known Assumption (Recommended)", "Verify it holds before proceeding", "Encode as invariant", "Actually a risk - add to pre-mortem".
+For each positive dependency, resolve its disposition — whether it's a safe assumption, needs verification, should be encoded as an invariant, or is actually a risk. The active interview mode defines how dependencies are presented and resolved.
 
 Converges when load-bearing assumptions are surfaced and each is verified, encoded, or logged as Known Assumption.
 
@@ -352,7 +354,7 @@ Pre-mortem imagines external failures. Adversarial self-review imagines process 
 - "Temporary" solutions that become permanent
 - Process shortcuts that erode quality
 
-For each pattern identified, present to user: "This task is susceptible to [pattern]. Should we guard against it?" → Options: "Yes - add as Process Guidance (Recommended)", "Yes - add as verifiable Invariant", "Low risk for this task", "Already covered by [existing constraint]".
+For each pattern identified, resolve its disposition — whether to add as Process Guidance, encode as a verifiable Invariant, accept as low risk, or note it's already covered. The active interview mode defines how patterns are presented and resolved.
 
 Skip for simple tasks. Use for tasks with scope risk, process complexity, or history of scope creep.
 
@@ -376,7 +378,7 @@ Three categories, each covering **output** or **process**:
 - **Goal:** [High-level purpose]
 - **Mental Model:** [Key concepts to understand]
 - **Mode:** efficient | balanced | thorough *(optional, default: thorough — controls verification intensity during /do)*
-- **Interview:** minimal | autonomous | thorough *(optional, default: thorough — recorded so --amend can inherit the original interview style)*
+- **Interview:** minimal | autonomous | thorough | collaborative *(optional, default: thorough — recorded so --amend can inherit the original interview style)*
 - **Medium:** local | &lt;any platform&gt; *(optional, default: local — controls communication channel for /do escalations and updates)*
 
 ## 2. Approach (Complex Tasks Only)

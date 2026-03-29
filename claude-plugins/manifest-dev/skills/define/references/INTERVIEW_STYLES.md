@@ -6,11 +6,12 @@ Complexity triage is orthogonal: it determines **which** protocols run; intervie
 
 ## Style Routing Table
 
-| Style | Principle | AskUserQuestion |
-|-------|-----------|-----------------|
-| **thorough** (default) | User decides everything. Current behavior — no change. | All questions go to user. |
-| **minimal** | User decides scope, constraints, and high-impact items. Agent auto-resolves the rest by picking the recommended option. | Ask when: scope boundaries, hard constraints, or multiple options are equally valid (no clear recommended choice). |
-| **autonomous** | Agent decides everything. Present the final manifest for approval — user accepts, rejects, or gives feedback. | No questions during the interview. All decisions auto-resolved. |
+| Style | Principle | AskUserQuestion | Mode File |
+|-------|-----------|-----------------|-----------|
+| **thorough** (default) | User decides everything. Model presents findings as conclusions with options. | All questions go to user via AskUserQuestion. No open-ended questions. | `interview-modes/thorough.md` |
+| **collaborative** | Co-discovery through transparent brainstorming. Model shares findings with reasoning as they emerge, building shared understanding. User contributes naturally when they have relevant context. | AskUserQuestion locks decisions. Transparent discussion and finding-sharing alongside structured options. | `interview-modes/collaborative.md` |
+| **minimal** | User decides scope, constraints, and high-impact items. Agent auto-resolves the rest by picking the recommended option. | Ask when: scope boundaries, hard constraints, or multiple options are equally valid (no clear recommended choice). | — |
+| **autonomous** | Agent decides everything. Present the final manifest for approval — user accepts, rejects, or gives feedback. | No questions during the interview. All decisions auto-resolved. | — |
 
 ## Auto-Decided Items
 
