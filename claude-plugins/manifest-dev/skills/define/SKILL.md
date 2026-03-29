@@ -26,7 +26,7 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`, `collaborative`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough | collaborative"
 
-Parse `--medium` from arguments (can appear anywhere). Accepts any value — the LLM adapts to whatever medium is specified (e.g., `slack`, `discord`, `email`, `teams`). Default: `local`.
+Parse `--medium` from arguments (can appear anywhere). Accepts any value — the LLM adapts to whatever medium is specified (e.g., `slack`, `discord`, `email`, `teams`). Default: `local`. Load the messaging file immediately — see Medium Routing section below.
 
 Parse `--amend <manifest-path>` from arguments (can appear anywhere). `--from-do` flag (optional, used with `--amend`) signals the autonomous fast path.
 

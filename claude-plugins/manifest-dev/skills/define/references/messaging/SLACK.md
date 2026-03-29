@@ -6,6 +6,8 @@ Interaction mechanics for `--medium slack`. Do NOT use AskUserQuestion — all q
 
 Post questions to the Slack channel using `slack_send_message` with numbered options. Tag relevant stakeholder(s) based on expertise context. Poll for responses using `slack_read_thread`. When the response arrives, continue the interview from where you left off.
 
+For non-question messages (findings, reasoning, checkpoints), also use `slack_send_message` to the same channel. These do not need numbered options — post them as conversational messages.
+
 ## Format Constraints
 
 - Numbered options per question, one marked "(Recommended)" — count constraint defined in SKILL.md
