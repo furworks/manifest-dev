@@ -36,7 +36,7 @@ Then use it:
 
 Two commands. `/define` interviews you and builds a manifest. `/do` executes it. That's the whole workflow. `/auto` chains both — define autonomously, auto-approve, execute — in a single command.
 
-Control interview depth with `--interview minimal|autonomous|thorough` (default: thorough). Thorough asks everything. Minimal asks scope and high-impact items. Autonomous builds the manifest without asking, presents it for approval. Add `--visualize` to launch a local web companion that shows reasoning transparency and coverage during the interview.
+Control interview depth with `--interview minimal|autonomous|thorough|collaborative` (default: thorough). Thorough asks everything. Minimal asks scope and high-impact items. Autonomous builds the manifest without asking, presents it for approval. Add `--visualize` to launch a local web companion that shows reasoning transparency and coverage during the interview.
 
 If you use zsh and want easy upgrade commands for the non-Claude distributions, add this to `~/.zshrc`:
 
