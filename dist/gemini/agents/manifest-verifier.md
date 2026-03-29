@@ -7,11 +7,9 @@ tools:
   - grep_search
   - glob
 model: inherit
-temperature: 0.2
 max_turns: 15
 timeout_mins: 5
 ---
-
 # Manifest Verifier Agent
 
 **User request**: $ARGUMENTS

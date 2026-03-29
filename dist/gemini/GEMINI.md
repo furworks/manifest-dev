@@ -51,14 +51,16 @@ Agents run as subagents callable by tool name. The installer enables `"experimen
 | `context-file-adherence-reviewer` | Context file / project rule compliance |
 | `define-session-analyzer` | Extracts user preference patterns from `define` sessions |
 
-### Hooks (3)
+### Hooks (5)
 
 Hooks enforce workflow discipline via the Gemini CLI hook protocol. The installer merges the `hooks/hooks.json` registrations into `~/.gemini/settings.json` automatically; manual installs must make the equivalent settings change.
 
 | Hook | Event | Purpose |
 |------|-------|---------|
 | `pretool-verify` | BeforeTool (activate_skill) | Reminds the agent to load the manifest before `verify` |
+| `posttool-log` | AfterTool (activate_skill, write_todos) | Reminds agent to update execution log after milestone tool calls |
 | `stop-do-enforcement` | AfterAgent | Blocks premature stops during `do` |
+| `prompt-submit-amendment` | BeforeAgent | Checks for manifest amendments when user submits input during `do` |
 | `post-compact-recovery` | SessionStart (resume) | Recovers `do` context after compaction |
 
 ## Tool Mapping

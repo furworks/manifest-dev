@@ -6,7 +6,6 @@ multi_agent = true
 
 max_threads = 6
 max_depth = 1
-project_doc_fallback_filenames = ["CLAUDE.md"]
 
 # Agent role definitions -- see agents/*.toml for per-role config
 

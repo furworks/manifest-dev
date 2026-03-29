@@ -1,11 +1,11 @@
 ---
-description: 'Reviews /define manifests for gaps and outputs actionable continuation steps. Returns specific questions to ask and areas to probe so interview can continue.'
+description: Reviews /define manifests for gaps and outputs actionable continuation steps. Returns specific questions to ask and areas to probe so interview can continue.
 mode: subagent
 temperature: 0.2
 tools:
-  read: true
-  grep: true
   glob: true
+  grep: true
+  read: true
 ---
 
 # Manifest Verifier Agent

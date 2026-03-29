@@ -2,6 +2,8 @@
 
 Verification-first manifest workflows. Plan work thoroughly, execute against criteria, verify everything passes.
 
+Version: 0.71.0
+
 ## Workflow Overview
 
 ```
@@ -24,6 +26,27 @@ Verification-first manifest workflows. Plan work thoroughly, execute against cri
 4. **/done** outputs completion summary (called by /verify on success)
 5. **/escalate** surfaces blocking issues with structured evidence (called when stuck)
 6. **/auto** chains /define and /do into a single autonomous flow -- defines the task without user interview, auto-approves the manifest, and immediately executes
+
+## Skills (7)
+
+| Skill | User-Invocable | Purpose |
+|-------|---------------|---------|
+| `define` | Yes | Manifest builder -- interactive interview to plan work |
+| `do` | Yes | Manifest executor -- implements deliverables against criteria |
+| `verify` | No | Verification runner -- spawns parallel verifier agents |
+| `auto` | Yes | End-to-end /define + /do in one command |
+| `done` | No | Completion marker -- outputs summary after verification |
+| `escalate` | No | Structured escalation during /do |
+| `learn-define-patterns` | Yes | Analyze past sessions, extract preferences to AGENTS.md |
+
+## Commands (4)
+
+| Command | Skill |
+|---------|-------|
+| `/define` | define |
+| `/do` | do |
+| `/auto` | auto |
+| `/learn-define-patterns` | learn-define-patterns |
 
 ## Agents (14)
 
@@ -64,3 +87,24 @@ Specialized reviewers spawned by /verify for code quality criteria. Each covers 
 ### Learning
 
 **define-session-analyzer** -- Analyze a single /define session transcript to extract user preference patterns. Spawned by /learn-define-patterns for parallel per-session analysis. Extracts probing hints, trade-off defaults, recurring invariants, and quality gate adjustments.
+
+## Hook Behaviors
+
+The manifest-dev plugin (`plugins/manifest-dev.ts`) implements workflow enforcement hooks:
+
+| Hook | Behavior | Can Block? |
+|------|----------|------------|
+| **Stop enforcement** | Re-engages agent when /do workflow exits without /done or /escalate | No (fire-and-forget) |
+| **Verify context** | Injects reminder to read manifest/log before spawning verifiers | No (context injection) |
+| **Post-compact recovery** | Restores /do workflow context after session compaction | No (context injection) |
+| **Amendment check** | Reminds agent to check if user input changes the manifest scope | No (system message) |
+| **Log reminder** | Nudges agent to update execution log after milestone tool calls | No (output mutation) |
+
+### Limitations
+
+- **Stop hook cannot block**: `session.idle` is fire-and-forget. The plugin attempts re-engagement via `ctx.client.session.prompt()` but this is fragile.
+- **Subagent bypass**: `tool.execute.before`/`after` does NOT fire for tool calls within subagents (issue #5894). Hooks will not trigger for tools called by criteria-checker or other verification agents.
+- **Experimental APIs**: `experimental.session.compacting` and `experimental.chat.system.transform` may change without notice.
+- **Ephemeral state**: Plugin workflow state is in-memory. Lost on server restart.
+
+See `plugins/HOOK_SPEC.md` for the complete behavioral specification.

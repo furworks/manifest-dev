@@ -13,11 +13,11 @@ Execution modes control verification intensity across the manifest-dev workflow 
 | /define manifest-verifier | SKIPPED | Runs once (no repeat loop) | Runs (with repeat loop) |
 | Escalation | Auto-escalate after 2 failures per criterion; cap 3 total | Escalate after loop limit hit | None |
 
-**Why these levels exist**: thorough preserves the current quality bar (default). balanced saves quota by limiting parallelism and verification cycles while keeping full model capability. efficient maximizes savings by using a cheaper model for verification and skipping reviewer agents — accept this only when iteration speed matters more than verification depth.
+**Why these levels exist**: thorough preserves the current quality bar (default). balanced saves quota by limiting parallelism and verification cycles while keeping full model capability. efficient maximizes savings by skipping reviewer agents — accept this only when iteration speed matters more than verification depth.
 
 ## Escalation Rules
 
-**Efficient mode**: When a criterion fails twice, auto-escalate that criterion's verifier to use more thorough checking. Track total escalations — after 3 in a single /do run, suggest to the user: "Efficient mode is escalating frequently. Consider switching to balanced." This prevents runaway costs from repeated escalation.
+**Efficient mode**: When a criterion fails twice, auto-escalate that criterion's verifier to inherit (session model). Track total escalations — after 3 in a single /do run, suggest to the user: "Efficient mode is escalating frequently. Consider switching to balanced." This prevents runaway costs from repeated escalation.
 
 **Balanced mode**: When the fix-verify loop limit (2) is hit, escalate via /escalate. The fix isn't converging — human judgment needed.
 
@@ -45,6 +45,6 @@ Three rules govern how mode interacts with other settings:
 
 1. **Criterion-level model wins**: When a manifest criterion specifies `model:` in its verify block, that overrides the mode's model routing. Mode sets defaults; criterion-level `model:` is explicit intent.
 
-2. **Explicit model overrides skip**: In efficient mode, quality gate reviewers are skipped. But if a criterion explicitly sets `model:` (e.g., `model: specific-model`), it runs even when efficient mode would otherwise skip it. The explicit model signals the user deliberately wants this verification.
+2. **Explicit model overrides skip**: In efficient mode, quality gate reviewers are skipped. But if a criterion explicitly sets `model:` (e.g., `model: inherit`), it runs even when efficient mode would otherwise skip it. The explicit model signals the user deliberately wants this verification.
 
 3. **Global Invariants always run**: "Reviewers SKIPPED" in efficient mode applies only to deliverable-level quality gate reviewer agents (code-bugs-reviewer, type-safety-reviewer, etc.). Global Invariant (INV-G*) verification agents always run regardless of mode — they are constitutional constraints.

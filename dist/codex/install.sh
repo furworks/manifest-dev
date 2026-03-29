@@ -21,8 +21,8 @@ ACTION="${1:-install}"
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-echo "manifest-dev installer for Codex CLI"
-echo "======================================"
+echo "manifest-dev installer for Codex CLI (v0.71.0)"
+echo "================================================"
 echo ""
 
 case "$ACTION" in

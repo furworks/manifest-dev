@@ -4,126 +4,128 @@ This document describes the exact behavior implemented in `index.ts` and serves 
 
 Corrected for OpenCode v1.2.15 (March 2026). See `.claude/skills/sync-tools/references/opencode-cli.md` for the full conversion reference.
 
-## OpenCode Plugin Architecture
+## Hook Mapping
 
-### Plugin Input Context
+| Claude Code Hook | Source File | OpenCode Event | Can Block? |
+|-----------------|-------------|----------------|------------|
+| Stop | `stop_do_hook.py` | `session.idle` (event) | **NO** — fire-and-forget |
+| PreToolUse/Skill | `pretool_verify_hook.py` | `tool.execute.before` | Yes — throw Error |
+| SessionStart/compact | `post_compact_hook.py` | `experimental.session.compacting` | No — inject context only |
+| UserPromptSubmit | `prompt_submit_hook.py` | `experimental.chat.system.transform` | No — inject system messages |
+| PostToolUse | `posttool_log_hook.py` | `tool.execute.after` | No — mutate output |
 
-The plugin factory function receives `ctx` with:
+## 1. Stop Enforcement (`stop_do_hook.py` → `session.idle`)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `ctx.client` | SDK client | HTTP client to localhost:4096 |
-| `ctx.project` | `{ id, worktree, vcs }` | Project metadata |
-| `ctx.directory` | string | Current working directory |
-| `ctx.worktree` | string | Git worktree root |
-| `ctx.serverUrl` | string | Server URL |
-| `ctx.$` | BunShell | Bun shell API |
+### Behavior
 
-### Hooks Interface
+When the session stops during an active /do workflow, attempt to re-engage the agent unless a proper exit condition is met.
 
-The plugin returns an object implementing these hooks:
+### Decision Matrix
 
-| Hook | Signature | Blocking | Description |
-|------|-----------|----------|-------------|
-| `tool.execute.before` | `(input: {tool, sessionID, callID}, output: {args}) => void` | **Yes -- throw Error** | Error message becomes tool result seen by LLM. Does NOT fire in subagents (#5894). |
-| `tool.execute.after` | `(input: {tool, sessionID, callID, args}, output: {title, output, metadata}) => void` | No (mutate output) | Mutate `output.output` to change what LLM sees as tool result. |
-| `experimental.chat.system.transform` | `(input: {sessionID, model}, output: {system: string[]}) => void` | No | Push to `output.system[]` to inject system-level context before every LLM request. |
-| `experimental.session.compacting` | `(input: {sessionID}, output: {context: string[], prompt?: string}) => void` | No -- inject context only | Push to `output.context[]` to preserve context across compaction. Optionally replace `output.prompt`. |
-| `event` | `(input: {event}) => void` | No -- fire-and-forget | Catch-all for bus events (session.idle, todo.updated, etc.). |
+| Condition | Action |
+|-----------|--------|
+| No /do active | Do nothing |
+| /do + /done | Do nothing (properly completed) |
+| /do + /escalate (non-self-amendment) | Do nothing (properly escalated) |
+| /do + self-amendment | Attempt re-engage with amendment message |
+| /do + /verify + non-local medium | Do nothing (escalation posted externally) |
+| /do without exit | Attempt re-engage with enforcement message |
+| 3+ consecutive short outputs | Do nothing — break loop, log warning |
 
-### Blocking Mechanism
+### Limitations
 
-**To block a tool call**: `throw new Error("reason")` inside `tool.execute.before`. The error message becomes the tool result seen by the LLM.
+- **Cannot block stopping.** `session.idle` is fire-and-forget. The workaround `ctx.client.session.prompt()` creates a NEW conversation turn, not a continuation. It is fragile with race conditions in `run` mode (issue #15267).
+- **Feature request exists** for blocking `session.idle` (issue #12472).
 
-**WRONG** (old/incorrect pattern): `args.abort = "reason"` -- this does NOT work.
+## 2. Verify Context Injection (`pretool_verify_hook.py` → `tool.execute.before` + `experimental.chat.system.transform`)
 
-### Context Injection
+### Behavior
 
-Three mechanisms available:
+When /verify is about to be called, inject a system-level reminder to read the manifest and execution log in full before spawning verifiers.
 
-| Mechanism | When | How | Best For |
-|-----------|------|-----|----------|
-| `experimental.chat.system.transform` | Before every LLM request | `output.system.push("context")` | Persistent context injection (replaces Claude Code's `additionalContext`) |
-| `experimental.session.compacting` | During compaction | `output.context.push("context")` | Preserving workflow state across compaction |
-| `chat.message` | Before user message processed | Mutate `output.message` or `output.parts` | Modifying user input |
+### Implementation
 
-**IMPORTANT**: `tui.prompt.append` only fills the TUI input field -- it does NOT inject system messages. Use `experimental.chat.system.transform` for system context injection.
+1. `tool.execute.before` detects when the `task` tool targets the `verify` skill
+2. Stores a pending verify reminder
+3. `experimental.chat.system.transform` pushes the reminder to `output.system[]` on the next LLM request
+4. Reminder is cleared after injection (one-shot)
 
-### Session Storage
+### Limitations
 
-Session data is stored in **SQLite** at `~/.local/share/opencode/opencode.db` (WAL mode, Drizzle ORM). **There is no JSONL transcript file.** Plugin access is via SDK client API only:
+- **Subagent bypass:** `tool.execute.before` does NOT fire for tool calls within subagents (issue #5894). If /verify is called from within a subagent, the reminder will not trigger.
 
-- `client.session.list()` -- list sessions
-- `client.session.get(id)` -- get session metadata
-- SSE event stream for real-time updates
-- POST `/session/{id}/message` -- send message to session
+## 3. Post-Compact Recovery (`post_compact_hook.py` → `experimental.session.compacting`)
 
-Tables: SessionTable, MessageTable (role, time_created, data), PartTable (type, content).
+### Behavior
 
-This means Claude Code's transcript-parsing logic (`hook_utils.py`) cannot be reused directly. The OpenCode plugin must track workflow state in-memory or query the SQLite database via the client API.
+When the session compacts during an active /do workflow, inject recovery context reminding the agent to re-read the manifest and execution log.
 
-### Subagent Hook Bypass
+### Decision Logic
 
-`tool.execute.before` and `tool.execute.after` do **NOT** fire for tool calls within subagents (issue #5894). This is a known gap -- skills invoked via the `task` tool run in isolation and their internal tool calls bypass all hooks.
+| Condition | Action |
+|-----------|--------|
+| No /do active | Do nothing |
+| /do completed (/done or /escalate) | Do nothing |
+| Active /do with args | Inject reminder with /do args |
+| Active /do without args | Inject fallback reminder |
 
-**Impact**: If a subagent invokes the `verify`, `done`, or `escalate` skill internally, the workflow state tracker in `tool.execute.before` will not see those invocations. The `todo.updated` event (see below) provides a partial workaround for progress tracking.
+### Limitations
 
-### Hook Execution Model
+- **Experimental API.** `experimental.session.compacting` may change without notice.
 
-`Plugin.trigger()` calls hooks sequentially across all loaded plugins. Each hook receives the **same mutable `output` object** -- mutations accumulate (middleware chain pattern).
+## 4. Amendment Check (`prompt_submit_hook.py` → `experimental.chat.system.transform`)
 
----
+### Behavior
 
-## Hook 1: Pre-Tool Verify (pretool_verify_hook.py)
+During an active /do workflow, inject an amendment check reminder before every LLM request. This tells the agent to check whether user input contradicts, extends, or amends the manifest.
 
-**OpenCode event**: `tool.execute.before` (for state tracking) + `experimental.chat.system.transform` (for context injection)
+### Decision Logic
 
-**Trigger condition**: The tool being called is `skill` (or `task`) AND the skill name is `verify` (or ends with `:verify`).
+| Condition | Action |
+|-----------|--------|
+| No /do active | Do nothing |
+| /do completed (/done) | Do nothing |
+| Active /do | Inject amendment check reminder |
 
-**Behavior**:
-1. In `tool.execute.before`: detect skill invocations and update workflow state (track `do`, `done`, `escalate`, `verify`)
-2. In `experimental.chat.system.transform`: when the `verify` skill was invoked during an active `do` workflow, push the context reminder into `output.system[]`
+### Limitations
 
-**NOT a blocker**: This hook injects context only. It does NOT throw an error to abort the tool call.
+- **Fires on every LLM request,** not just user messages. This is broader than Claude Code's UserPromptSubmit which fires only on user input. The overhead is acceptable since the reminder is small.
+- **Experimental API.** `experimental.chat.system.transform` may change without notice.
 
----
+## 5. Post-Tool Log Reminder (`posttool_log_hook.py` → `tool.execute.after`)
 
-## Hook 2: Stop-Do Enforcement (stop_do_hook.py)
+### Behavior
 
-**OpenCode event**: `session.idle` (via the `event` catch-all handler)
+After milestone tool calls during an active /do workflow, append a log reminder to the tool output. This nudges the agent to update the execution log.
 
-**CRITICAL LIMITATION**: `session.idle` is **fire-and-forget** in OpenCode. Unlike Claude Code's Stop hook which can return `decision: "block"`, OpenCode provides **no mechanism to prevent the session from stopping**.
+### Target Tools
 
-**Workaround** (fragile): `ctx.client.session.prompt(sessionID, { parts: [...] })` creates a NEW conversation turn after the session has already gone idle. This has race conditions in `run` mode (issue #15267). Feature request for blocking session.idle exists (issue #12472).
+| Tool | Condition |
+|------|-----------|
+| `todowrite` | Always (task management milestones) |
+| `task`/`skill` | Only for workflow skills: verify, escalate, done, define |
 
----
+### Limitations
 
-## Hook 3: Post-Compact Recovery (post_compact_hook.py)
+- **Subagent bypass:** `tool.execute.after` does NOT fire for tool calls within subagents (issue #5894). Log reminders for tools called by criteria-checker or other subagents will not trigger.
+- **Mutates output:** The reminder is appended to `output.output` as a `<system-reminder>` tag. If the output is not a string, the reminder is skipped.
 
-**OpenCode event**: `experimental.session.compacting`
+## Workflow State Tracking
 
-**Trigger condition**: Session context is being compacted.
+Claude Code hooks parse the session transcript (JSONL) to detect workflow state. OpenCode stores sessions in SQLite with no JSONL equivalent.
 
-**Behavior**: Push recovery reminder into `output.context[]` when an active `do` workflow is detected.
+**Replacement approach:** In-memory state tracking within the plugin. The `DoFlowState` object tracks:
+- `/do` invocation (resets all state)
+- `/verify`, `/done`, `/escalate` calls after `/do`
+- Self-amendment escalations
+- Collaboration mode (`--medium` flag)
 
----
+**Limitation:** Plugin state is ephemeral — lost on plugin reload or server restart. For long-running sessions that survive server restarts, state would need to be persisted to disk or reconstructed from the SDK client API.
 
-## Hook 4: Todo-Updated Tracking (new -- no Claude Code equivalent)
+## Loop Detection
 
-**OpenCode event**: `todo.updated` (via the `event` catch-all handler)
+Consecutive short outputs (< 100 chars, no meaningful tool use) are tracked to detect infinite loops where the agent tries to stop but keeps getting re-engaged. After 3+ consecutive short outputs, the stop hook allows the session to end.
 
-**Behavior**: Track workflow progress via todo state changes. Supplements `tool.execute.before` state tracking, especially for subagent actions (which bypass tool hooks).
+## Active /do Enforcement
 
----
-
-## Gap Analysis
-
-| Capability | Claude Code | OpenCode | Status |
-|-----------|-------------|----------|--------|
-| Block tool call | PreToolUse returns decision | **throw new Error()** in tool.execute.before | Supported (different mechanism) |
-| Block stop | Stop hook returns `decision: block` | **No blocking session.idle** | GAP -- best-effort workaround only |
-| Inject system context | `additionalContext` in hook output | `experimental.chat.system.transform` -- push to `output.system[]` | Supported (experimental) |
-| Preserve across compaction | PreCompact `additionalContext` | `experimental.session.compacting` -- push to `output.context[]` | Supported (experimental) |
-| Read transcript | `transcript_path` JSONL file | **No JSONL** -- SQLite DB, client API, or in-memory state | Replaced by in-memory tracking |
-| Track todos | N/A (Claude Code uses TaskCreate) | `todo.updated` bus event | Supported (new capability) |
-| Hook in subagents | Hooks fire for all tool calls | **tool.execute.before/after does NOT fire in subagents** (#5894) | GAP -- no workaround |
+A soft enforcement message is injected via `experimental.chat.system.transform` during every active /do workflow, reminding the agent that it must complete via /verify or /escalate. This supplements the stop hook's re-engagement (which may not fire due to the fire-and-forget limitation).

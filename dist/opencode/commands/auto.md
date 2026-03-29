@@ -1,5 +1,6 @@
 ---
-description: 'End-to-end autonomous execution: /define -> auto-approve -> /do in a single command'
+description: 'End-to-end autonomous execution: /define -> auto-approve -> /do in a single command.'
+subtask: true
 ---
 
-Invoke the auto skill with: "$ARGUMENTS"
+Invoke the manifest-dev:auto skill with: "$ARGUMENTS"

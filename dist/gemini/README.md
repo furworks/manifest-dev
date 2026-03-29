@@ -8,7 +8,7 @@ Verification-first manifest workflows for Gemini CLI, delivered as extension-man
 |------|-------|---------|
 | Skills | 7 | auto, define, do, verify, done, escalate, learn-define-patterns |
 | Agents | 14 | criteria-checker, manifest-verifier, 10 code reviewers, docs-reviewer, define-session-analyzer |
-| Hooks | 3 | pretool-verify, stop-do-enforcement, post-compact-recovery |
+| Hooks | 5 | pretool-verify, posttool-log, stop-do-enforcement, prompt-submit-amendment, post-compact-recovery |
 
 ## Install
 
@@ -32,6 +32,18 @@ curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/g
 npx skills add https://github.com/doodledood/manifest-dev --all -a gemini-cli
 ```
 
+### Option 3: Gemini extensions install
+
+```bash
+gemini extensions install https://github.com/doodledood/manifest-dev/dist/gemini
+```
+
+Or link locally:
+
+```bash
+gemini extensions link ./dist/gemini
+```
+
 ## Workflow
 
 ```
@@ -39,7 +51,7 @@ npx skills add https://github.com/doodledood/manifest-dev --all -a gemini-cli
     |
 `do` -> executes against the manifest and tracks progress
     |
-`verify` -> parallel verification with 12 specialized agents
+`verify` -> parallel verification with 14 specialized agents
     |
 `done` (all pass) or `escalate` (blocked)
 ```
@@ -51,6 +63,20 @@ npx skills add https://github.com/doodledood/manifest-dev --all -a gemini-cli
 | **thorough** (default) | Full reviewer agents, unlimited fix loops | All at once | Production-quality work |
 | **balanced** | Full model capability, capped loops | Batched (max 4) | Standard development |
 | **efficient** | Skips reviewer subagents, lighter checks | Sequential | Quick iterations, low-risk changes |
+
+## Feature Parity
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Skills (define, do, verify, done, escalate, auto, learn-define-patterns) | Full | All 7 skills with all subdirectories |
+| Agents (14 reviewers + verifiers) | Full | Frontmatter converted to Gemini format |
+| Hook: stop-do-enforcement | Full | AfterAgent deny/retry protocol |
+| Hook: pretool-verify | Full | BeforeTool context injection |
+| Hook: post-compact-recovery | Full | SessionStart context recovery |
+| Hook: prompt-submit-amendment | Full | BeforeAgent amendment check |
+| Hook: posttool-log | Full | AfterTool execution log reminder |
+| $ARGUMENTS in skills | Limited | Claude Code extension only; Gemini passes args via activate_skill |
+| Execution modes (thorough/balanced/efficient) | Full | Model tier names replaced with `inherit` |
 
 ## Known Limitations
 
@@ -65,4 +91,4 @@ npx skills add https://github.com/doodledood/manifest-dev --all -a gemini-cli
 
 Main repo: [github.com/doodledood/manifest-dev](https://github.com/doodledood/manifest-dev)
 
-This distribution is auto-generated from the Claude Code plugin source.
+This distribution is auto-generated from the Claude Code plugin source at version 0.71.0.

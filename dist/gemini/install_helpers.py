@@ -59,7 +59,9 @@ SKIP_FILES = {"install_helpers.py", "install.sh"}
 STATE_VERSION = 2
 MANAGED_HOOK_NAMES = {
     "pretool-verify",
+    "posttool-log",
     "stop-do-enforcement",
+    "prompt-submit-amendment",
     "post-compact-recovery",
 }
 

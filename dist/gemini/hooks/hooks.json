@@ -15,6 +15,21 @@
         ]
       }
     ],
+    "AfterTool": [
+      {
+        "matcher": "activate_skill|write_todos",
+        "sequential": true,
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${extensionPath}/hooks/gemini_adapter.py AfterTool",
+            "name": "posttool-log",
+            "timeout": 60000,
+            "description": "Reminds agent to update execution log after milestone tool calls"
+          }
+        ]
+      }
+    ],
     "AfterAgent": [
       {
         "sequential": true,
@@ -25,6 +40,20 @@
             "name": "stop-do-enforcement",
             "timeout": 60000,
             "description": "Blocks premature stops during /do workflow"
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "sequential": true,
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${extensionPath}/hooks/gemini_adapter.py BeforeAgent",
+            "name": "prompt-submit-amendment",
+            "timeout": 60000,
+            "description": "Checks for manifest amendments when user submits input during /do"
           }
         ]
       }
