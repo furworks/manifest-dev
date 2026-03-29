@@ -92,10 +92,10 @@ Criteria have an optional `phase:` field (numeric, default 1). Phases run in asc
 
 ## Mode-Aware Verification
 
-Load the execution mode file from `/do/references/execution-modes/` for the resolved mode:
-- `thorough` (default): read `skills/do/references/execution-modes/thorough.md`
-- `balanced`: read `skills/do/references/execution-modes/balanced.md`
-- `efficient`: read `skills/do/references/execution-modes/efficient.md`
+Load the execution mode file for the resolved mode. Mode files live in the /do skill's references:
+- `thorough` (default): read `../do/references/execution-modes/thorough.md`
+- `balanced`: read `../do/references/execution-modes/balanced.md`
+- `efficient`: read `../do/references/execution-modes/efficient.md`
 
 Follow the mode's rules for verification parallelism, model routing, and quality gate inclusion. The mode file defines which verifiers to skip, what model to use for criteria-checker agents, and how many concurrent verifiers to launch per phase.
 

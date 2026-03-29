@@ -156,7 +156,7 @@ Don't defer to synthesis — these are structural decisions that compound when m
 
 **Mark a recommended option** - Every question with options must include a recommended default. For single-select, mark exactly one "(Recommended)". For multi-select, mark sensible defaults or none if all equally valid. Reduces cognitive load — users accept, reject, or adjust rather than evaluating from scratch.
 
-**Confirm before encoding** - When you discover constraints from exploration (structural patterns, conventions, existing boundaries), present them to the user before encoding as invariants. "I found X—should this be a hard constraint?" Discovered ≠ confirmed.
+**Confirm before encoding** - When you discover constraints from exploration (structural patterns, conventions, existing boundaries), present them to the user before encoding as invariants. "I found X—should this be a hard constraint?" Discovered ≠ confirmed. This applies to exploration-discovered constraints, not to task-file quality gates and Defaults (which are auto-included per the rules above).
 
 **Encode explicit constraints** - When users state preferences, requirements, or constraints (not clarifying remarks or exploratory responses), these must map to an INV or AC. "Single-author writing only" → process invariant. "Target < 1500 words" → acceptance criterion. Don't let explicit constraints get lost in the interview log.
 
@@ -461,7 +461,7 @@ Manifests support amendments during execution:
 
 ## Verification Loop
 
-After writing the manifest, check the manifest's `mode:` field and load the execution mode file from `skills/do/references/execution-modes/` for the resolved mode (default: `thorough`). Follow the mode's "Manifest Verification (/define)" section for whether to run the manifest-verifier and how many cycles.
+After writing the manifest, check the manifest's `mode:` field and load the execution mode file from `../do/references/execution-modes/` for the resolved mode (default: `thorough`). Follow the mode's "Manifest Verification (/define)" section for whether to run the manifest-verifier and how many cycles.
 
 When running the verifier, pass only the file paths — no summary, framing, or commentary:
 
