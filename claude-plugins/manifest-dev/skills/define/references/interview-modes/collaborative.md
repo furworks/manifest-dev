@@ -12,7 +12,7 @@ Two interaction types:
 
 1. **Transparent sharing** — Share findings, reasoning, and emerging patterns as you discover them. "I'm seeing X in the codebase, which suggests Y. This connects to Z because..." This builds shared understanding of the problem space.
 
-2. **Decision locking** — When a finding needs to become a manifest item, present structured options (2-4 options, one marked "(Recommended)") to lock the decision. Only lock after sufficient shared understanding.
+2. **Decision locking** — When a finding needs to become a manifest item, present structured options to lock the decision. Only lock after sufficient shared understanding.
 
 Don't front-load options before the user understands the problem space. Share the finding and reasoning first, then lock. This applies equally to Resolvable task file structures — share the structure and its relevance transparently, then lock the disposition with structured options.
 
