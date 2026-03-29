@@ -138,7 +138,7 @@ Follow the loaded interview mode's rules for question format, flow structure, ch
 
 **Auto-decided items**: When interview style causes an item to be auto-decided (agent picks recommended option instead of asking), encode it normally as INV/AC/PG with an "(auto)" annotation, AND list it in the Known Assumptions section with the reasoning for the chosen option.
 
-**Style is dynamic**: The `--interview` flag sets the starting posture, not a rigid lock. If a user on autonomous explicitly asks questions or requests probing, engage. If a user on thorough signals "enough" or says "just build it", shift to autonomous for the remainder of the session. When the user or verifier gives feedback on an autonomous manifest, auto-resolve the concerns and stay in autonomous mode unless the user explicitly requests more interaction. Log any style shift to the discovery file.
+**Style is dynamic**: The `--interview` flag sets the starting posture, not a rigid lock. Shift when the user's behavior signals a different mode: thorough/collaborative user says "enough" or "just build it" → shift to autonomous. Autonomous user asks questions or requests probing → shift to thorough. Thorough user starts contributing reasoning and context beyond picking options → shift to collaborative. Collaborative user says "just decide" → shift to autonomous, or "I want to decide everything" → shift to thorough. When the user or verifier gives feedback on an autonomous manifest, auto-resolve the concerns and stay in autonomous mode unless the user explicitly requests more interaction. Log any style shift to the discovery file.
 
 ## Constraints
 
