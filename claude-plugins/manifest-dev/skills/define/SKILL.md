@@ -26,13 +26,11 @@ Output: `/tmp/manifest-{timestamp}.md`
 
 Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal`, `autonomous`, `thorough`, `collaborative`. Default: `thorough`. Invalid value → error and halt: "Invalid interview style '<value>'. Valid styles: minimal | autonomous | thorough | collaborative"
 
-Parse `--medium` from arguments (can appear anywhere). Accepts any value — the LLM adapts to whatever medium is specified (e.g., `slack`, `discord`, `email`, `teams`). Default: `local` (AskUserQuestion). When a task file exists for the medium (e.g., `tasks/workflow/messaging/SLACK.md` for slack), load it for platform-specific probing fuel.
+Parse `--medium` from arguments (can appear anywhere). Accepts any value — the LLM adapts to whatever medium is specified (e.g., `slack`, `discord`, `email`, `teams`). Default: `local` (AskUserQuestion).
 
-When medium is not `local`: read `references/COLLABORATION_MODE.md` for routing rules. The medium is encoded in the manifest's Intent section as `Medium: <value>` so `/do` knows the communication channel.
+Parse `--amend <manifest-path>` from arguments (can appear anywhere). `--from-do` flag (optional, used with `--amend`) signals the autonomous fast path.
 
-Parse `--amend <manifest-path>` from arguments (can appear anywhere). When present, /define operates on the existing manifest at the given path — see Amendment Mode section below. `--from-do` flag (optional, used with `--amend`) signals the autonomous fast path — no user approval gates.
-
-Parse `--visualize` from arguments (can appear anywhere). Boolean flag (no value). Default: off. When present and medium is `local`: read `references/VISUALIZE_MODE.md` for visualization setup and update instructions. When medium is not `local`, `--visualize` is silently ignored (user isn't at a terminal).
+Parse `--visualize` from arguments (can appear anywhere). Boolean flag (no value). Default: off.
 
 If no arguments provided, ask: "What would you like to build or change?"
 
@@ -82,7 +80,7 @@ If input references a previous manifest: **treat it as source of truth**. It con
 
 ## Amendment Mode
 
-When `--amend <manifest-path>` is present: read `references/AMENDMENT_MODE.md` for amendment rules. /define modifies the existing manifest instead of building from scratch.
+When `--amend <manifest-path>` is present: read `references/AMENDMENT_MODE.md` for amendment rules.
 
 ## Multi-Repo Scope
 
@@ -503,7 +501,15 @@ Before asking for approval, output a scannable summary that enables full manifes
 
 ## Collaboration Mode
 
-When `--medium` is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. If medium is `local` (default), ignore this — all other sections apply as written.
+When `--medium` is not `local`: read `references/COLLABORATION_MODE.md` for routing rules that override the interaction channel.
+
+The medium is encoded in the manifest's Intent section as `Medium: <value>` so `/do` knows the communication channel. When a task file exists for the medium (e.g., `tasks/workflow/messaging/SLACK.md` for slack), load it for platform-specific probing fuel.
+
+## Visualization
+
+When `--visualize` is present and medium is `local`: read `references/VISUALIZE_MODE.md` for visualization behavior.
+
+When medium is not `local`, `--visualize` is silently ignored (user isn't at a terminal).
 
 ## Complete
 

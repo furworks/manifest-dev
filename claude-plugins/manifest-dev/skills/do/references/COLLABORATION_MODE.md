@@ -1,12 +1,6 @@
 # Collaboration Mode — /do
 
-This file is loaded when the manifest's `Medium:` field is not `local`. If medium is `local` (default) or absent, this file should not have been loaded — all other sections of SKILL.md apply as written.
-
-## How It Works
-
-When the manifest specifies a non-local medium, /do posts updates and escalations through that medium instead of AskUserQuestion.
-
-The `Medium:` value tells you which platform to use. Common examples:
+Non-local medium interaction rules. The manifest's `Medium:` value tells you which platform to use:
 - `slack` — use Slack MCP tools for posting updates and escalations
 - Any other value — adapt to the platform. Use available MCP tools, CLI commands, or whatever the environment provides.
 

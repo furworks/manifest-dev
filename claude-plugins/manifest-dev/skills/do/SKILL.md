@@ -89,4 +89,6 @@ Externalize progress to survive context loss. The log IS the disaster recovery m
 
 ## Collaboration Mode
 
-When the manifest's `Medium:` field is not `local`, read `references/COLLABORATION_MODE.md` for routing rules. If medium is `local` (default) or absent, ignore this — all other sections apply as written.
+When the manifest's `Medium:` field is not `local`: read `references/COLLABORATION_MODE.md` for routing rules that override the update and escalation channels.
+
+Follow the loaded file's rules for posting updates, escalations, and security constraints for the remainder of this /do run.

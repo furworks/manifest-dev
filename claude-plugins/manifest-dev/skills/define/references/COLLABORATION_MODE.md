@@ -1,12 +1,6 @@
 # Collaboration Mode — /define
 
-This file is loaded when `--medium` is not `local`. If medium is `local` (default), this file should not have been loaded — all other sections of SKILL.md apply as written.
-
-## How It Works
-
-When `--medium` specifies a non-local communication channel, you interact with stakeholders through that medium instead of AskUserQuestion.
-
-The `--medium` value tells you which platform to use. Common examples:
+Non-local medium interaction rules. The `--medium` value tells you which platform to use:
 - `slack` — use Slack MCP tools (slack_send_message, slack_read_thread, etc.)
 - Any other value — adapt to the platform. Use available MCP tools, CLI commands, or whatever the environment provides for that medium.
 
