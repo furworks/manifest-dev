@@ -4,7 +4,7 @@ Interaction mechanics for any non-local medium. Adapt to the platform using avai
 
 ## Interaction Tool
 
-Post questions to the medium with numbered options. Tag relevant stakeholder(s) if the platform supports it. Poll for responses using the medium's read tools. When the response arrives, continue the interview from where you left off.
+Do NOT use AskUserQuestion — all questions go through the medium's tools. Post questions to the medium with numbered options. Tag relevant stakeholder(s) if the platform supports it. Poll for responses using the medium's read tools. When the response arrives, continue the interview from where you left off.
 
 ## Format Constraints
 
@@ -25,6 +25,10 @@ Invoke the manifest-verifier agent locally as normal — no delegation needed.
 ## Memento Discipline
 
 After receiving EACH response from the medium, immediately log the finding/decision to the discovery log file.
+
+## Scope
+
+These are interaction mechanics only. All methodology, principles, convergence criteria, and constraints from the skill apply unchanged. Only the interaction channel changes.
 
 ## Security
 
