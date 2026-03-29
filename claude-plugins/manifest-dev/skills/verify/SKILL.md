@@ -131,6 +131,6 @@ Report verification results grouped by phase, then by Global Invariants first, t
 
 ## Collaboration Mode
 
-When `--medium` is not `local`: read `references/COLLABORATION_MODE.md` for routing rules that override result posting.
+When the manifest's `Medium:` field is not `local`: read `references/COLLABORATION_MODE.md` for routing rules that override result posting.
 
 Follow the loaded file's rules for posting verification results and security constraints.
