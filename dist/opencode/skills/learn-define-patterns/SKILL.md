@@ -54,7 +54,7 @@ The final output is a unified set of user preferences derived from all analyzed 
 - Choice of write target: project AGENTS.md, user `~/.config/opencode/AGENTS.md`, or both
 - Diff/preview of exact changes before writing
 
-# CLAUDE.md Output Format
+# AGENTS.md Output Format
 
 ```markdown
 ## /define Preferences
