@@ -522,7 +522,6 @@ When medium is not `local`, `--visualize` is silently ignored (user isn't at a t
 
 ```text
 Manifest complete: /tmp/manifest-{timestamp}.md
-Session: ~/.claude/projects/<dir>/<session-id>.jsonl
 
 To execute: /do /tmp/manifest-{timestamp}.md [log-file-path if iterating]
 ```
