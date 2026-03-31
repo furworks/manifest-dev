@@ -36,7 +36,7 @@ Then use it:
 
 Two commands. `/define` interviews you and builds a manifest. `/do` executes it. That's the whole workflow. `/auto` chains both — define autonomously, auto-approve, execute — in a single command.
 
-Control interview depth with `--interview minimal|autonomous|thorough|collaborative` (default: thorough). Thorough asks everything. Minimal asks scope and high-impact items. Autonomous builds the manifest without asking, presents it for approval. Add `--visualize` to launch a local web companion that shows reasoning transparency and coverage during the interview.
+Control interview depth with `--interview minimal|autonomous|thorough|collaborative` (default: thorough). Thorough asks everything. Minimal asks scope and high-impact items. Autonomous builds the manifest without asking, presents it for approval.
 
 If you use zsh and want easy upgrade commands for the non-Claude distributions, add this to `~/.zshrc`:
 
@@ -334,7 +334,7 @@ The Claude Code plugin is the source of truth. Per-CLI distributions under `dist
 
 | Skill | Type | Description |
 |-------|------|-------------|
-| `/define` | User-invoked | Interviews you, classifies task type, probes for latent criteria, outputs manifest with verification methods. `--visualize` launches a local web companion for reasoning transparency |
+| `/define` | User-invoked | Interviews you, classifies task type, probes for latent criteria, outputs manifest with verification methods |
 | `/do` | User-invoked | Executes against manifest. Follows execution order, watches for risks, logs progress for disaster recovery |
 | `/auto` | User-invoked | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do`. Supports `--mode` pass-through |
 | `/verify` | Internal | Spawns verifiers for all criteria, phased by iteration speed (fast checks first, e2e/deploy-dependent later). Routes to `criteria-checker` agents based on verification method |

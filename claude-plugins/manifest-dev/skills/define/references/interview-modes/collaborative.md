@@ -66,20 +66,57 @@ The protocols are lenses to apply, not phases to complete.
 
 Two interaction types:
 
-1. **Transparent thinking** — Share findings, reasoning, and opinions as they emerge. Not just facts — what you think they mean, and why. "I found X in the codebase. This worries me because Y, and here's how it connects to Z." Show your work and your assessment.
+1. **Sharing** — Tell the user what you're thinking. Findings, reasoning, opinions, pushback — all as conversation. Not just facts — what you think they mean, and why. "I found X in the codebase. This worries me because Y, and here's how it connects to Z." Show your work and your assessment.
 
-2. **Decision locking** — When a finding needs to become a manifest item, present structured options. Only lock after sufficient discussion. Share findings and reasoning first; don't front-load options before the user understands the problem space.
+   When prose gets dense — relationships, flows, comparisons, structure — sketch it out. ASCII diagrams, tables, formatted examples, code blocks. A colleague reaches for the whiteboard when words alone aren't landing. Do the same when it helps clarify.
+
+2. **Asking** — When you need something FROM the user — a decision, confirmation, clarification, direction — use the medium's interaction tool. Don't bury questions in conversational prose; route them through the tool so the user has structured options to respond to. Share your thinking first, then ask through the tool when you need their input.
+
+The bright line: if you're telling the user something, that's conversation. If you need the user to tell you something, that's the tool.
+
+**Talk about the problem, not the manifest.** Discuss constraints, risks, goals, and trade-offs in natural language. The manifest encodes the shared understanding afterward — it's not the vocabulary of the conversation. Don't reference deliverable IDs, acceptance criteria numbers, or invariant codes during discussion.
+
+### The full pattern in action
+
+```
+[Sharing — conversation with visual aid]
+
+"I'm looking at the auth flow and I think there's a dependency
+we haven't talked about:
+
+  Login → Token refresh → API call
+           ↓
+    Session store (Redis)
+
+If Redis goes down mid-refresh, the user gets a 500 instead of
+a graceful redirect to login. I think this matters because your
+API serves both the web app and the mobile client — mobile users
+won't see a helpful error page, they'll just see a crash.
+
+I checked the existing error handling and there's nothing
+catching Redis connection failures in the refresh path."
+
+[Asking — via the medium's interaction tool]
+
+→ "How should auth handle Redis being unavailable during
+   token refresh?"
+
+  1. Graceful degradation — serve stale token, log warning
+     (Recommended)
+  2. Hard fail — force re-login on any Redis error
+  3. Out of scope for this task — accept the risk
+```
 
 **Scenario presentation**: Lead with your assessment:
 
 - Weak: "How should we handle rate limits?" → Options
-- Strong: "I'm seeing external API calls in the payment flow. I think this is a real risk in production — rate limits during peak hours could silently drop orders. If I'm wrong about the traffic patterns, tell me." → Options with your opinion as Recommended
+- Strong: "I'm seeing external API calls in the payment flow. I think this is a real risk in production — rate limits during peak hours could silently drop orders. If I'm wrong about the traffic patterns, tell me." → Ask via the tool if disposition isn't clear from discussion, with your opinion as Recommended
 
-**Backcasting presentation**: Share your assessment of whether each dependency holds: "This assumes [X] stays stable. I checked [evidence] and I think [assessment]. Do you see it differently?" → Options if disposition isn't clear from discussion.
+**Backcasting presentation**: Share your assessment of whether each dependency holds: "This assumes [X] stays stable. I checked [evidence] and I think [assessment]. Do you see it differently?" → Ask via the tool if disposition isn't clear from discussion.
 
-**Mental model alignment**: Before finalizing deliverables, share your honest assessment of what "done" looks like: "Here's what I think done looks like: [description]. I'm confident about [X] but less sure about [Y]. Does this match what you had in mind?" Mismatches are latent criteria — expectations the user didn't state. Lock via options if there's a gap.
+**Mental model alignment**: Before finalizing deliverables, share your honest assessment of what "done" looks like: "Here's what I think done looks like: [description]. I'm confident about [X] but less sure about [Y]. Does this match what you had in mind?" Mismatches are latent criteria — expectations the user didn't state. Ask via the tool if there's a gap to resolve.
 
-**Resolvable task-file structures**: Bring your assessment of each risk, scenario, and trade-off before presenting disposition options. Don't just present the structure — say what you think matters and why.
+**Resolvable task-file structures**: Share your assessment of each risk, scenario, and trade-off first, then ask for dispositions via the tool. Don't just present the structure — say what you think matters and why.
 
 **Adversarial self-review**: You're already adversarial in this mode — the formal protocol is a focused intensification. Look for patterns hard to catch from inside the discussion: scope creep you both normalized, edge cases you both deferred, "temporary" decisions that became permanent. Name them directly: "I think we've been avoiding [X]. Let's decide on it now."
 
