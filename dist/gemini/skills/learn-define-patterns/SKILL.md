@@ -54,7 +54,7 @@ The final output is a unified set of user preferences derived from all analyzed 
 - Choice of write target: project GEMINI.md, user `~/.gemini/GEMINI.md`, or both
 - Diff/preview of exact changes before writing
 
-# CLAUDE.md Output Format
+# GEMINI.md Output Format
 
 ```markdown
 ## /define Preferences

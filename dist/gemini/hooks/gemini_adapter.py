@@ -13,7 +13,7 @@ Events:
     BeforeTool   - maps to pretool_verify_hook (PreToolUse equivalent)
     AfterTool    - maps to posttool_log_hook (PostToolUse equivalent)
     AfterAgent   - maps to stop_do_hook (Stop equivalent)
-    BeforeAgent  - maps to prompt_submit_hook (UserPromptSubmit equivalent)
+    BeforeAgent  - maps to prompt_submit_hook + understand_prompt_hook (UserPromptSubmit equivalents)
     SessionStart - maps to post_compact_hook (source=resume only)
 
 Protocol (Gemini CLI):
@@ -370,11 +370,37 @@ def _run_after_agent(gemini_input: dict[str, Any]) -> None:
 
 
 def _run_before_agent(gemini_input: dict[str, Any]) -> None:
-    """Dispatch BeforeAgent -> prompt_submit_hook."""
-    from prompt_submit_hook import main as _prompt_main
+    """Dispatch BeforeAgent -> prompt_submit_hook + understand_prompt_hook.
 
-    gemini_output = _run_hook(_prompt_main, gemini_input, "BeforeAgent")
-    if gemini_output:
+    Both Claude Code hooks are UserPromptSubmit handlers. Their
+    additionalContext outputs are merged into a single BeforeAgent response.
+    """
+    from prompt_submit_hook import main as _prompt_main
+    from understand_prompt_hook import main as _understand_main
+
+    combined_context_parts: list[str] = []
+
+    # Run prompt_submit_hook (amendment check during /do)
+    prompt_output = _run_hook(_prompt_main, gemini_input, "BeforeAgent")
+    if prompt_output:
+        ctx = (prompt_output.get("hookSpecificOutput") or {}).get("additionalContext", "")
+        if ctx:
+            combined_context_parts.append(ctx)
+
+    # Run understand_prompt_hook (sycophancy drift reinforcement during /understand)
+    understand_output = _run_hook(_understand_main, gemini_input, "BeforeAgent")
+    if understand_output:
+        ctx = (understand_output.get("hookSpecificOutput") or {}).get("additionalContext", "")
+        if ctx:
+            combined_context_parts.append(ctx)
+
+    if combined_context_parts:
+        gemini_output = {
+            "hookSpecificOutput": {
+                "hookEventName": "BeforeAgent",
+                "additionalContext": "\n\n".join(combined_context_parts),
+            }
+        }
         print(json.dumps(gemini_output))
 
     sys.exit(0)

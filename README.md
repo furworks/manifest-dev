@@ -27,16 +27,20 @@ curl -fsSL https://raw.githubusercontent.com/doodledood/manifest-dev/main/dist/c
 
 Then use it:
 ```bash
+# Define what to build, then execute
 /define <what you want to build>
 /do <manifest-path>
 
 # Or go end-to-end autonomously:
 /auto <what you want to build>
+
+# Optional: understand something deeply before acting
+/understand <topic or problem>
 ```
 
-Two commands. `/define` interviews you and builds a manifest. `/do` executes it. That's the whole workflow. `/auto` chains both — define autonomously, auto-approve, execute — in a single command.
+`/define` interviews you and builds a manifest. `/do` executes it. `/auto` chains both — define autonomously, auto-approve, execute — in a single command. `/understand` is optional — a truth-convergent thinking partner for when understanding IS the goal, or before `/define` when the problem space is foggy.
 
-Control interview depth with `--interview minimal|autonomous|thorough|collaborative` (default: thorough). Thorough asks everything. Minimal asks scope and high-impact items. Autonomous builds the manifest without asking, presents it for approval.
+Control interview depth with `--interview minimal|autonomous|thorough` (default: thorough). Thorough asks everything. Minimal asks scope and high-impact items. Autonomous builds the manifest without asking, presents it for approval.
 
 If you use zsh and want easy upgrade commands for the non-Claude distributions, add this to `~/.zshrc`:
 

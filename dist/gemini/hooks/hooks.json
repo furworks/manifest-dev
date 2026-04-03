@@ -53,7 +53,7 @@
             "command": "python3 ${extensionPath}/hooks/gemini_adapter.py BeforeAgent",
             "name": "prompt-submit-amendment",
             "timeout": 60000,
-            "description": "Checks for manifest amendments when user submits input during /do"
+            "description": "Checks for manifest amendments during /do and reinforces /understand principles"
           }
         ]
       }
@@ -68,7 +68,7 @@
             "command": "python3 ${extensionPath}/hooks/gemini_adapter.py SessionStart",
             "name": "post-compact-recovery",
             "timeout": 60000,
-            "description": "Recovers /do context after compaction (source=resume)"
+            "description": "Recovers /do and /understand context after compaction (source=resume)"
           }
         ]
       }
