@@ -468,21 +468,26 @@ Do not paraphrase, filter, or editorialize the verifier's questions — present 
 
 ## Summary for Approval
 
-Before asking for approval, output a scannable summary that enables full manifest review without reading the structured document.
+Before asking for approval, explain the plan the way you'd explain it to a senior engineer over Slack. They need to know what you're building, what could go wrong, and how you'll know it's right.
 
-**Goal**: User can catch any mistake—wrong deliverable scope, missing AC, wrong verification method, bad assumption, incorrect flow—by scanning the summary alone.
+**Voice**: Plain language. No manifest codes (D1, AC-1.1, INV-G3), no YAML blocks, no structured-document vocabulary. Write prose — the manifest is the structured document, the summary is the human conversation about it.
 
-**Requirements**:
-- Expose all manifest content (deliverables, ACs, invariants, assumptions, verification methods)
-- Show verification inline with what it verifies—user must judge if verification method fits the criterion
-- Include ASCII diagram showing structure, flow, and dependencies
-- Optimize for human scanning speed, not AI parsing
-- Adapt presentation to the task—no fixed template
+**Structure the explanation around three things**:
+
+1. **What I'll do** — Walk through each piece of work in execution order. For each, state what it is and how you'll verify it's correct (parenthetical or inline — verification is present but not dominant). Example: "I'll create a reference doc for auto-mode behavior, covering what changes per phase. I'll verify it doesn't contradict SKILL.md (criteria-checker reads both files for conflicts)."
+
+2. **Rules that always hold** — State the invariants as plain rules, not coded entries. Example: "Explicit flags always override --auto defaults. Every owner-replacing decision gets logged with reasoning. Auto mode halts on truly unresolvable issues — it's not silent-failure mode."
+
+3. **Architecture sketch** — Include an ASCII diagram when the task involves structure, flow, or dependencies worth visualizing. Skip it for simple tasks where a diagram would be noise.
+
+**The test**: If the summary reads like a compressed manifest, rewrite it. If it reads like something you'd actually say to a colleague, it's right.
 
 **Anti-patterns**:
+- Manifest cosplay — codes, YAML, structured labels dressed up as prose
 - Hiding detail behind counts ("8 automated verifications")
-- Abstracting instead of compressing ("3 deliverables covering auth")
+- Abstracting instead of showing ("3 deliverables covering auth")
 - Omitting "obvious" things that could still be wrong
+- Listing verification methods without the thing they verify
 
 **After presenting the summary**, wait for the user's response. User responses mean:
 - **Approval** (e.g., "looks good", "approved") → proceed to Complete
