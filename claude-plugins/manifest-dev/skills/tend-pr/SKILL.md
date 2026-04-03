@@ -43,7 +43,7 @@ Two modes:
 
 5. **Create log.** Create `/tmp/tend-pr-log-{pr-number}.md` for cross-iteration state.
 
-6. **Start loop.** Invoke the manifest-dev:loop skill with the configured interval to start the polling loop. Each iteration executes the Loop Iteration section below.
+6. **Start loop.** Invoke the manifest-dev:loop skill with the configured interval to start the polling loop. Each iteration executes the Loop Iteration section below. If `/loop` is not available, fall back to a manual loop: execute the Loop Iteration, then `sleep` for the interval duration, and repeat.
 
 ## Loop Iteration
 
