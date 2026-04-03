@@ -98,7 +98,9 @@ Append to `/tmp/tend-pr-log-{pr-number}.md`: timestamp, actions taken, skipped i
 
 ### Merge Readiness
 
-When ALL conditions are met — CI green, at least one human approval (no changes-requested), no unresolved threads (including uncertain), no pending `/do` runs — stop the loop and ask: "PR is merge-ready. All CI green, approved, no unresolved threads. Merge?"
+When the PR's merge state indicates it is mergeable (all required checks pass, required approvals obtained, no unresolved threads including uncertain, no pending `/do` runs) — stop the loop and ask: "PR is merge-ready. Merge?"
+
+Determine merge requirements from the platform's merge state (e.g., GitHub branch protection rules), not hardcoded assumptions about what's required.
 
 **Stale thread escalation:** If an uncertain comment has received no reply for several consecutive iterations, or an actionable comment was fixed (pushed + replied) but the thread remains unresolved for several consecutive iterations, escalate to the user: "Thread from @reviewer unresolved for [duration]: [uncertain — no reply / fixed — awaiting reviewer resolution]. Continue waiting, resolve, or ping reviewer?" This prevents indefinite loops when reviewers are unresponsive.
 
@@ -118,5 +120,3 @@ When ALL conditions are met — CI green, at least one human approval (no change
 - **Draft PRs.** If a PR is in draft state, skip the iteration — the author may not want review feedback yet.
 - **Closed/deleted PRs.** If the PR is closed or the branch is deleted, stop the loop and report.
 - **Empty diff.** If the PR has no diff (e.g., all changes reverted), report to user rather than attempting to process.
-- **No reviewers assigned.** The loop still runs — CI checks and bot reviews don't require human reviewers. Merge readiness still requires at least one approval.
-- **Bot-only reviews.** If only bots have reviewed, the PR is not merge-ready (requires human approval). Continue looping.
