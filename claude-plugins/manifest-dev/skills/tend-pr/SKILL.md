@@ -16,7 +16,7 @@ Two modes:
 
 ## Input
 
-`$ARGUMENTS` = manifest path, PR URL, or omitted. Optionally with `--medium <platform>`, `--interval <duration>`, and `--reviewers <usernames>`.
+`$ARGUMENTS` = manifest path, PR URL, or omitted. Optionally with `--platform <platform>`, `--interval <duration>`, `--reviewers <usernames>`, and `--log <execution-log-path>`.
 
 **Mode detection:**
 1. If argument is a file path ending in `.md` pointing to an existing manifest → **manifest-aware mode**
@@ -26,13 +26,14 @@ Two modes:
 **PR resolution (babysit mode without a PR URL argument):** Look up the open PR for the current branch. If no open PR exists, error and halt — babysit mode requires an existing PR to tend (it does not create PRs).
 
 **Flags:**
-- `--medium`: PR platform. Default: `github`. Controls how PR operations (create, read comments, check CI) are performed.
+- `--platform`: PR platform. Default: `github`. Controls how PR operations (create, read comments, check CI) are performed.
 - `--interval`: Polling interval for `/loop`. Default: `10m`. Accepts duration format (e.g. `5m`, `15m`).
 - `--reviewers`: Comma-separated usernames to request review from (e.g. `--reviewers alice,bob`). Optional — if omitted, no reviewers are requested.
+- `--log`: Path to the `/do` execution log from a prior run. Used in manifest-aware mode to pass to scoped `/do` invocations. Optional — if omitted, match by timestamp (manifest filename timestamp matches log filename in `/tmp/do-log-*.md`) or from conversation context.
 
 **Errors:**
-- No argument, no manifest inferrable, and no open PR for current branch: "Error: No manifest or open PR found. Provide a manifest path or PR URL. Usage: /tend-pr <manifest-path-or-pr-url> [--medium github] [--interval 10m] [--reviewers user1,user2]"
-- `--medium` value not supported: "Error: Medium '<value>' not yet supported. Currently supported: github"
+- No argument, no manifest inferrable, and no open PR for current branch: "Error: No manifest or open PR found. Provide a manifest path or PR URL. Usage: /tend-pr <manifest-path-or-pr-url> [--platform github] [--interval 10m] [--reviewers user1,user2]"
+- `--platform` value not supported: "Error: Platform '<value>' not yet supported. Currently supported: github"
 
 ## Setup Phase
 
@@ -75,7 +76,7 @@ Compare against base branch first:
 
 ### Routing
 
-**Manifest-aware mode:** For actionable items, determine affected deliverable(s) by examining what files/code the comment targets against the manifest's deliverable structure (include all potentially affected when ambiguous). Amend manifest via `/define --amend <manifest-path> --from-do`, then invoke `/do <manifest-path> <log-path> --scope <affected-deliverable-ids>` (use the execution log from the original `/do` run — locate it by scanning `/tmp/do-log-*.md` or from the conversation context). If `/do` escalates, stop the loop and report the blocker with enough context for the user to resume. Push changes and reply to the comment.
+**Manifest-aware mode:** For actionable items, determine affected deliverable(s) by examining what files/code the comment targets against the manifest's deliverable structure (include all potentially affected when ambiguous). Amend manifest via `/define --amend <manifest-path> --from-do`, then invoke `/do <manifest-path> <log-path> --scope <affected-deliverable-ids>` (use the `--log` path if provided, otherwise match by timestamp from `/tmp/do-log-*.md` or conversation context). If `/do` escalates, stop the loop and report the blocker with enough context for the user to resume. Push changes and reply to the comment.
 
 **Babysit mode:** Fix directly, push, reply.
 
@@ -98,6 +99,8 @@ Append to `/tmp/tend-pr-log-{pr-number}.md`: timestamp, actions taken, skipped i
 ### Merge Readiness
 
 When ALL conditions are met — CI green, at least one human approval (no changes-requested), no unresolved threads (including uncertain), no pending `/do` runs — stop the loop and ask: "PR is merge-ready. All CI green, approved, no unresolved threads. Merge?"
+
+**Stale uncertain escalation:** If an uncertain comment has received no reply for several consecutive iterations, escalate to the user: "Uncertain comment from @reviewer has had no reply for [duration]. Continue waiting, dismiss, or address?" This prevents indefinite loops when reviewers are unresponsive.
 
 **Never merge without explicit user confirmation.**
 
