@@ -34,6 +34,9 @@ Then use it:
 # Or go end-to-end autonomously:
 /auto <what you want to build>
 
+# Tend a PR through review:
+/tend-pr <manifest-path-or-pr-url>
+
 # Optional: understand something deeply before acting
 /understand <topic or problem>
 ```
@@ -340,7 +343,8 @@ The Claude Code plugin is the source of truth. Per-CLI distributions under `dist
 |-------|------|-------------|
 | `/define` | User-invoked | Interviews you, classifies task type, probes for latent criteria, outputs manifest with verification methods |
 | `/do` | User-invoked | Executes against manifest. Follows execution order, watches for risks, logs progress for disaster recovery |
-| `/auto` | User-invoked | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do`. Supports `--mode` pass-through |
+| `/auto` | User-invoked | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do`. Supports `--mode` and `--tend-pr` pass-through |
+| `/tend-pr` | User-invoked | Tends a PR through review to merge-readiness. Classifies comments, fixes issues, tends CI. Manifest-aware or babysit mode |
 | `/verify` | Internal | Spawns verifiers for all criteria, phased by iteration speed (fast checks first, e2e/deploy-dependent later). Routes to `criteria-checker` agents based on verification method |
 | `/done` | Internal | Prints hierarchical completion summary mirroring manifest structure |
 | `/escalate` | Internal | Structured escalation when blockers need human intervention. Requires evidence: 3+ attempts, failure reasons, hypothesis, resolution options |

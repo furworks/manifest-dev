@@ -1,6 +1,6 @@
 ---
 name: auto
-description: 'End-to-end autonomous execution: /define → auto-approve → /do in a single command. Use when you want to define and execute a task without manual intervention during planning. Triggers: auto, autonomous define and do, end-to-end, just build it.'
+description: 'End-to-end autonomous execution: /define → auto-approve → /do in a single command. Add --tend-pr to continue through PR review lifecycle. Use when you want to define and execute a task without manual intervention during planning. Triggers: auto, autonomous define and do, end-to-end, just build it.'
 user-invocable: true
 ---
 
@@ -12,13 +12,18 @@ Chain `/define` and `/do` into a single autonomous flow. The full /define proces
 
 ## Input
 
-`$ARGUMENTS` = task description (REQUIRED), optionally with `--mode efficient|balanced|thorough`
+`$ARGUMENTS` = task description (REQUIRED), optionally with `--mode efficient|balanced|thorough`, `--tend-pr`, `--medium <platform>`, `--interval <duration>`
 
 If `--interview` is present in arguments: error and halt: "--interview is not supported by /auto. /auto always uses autonomous mode. Use /define for custom interview styles."
 
-If no arguments provided: error and halt: "Usage: /auto <task description> [--mode efficient|balanced|thorough]"
+If no arguments provided: error and halt: "Usage: /auto <task description> [--mode efficient|balanced|thorough] [--tend-pr [--medium github] [--interval 10m]]"
 
-Parse `--mode` from arguments if present. `--mode` will be passed to /do. The remaining text after flag extraction is the task description.
+Parse flags from arguments if present:
+- `--mode` will be passed to /do.
+- `--tend-pr` enables PR lifecycle automation after /do completes.
+- `--medium` and `--interval` are only used when `--tend-pr` is present — passed to /tend-pr.
+
+The remaining text after flag extraction is the task description.
 
 ## Flow
 
@@ -28,6 +33,12 @@ Parse `--mode` from arguments if present. `--mode` will be passed to /do. The re
 
 3. **Execute** — Note the manifest file path from /define's completion output. Invoke the manifest-dev:do skill with: "<manifest-path>" (append `--mode <level>` if --mode was specified in the original /auto arguments).
 
+4. **Tend PR** (only when `--tend-pr` is present) — After /do completes successfully (calls `/done`, not `/escalate`), invoke the manifest-dev:tend-pr skill with: "<manifest-path>" (append `--medium <platform>` and `--interval <duration>` if specified in the original /auto arguments).
+
+   If /do escalates instead of completing: do NOT invoke /tend-pr. Report to user: "/do escalated — skipping /tend-pr. Reason: <escalation reason from /do>. Resolve the blocker and re-invoke /tend-pr manually with the manifest path."
+
 ## Failure Handling
 
 If /define does not produce a manifest path, stop and report the failure. Do not invoke /do without a valid manifest.
+
+If /do escalates and `--tend-pr` was specified, report why /tend-pr was skipped (see step 4 above).

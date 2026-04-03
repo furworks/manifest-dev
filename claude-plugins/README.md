@@ -30,7 +30,7 @@ Manifest-driven workflows separating **what to build** (Deliverables) from **rul
 **Optional skills:**
 - `/understand` - Collaborative deep understanding. Truth-convergent thinking partner mode for any topic. Investigates before claiming, surfaces gaps, resists premature synthesis. Use before `/define` when the problem space is foggy.
 
-**Other skills:** `/auto` - End-to-end autonomous `/define` → auto-approve → `/do` in a single command | `/learn-define-patterns` - Analyzes past /define sessions and writes preference patterns to CLAUDE.md
+**Other skills:** `/auto` - End-to-end autonomous `/define` → auto-approve → `/do` in a single command (add `--tend-pr` for PR lifecycle) | `/tend-pr` - Tends a PR through review to merge-readiness, manifest-aware or babysit mode | `/learn-define-patterns` - Analyzes past /define sessions and writes preference patterns to CLAUDE.md
 
 **Internal skills:** `/verify`, `/done`, `/escalate`, `/understand-done`
 
