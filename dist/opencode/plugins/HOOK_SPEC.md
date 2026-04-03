@@ -12,6 +12,7 @@ Corrected for OpenCode v1.2.15 (March 2026). See `.claude/skills/sync-tools/refe
 | PreToolUse/Skill | `pretool_verify_hook.py` | `tool.execute.before` | Yes — throw Error |
 | SessionStart/compact | `post_compact_hook.py` | `experimental.session.compacting` | No — inject context only |
 | UserPromptSubmit | `prompt_submit_hook.py` | `experimental.chat.system.transform` | No — inject system messages |
+| UserPromptSubmit | `understand_prompt_hook.py` | `experimental.chat.system.transform` | No — inject system messages |
 | PostToolUse | `posttool_log_hook.py` | `tool.execute.after` | No — mutate output |
 
 ## 1. Stop Enforcement (`stop_do_hook.py` → `session.idle`)
@@ -110,15 +111,56 @@ After milestone tool calls during an active /do workflow, append a log reminder 
 - **Subagent bypass:** `tool.execute.after` does NOT fire for tool calls within subagents (issue #5894). Log reminders for tools called by criteria-checker or other subagents will not trigger.
 - **Mutates output:** The reminder is appended to `output.output` as a `<system-reminder>` tag. If the output is not a string, the reminder is skipped.
 
+## 6. Understand Principles Reinforcement (`understand_prompt_hook.py` → `experimental.chat.system.transform`)
+
+### Behavior
+
+During an active /understand session, inject a concise principles reminder before every LLM request. This combats sycophantic drift and premature convergence over long conversations.
+
+### Decision Logic
+
+| Condition | Action |
+|-----------|--------|
+| No /understand active | Do nothing |
+| /understand completed (/understand-done or workflow skill invoked) | Do nothing |
+| Active /understand | Inject principles reminder |
+
+### Limitations
+
+- **Fires on every LLM request,** not just user messages. Broader than Claude Code's UserPromptSubmit but overhead is minimal (short reminder text).
+- **Experimental API.** `experimental.chat.system.transform` may change without notice.
+
+## 7. Understand Compaction Recovery (`post_compact_hook.py` → `experimental.session.compacting`)
+
+### Behavior
+
+When the session compacts during an active /understand session, inject recovery context reminding the agent to re-read the /understand skill and restore its cognitive stance.
+
+### Decision Logic
+
+| Condition | Action |
+|-----------|--------|
+| No /understand active | Do nothing |
+| /understand completed | Do nothing |
+| Active /understand with args | Inject reminder with /understand args |
+| Active /understand without args | Inject fallback reminder |
+
 ## Workflow State Tracking
 
 Claude Code hooks parse the session transcript (JSONL) to detect workflow state. OpenCode stores sessions in SQLite with no JSONL equivalent.
 
-**Replacement approach:** In-memory state tracking within the plugin. The `DoFlowState` object tracks:
+**Replacement approach:** In-memory state tracking within the plugin.
+
+The `DoFlowState` object tracks:
 - `/do` invocation (resets all state)
 - `/verify`, `/done`, `/escalate` calls after `/do`
 - Self-amendment escalations
 - Collaboration mode (`--medium` flag)
+
+The `UnderstandFlowState` object tracks:
+- `/understand` invocation (resets understand state)
+- `/understand-done` calls (explicit completion)
+- Workflow skill invocations that implicitly end /understand (`/define`, `/do`, `/auto`)
 
 **Limitation:** Plugin state is ephemeral — lost on plugin reload or server restart. For long-running sessions that survive server restarts, state would need to be persisted to disk or reconstructed from the SDK client API.
 
