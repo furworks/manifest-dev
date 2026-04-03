@@ -354,6 +354,53 @@ class TestParseUnderstandFlowEdgeCases:
         assert not state.has_understand
         assert not state.is_complete
 
+    def test_ismeta_expansion_does_not_reset(
+        self, temp_transcript, user_understand_command, assistant_text
+    ):
+        """isMeta skill expansion after user /understand should not reset args."""
+        ismeta_expansion = {
+            "type": "user",
+            "isMeta": True,
+            "message": {
+                "content": (
+                    "Base directory for this skill: "
+                    "/home/user/manifest-dev/claude-plugins/manifest-dev/skills/understand\n\n"
+                    "Skill content here..."
+                )
+            },
+        }
+        path = temp_transcript(
+            [user_understand_command, ismeta_expansion, assistant_text]
+        )
+        state = parse_understand_flow(path)
+        assert state.has_understand
+        assert not state.is_complete
+        assert state.understand_args == "the latency problem in our API"
+
+    def test_bare_understand_after_done_resets(
+        self, temp_transcript, user_understand_command, assistant_text, user_understand_done_command
+    ):
+        """Bare /understand (no args) after /understand-done should start a new session."""
+        bare_understand = {
+            "type": "user",
+            "message": {
+                "content": "<command-name>/manifest-dev:understand</command-name>"
+            },
+        }
+        path = temp_transcript(
+            [
+                user_understand_command,
+                assistant_text,
+                user_understand_done_command,
+                bare_understand,
+                assistant_text,
+            ]
+        )
+        state = parse_understand_flow(path)
+        assert state.has_understand
+        assert not state.is_complete
+        assert state.understand_args is None
+
 
 # -- understand_prompt_hook tests --
 

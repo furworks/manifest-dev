@@ -768,15 +768,13 @@ def run_understand_prompt(transcript_path: str) -> dict[str, Any] | None:
     return run_hook("understand_prompt_hook.py", {"transcript_path": transcript_path})
 
 
-def user_understand(args: str = "the latency problem") -> dict[str, Any]:
+def user_understand(args: str | None = "the latency problem") -> dict[str, Any]:
+    content = "<command-name>/manifest-dev:understand</command-name>"
+    if args:
+        content += f"<command-args>{args}</command-args>"
     return {
         "type": "user",
-        "message": {
-            "content": (
-                f"<command-name>/manifest-dev:understand</command-name>"
-                f"<command-args>{args}</command-args>"
-            )
-        },
+        "message": {"content": content},
     }
 
 
@@ -1016,3 +1014,38 @@ class TestUnderstandCompactionWithDo:
         assert "deployment pipeline" in ctx
         # No /do context
         assert "manifest" not in ctx.lower() or "understand" in ctx.lower()
+
+    def test_compaction_with_understand_no_args(self, tmp_path: Path):
+        """/understand without args — compaction uses fallback (no 'about:' line)."""
+        transcript = make_transcript(
+            tmp_path,
+            [
+                user_understand(None),
+                assistant_text("Let me investigate..."),
+            ],
+        )
+
+        recovery = run_post_compact(transcript)
+        assert recovery is not None
+        ctx = recovery["hookSpecificOutput"]["additionalContext"]
+        assert "understand" in ctx.lower()
+        assert "about:" not in ctx
+
+    def test_compaction_understand_then_do_only_do_recovery(self, tmp_path: Path):
+        """/understand then /do — /do implicitly ends understand, only /do restored."""
+        transcript = make_transcript(
+            tmp_path,
+            [
+                user_understand("the auth flow"),
+                assistant_text("Investigating auth..." + " detailed analysis" * 20),
+                user_do("/tmp/manifest.md /tmp/do-log.md"),
+                assistant_text("Working on AC-1.1, implementing auth changes with tests." * 3),
+            ],
+        )
+
+        recovery = run_post_compact(transcript)
+        assert recovery is not None
+        ctx = recovery["hookSpecificOutput"]["additionalContext"]
+        # Only /do should be present — /do starting ended /understand
+        assert "/tmp/manifest.md" in ctx
+        assert "the auth flow" not in ctx
