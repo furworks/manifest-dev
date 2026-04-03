@@ -21,7 +21,7 @@ Two modes:
 **Mode detection:**
 1. If argument is a file path ending in `.md` pointing to an existing manifest → **manifest-aware mode**
 2. If no argument but conversation context contains a manifest path from a prior `/do` or `/define` run → **manifest-aware mode** (use the inferred manifest)
-3. If argument is a PR URL or no manifest is inferrable → **babysit mode**
+3. If argument is a PR URL or no manifest is inferrable → **babysit mode** (identify the PR from the argument URL or from the current branch)
 
 **Flags:**
 - `--medium`: PR platform. Default: `github`. Controls how PR operations (create, read comments, check CI) are performed.
@@ -68,7 +68,7 @@ Compare against base branch first:
 
 ### Routing
 
-**Manifest-aware mode:** For actionable items, determine affected deliverable(s) by examining what files/code the comment targets against the manifest's deliverable structure (include all potentially affected when ambiguous). Amend manifest via `/define --amend <manifest-path> --from-do`, then invoke `/do <manifest-path> <log-path> --scope <affected-deliverable-ids>`. If `/do` escalates, stop the loop and report the blocker with enough context for the user to resume. Push changes and reply to the comment.
+**Manifest-aware mode:** For actionable items, determine affected deliverable(s) by examining what files/code the comment targets against the manifest's deliverable structure (include all potentially affected when ambiguous). Amend manifest via `/define --amend <manifest-path> --from-do`, then invoke `/do <manifest-path> <log-path> --scope <affected-deliverable-ids>` (use the execution log from the original `/do` run — locate it by scanning `/tmp/do-log-*.md` or from the conversation context). If `/do` escalates, stop the loop and report the blocker with enough context for the user to resume. Push changes and reply to the comment.
 
 **Babysit mode:** Fix directly, push, reply.
 
