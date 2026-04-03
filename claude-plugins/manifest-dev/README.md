@@ -103,7 +103,6 @@ Criteria verify blocks support an optional `phase:` field (numeric, default 1). 
 
 | Skill | Description |
 |-------|-------------|
-| `/understand` | Collaborative deep understanding of any topic. Truth-convergent thinking partner mode — investigates before claiming, surfaces gaps, resists premature synthesis. Use when understanding IS the goal. End with `/understand-done`. |
 | `/define` | Interviews you, builds an executable manifest with verification criteria. `--interview minimal\|autonomous\|thorough\|collaborative` controls interview style (default: thorough). |
 | `/do` | Works through the manifest autonomously, verifies everything passes |
 | `/auto` | End-to-end autonomous: `/define --interview autonomous` → auto-approve → `/do` in one command. Supports `--mode` pass-through. |
@@ -111,6 +110,8 @@ Criteria verify blocks support an optional `phase:` field (numeric, default 1). 
 | `/done` | Prints what got done and what was verified |
 | `/escalate` | When something's blocked, surfaces the issue for you to decide |
 | `/learn-define-patterns` | Analyzes recent /define sessions, extracts user preference patterns, writes them to CLAUDE.md |
+
+**Optional:** `/understand` — collaborative deep understanding of any topic. Truth-convergent thinking partner that investigates before claiming, surfaces gaps, and resists premature synthesis. Use when understanding IS the goal, or before `/define` when the problem space is foggy. End with `/understand-done`.
 
 ### Execution Modes
 
