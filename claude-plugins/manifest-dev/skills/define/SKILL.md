@@ -468,26 +468,26 @@ Do not paraphrase, filter, or editorialize the verifier's questions — present 
 
 ## Summary for Approval
 
-Before asking for approval, explain the plan the way you'd explain it to a senior engineer over Slack. They need to know what you're building, what could go wrong, and how you'll know it's right.
+Digest the manifest into a scannable summary the user can approve at a glance. The summary answers "do you understand and agree with this plan?" — not "review every acceptance criterion." The manifest has the details; the summary is the human-readable version.
 
-**Voice**: Plain language. No manifest codes (D1, AC-1.1, INV-G3), no YAML blocks, no structured-document vocabulary. Write prose — the manifest is the structured document, the summary is the human conversation about it.
+**Voice**: Plain language. No manifest codes (D1, AC-1.1, INV-G3), no YAML blocks, no structured-document vocabulary.
 
-**Structure the explanation around three things**:
+**Four blocks**:
 
-1. **What I'll do** — Walk through each piece of work in execution order. For each, state what it is and how you'll verify it's correct (parenthetical or inline — verification is present but not dominant). Example: "I'll create a reference doc for auto-mode behavior, covering what changes per phase. I'll verify it doesn't contradict SKILL.md (criteria-checker reads both files for conflicts)."
+- **The plan** — One-line headline of what's being done and why.
+- **What I'll build** — Bullet list of work items. Group related items naturally; don't enumerate every sub-task.
+- **Guardrails** — Bullet list of invariants as plain rules. Example: "Existing behavior untouched when --auto is absent. Explicit flags always override --auto defaults. Agent halts on truly unresolvable issues — not silent-failure mode."
+- **How I'll verify** — Brief description of verification approach. Example: "criteria-checker cross-references docs for contradictions, prompt-reviewer checks prompt quality."
 
-2. **Rules that always hold** — State the invariants as plain rules, not coded entries. Example: "Explicit flags always override --auto defaults. Every owner-replacing decision gets logged with reasoning. Auto mode halts on truly unresolvable issues — it's not silent-failure mode."
+Include an ASCII architecture diagram when the task has multiple components with inter-component flow. Skip for single-deliverable tasks.
 
-3. **Architecture sketch** — Include an ASCII diagram when the task has multiple components with inter-component flow or dependencies. Skip for single-deliverable tasks.
-
-**The test**: If the summary reads like a compressed manifest, rewrite it. If it reads like something you'd actually say to a colleague, it's right.
+**The test**: If the summary reads like a compressed manifest, rewrite it. If it reads like something you'd say to a colleague, it's right.
 
 **Anti-patterns**:
 - Manifest cosplay — codes, YAML, structured labels dressed up as prose
+- Enumerating every acceptance criterion instead of digesting
 - Hiding detail behind counts ("8 automated verifications")
 - Abstracting instead of showing ("3 deliverables covering auth")
-- Omitting "obvious" things that could still be wrong
-- Listing verification methods without the thing they verify
 
 **After presenting the summary**, wait for the user's response. User responses mean:
 - **Approval** (e.g., "looks good", "approved") → proceed to Complete
