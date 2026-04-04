@@ -71,7 +71,7 @@ After installation, invoke workflows via slash commands:
 /define-manifest-dev     Plan and scope a task
 /do-manifest-dev         Execute a manifest
 /auto-manifest-dev       End-to-end autonomous execution
-/understand-manifest-dev Deep collaborative understanding
+/figure-out-manifest-dev Deep collaborative understanding
 /tend-pr-manifest-dev    PR lifecycle automation
 ```
 
@@ -87,7 +87,7 @@ After installation, invoke workflows via slash commands:
 | Pre-verify refresh | Full | Full | tool.execute.before (main agent only) |
 | Log reminders | Full | Approximate | Persistent system context vs event-driven |
 | Amendment check | Full | Approximate | Persistent system context vs per-prompt |
-| /understand reinforcement | Full | Approximate | Persistent system context vs per-prompt |
+| /figure-out reinforcement | Full | Approximate | Persistent system context vs per-prompt |
 | Subagent hooks | Full | Missing | tool.execute.before/after don't fire in subagents |
 
 ## Known Limitations
@@ -124,8 +124,8 @@ dist/opencode/
 │   ├── do.md
 │   ├── learn-define-patterns.md
 │   ├── tend-pr.md
-│   ├── understand-done.md
-│   └── understand.md
+│   ├── figure-out-done.md
+│   └── figure-out.md
 ├── skills/                          # 11 skills (with subdirectories)
 │   ├── auto/
 │   ├── define/
@@ -135,8 +135,8 @@ dist/opencode/
 │   ├── learn-define-patterns/
 │   ├── tend-pr/
 │   ├── tend-pr-tick/
-│   ├── understand/
-│   ├── understand-done/
+│   ├── figure-out/
+│   ├── figure-out-done/
 │   └── verify/
 ├── plugins/
 │   ├── index.ts                     # Hook plugin

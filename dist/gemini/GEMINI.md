@@ -13,7 +13,7 @@ manifest-dev provides structured workflows for planning, executing, and verifyin
 
 ### Supporting Skills
 
-- **`/understand`** — Collaborative deep understanding before acting. Truth-convergence over helpfulness
+- **`/figure-out`** — Collaborative deep understanding before acting. Truth-convergence over helpfulness
 - **`/escalate`** — Structured escalation during `/do`: blocking issues, scope changes, pauses
 - **`/done`** — Completion marker with hierarchical execution summary
 - **`/tend-pr`** — PR lifecycle automation: classify comments, route fixes, tend CI, sync description
@@ -48,7 +48,7 @@ Event-driven hooks enforce workflow discipline:
 - **pretool-verify** — Reminds model to load manifest before `/verify`
 - **posttool-log** — Reminds model to update execution log after milestones
 - **prompt-submit-amendment** — Checks for manifest amendments on user input
-- **understand-prompt** — Reinforces `/understand` principles against sycophantic drift
+- **figure-out-prompt** — Reinforces `/figure-out` principles against sycophantic drift
 - **post-compact** — Restores workflow context after session compaction
 
 ## Configuration
