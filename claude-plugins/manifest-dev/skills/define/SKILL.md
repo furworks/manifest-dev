@@ -103,6 +103,14 @@ Five goals that must be met before convergence. Each defines WHAT must be true a
 
 **In amendment context**, coverage goals apply scoped to the change — not the full manifest. Existing manifest content satisfies goals for unchanged areas.
 
+| Goal | Convergence test |
+|------|-----------------|
+| Domain Understanding | Can you generate project-specific (not generic) failure scenarios? |
+| Reference Class | Can you name the task type and its common failure modes? |
+| Failure Modes | All scenarios have dispositions (encoded, scoped out, or mitigated)? |
+| Positive Dependencies | Load-bearing assumptions surfaced and each has a disposition? |
+| Process Self-Audit | Scope-creep risks identified and resolved? (skip if straightforward) |
+
 ### Domain Understanding
 
 **What must be true:** You understand the affected area well enough to generate project-specific failure scenarios — not generic ones. You know existing patterns, structure, constraints, and prior decisions relevant to the task.
@@ -245,7 +253,7 @@ Low-impact unknowns become Known Assumptions. User can signal "enough" to overri
 
 **Insights become criteria** — Every discovery must be encoded as INV-G*, AC-*, or explicitly scoped out. Unencoded insights are aspirational, not enforced.
 
-**Automate verification** — When a criterion seems to require manual verification, push back: suggest how it could be automated, or ask the user for ideas. Manual only as last resort or when user explicitly requests it. When using general-purpose subagent, default to `inherit`.
+**Automate verification** — When a criterion seems to require manual verification, push back: suggest how it could be automated, or ask the user for ideas. Manual only as last resort or when user explicitly requests it.
 
 **Verification phases** — Each criterion's verify block has an optional `phase:` field (numeric, default 1). The principle: **group by iteration speed — faster feedback loops run first.** Fast checks (agent reviewers, bash) stay in default phase. Slow checks (e2e tests, deploy-dependent) go in later phases. Manual verification goes last. Omit `phase:` for phase 1. Non-contiguous phases are valid.
 
@@ -383,7 +391,7 @@ Invoke the manifest-dev:manifest-verifier agent with: "Manifest: /tmp/manifest-{
 
 The verifier returns **CONTINUE** or **COMPLETE**:
 
-- **CONTINUE**: Present the verifier's questions to the user, log answers to the discovery file, update the manifest, then invoke the verifier again.
+- **CONTINUE**: In autonomous mode, auto-resolve the verifier's concerns, update the manifest, and re-invoke the verifier. In other modes, present the verifier's questions to the user, log answers to the discovery file, update the manifest, then invoke the verifier again.
 - **COMPLETE**: Proceed to summary for approval.
 
 Repeat until COMPLETE or user signals "enough".
