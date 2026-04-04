@@ -55,10 +55,10 @@
           },
           {
             "type": "command",
-            "command": "python3 ${extensionPath}/hooks/understand_prompt_hook.py",
-            "name": "understand-prompt",
+            "command": "python3 ${extensionPath}/hooks/figure_out_prompt_hook.py",
+            "name": "figure-out-prompt",
             "timeout": 10000,
-            "description": "Reinforces /understand principles during active sessions"
+            "description": "Reinforces /figure-out principles during active sessions"
           }
         ]
       }

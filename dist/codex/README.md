@@ -23,8 +23,8 @@ Verification-first manifest workflows for Codex CLI. Define specifications, exec
 | learn-define-patterns | Extract user preference patterns from /define sessions |
 | tend-pr | PR tending workflow |
 | tend-pr-tick | PR tending tick (periodic check) |
-| understand | Codebase understanding phase |
-| understand-done | Understanding completion checkpoint |
+| figure-out | Collaborative deep understanding |
+| figure-out-done | End an active /figure-out session |
 | verify | Parallel verification of all criteria |
 
 ### Agents
@@ -110,8 +110,8 @@ dist/codex/
 │   ├── learn-define-patterns/
 │   ├── tend-pr/
 │   ├── tend-pr-tick/
-│   ├── understand/
-│   ├── understand-done/
+│   ├── figure-out/
+│   ├── figure-out-done/
 │   └── verify/
 ├── agents/                          # 14 TOML config stubs
 │   ├── change-intent-reviewer.toml

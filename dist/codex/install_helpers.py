@@ -63,8 +63,8 @@ def patch_cross_references(file_path: str) -> None:
         "learn-define-patterns",
         "tend-pr",
         "tend-pr-tick",
-        "understand",
-        "understand-done",
+        "figure-out",
+        "figure-out-done",
         "verify",
     ]
 
