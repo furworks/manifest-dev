@@ -28,7 +28,7 @@ Parse `--interview` from arguments (can appear anywhere). Valid values: `minimal
 
 Parse `--medium` from arguments (can appear anywhere). Currently only `local` is supported (default). Other mediums may be added in the future. If a non-local value is provided, error and halt: "Medium '<value>' not yet supported. Currently supported: local". See Medium Routing section below.
 
-Parse `--amend <manifest-path>` from arguments (can appear anywhere). `--from-do` flag (optional, used with `--amend`) signals the autonomous fast path.
+Parse `--amend <manifest-path>` from arguments (can appear anywhere). `--from-do` flag (optional, used with `--amend`) — see `references/AMENDMENT_MODE.md` for behavior.
 
 If no arguments provided, ask: "What would you like to build or change?"
 
@@ -52,13 +52,13 @@ Domain-specific guidance available in:
 
 **Exception**: PROMPTING tasks do NOT compose with CODING.md unless the task also changes executable code. PROMPTING.md has its own quality gates (prompt-reviewer, clarity, structure, etc.). When a task changes both prompts AND code, apply both PROMPTING.md and CODING.md gates, scoping each to the relevant files.
 
-**Task file structures are presumed relevant.** Task files contain quality gates, reviewer agents, risks, scenarios, and trade-offs. These are angles you won't think to check on your own — they exist precisely because they're easy to miss. Quality gates are auto-included; Resolvable structures (risks, scenarios, trade-offs) must be **resolved**: either presented to the user for selection, or explicitly skipped with logged reasoning (e.g., "CODING.md concurrency risk skipped: single-threaded CLI tool"). Silent drops are the failure mode — not over-asking.
+**Task file structures are presumed relevant.** Task files contain quality gates, reviewer agents, risks, scenarios, and trade-offs. These are angles you won't think to check on your own — they exist precisely because they're easy to miss. Quality gates are auto-included; Resolvable structures (risks, scenarios, trade-offs) must be **resolved**: either resolved per the interview mode's decision authority, or explicitly skipped with logged reasoning (e.g., "CODING.md concurrency risk skipped: single-threaded CLI tool"). Silent drops are the failure mode — not over-asking.
 
 **Task file content types.** Five categories, each handled differently:
 - **Quality gates** (structured items under `## Quality Gates` — tables, bullet lists, or any format with thresholds/criteria) — auto-include as INV-G*, omit clearly inapplicable with logged reasoning. User reviews manifest.
 - **Resolvable** (tables/checklists: risks, scenarios, trade-offs) — resolve via interview, encode as INV/AC or explicitly skip.
 - **Compressed awareness** (bold-labeled one-line domain summaries, not tables/checklists) — informs your probing; no resolution needed.
-- **Process guidance hints** (counter-instinctive practices) — practices LLMs would get wrong without explicit guidance. Two modes: **candidates** (labeled as PG candidates, presented as batch after scenarios, user selects) and **defaults** (`## Defaults` section, included in manifest without probing, user reviews manifest and removes if not applicable). Both become PG-* in the manifest.
+- **Process guidance hints** (counter-instinctive practices) — practices LLMs would get wrong without explicit guidance. Two modes: **candidates** (labeled as PG candidates, presented as a batch after scenarios, resolved per interview mode) and **defaults** (`## Defaults` section, included in manifest without probing, user reviews manifest and removes if not applicable). Both become PG-* in the manifest.
 - **Reference files** (`references/*.md`) — detailed lookup data for `/verify` agents. Do not load during the interview.
 
 **Encode quality gates and Defaults immediately after reading task files — before the interview.** Log each as `- [x]` RESOLVED.
@@ -205,19 +205,19 @@ Follow the loaded interview mode's rules for question format, flow structure, ch
 
 **Decisions lock through structured options** — Questions that lock manifest content present 2-4 concrete options, one marked "(Recommended)". The messaging file defines the tool; the interview mode defines when and how.
 
-**Resolve all Resolvable task file structures** — After reading task files, extract every Resolvable table and checklist (risk lists, scenario prompts, trade-offs) and log each. Items already resolved in conversation context are logged as `- [x]` RESOLVED (from context) with source — not re-probed. Remaining items are logged as `- [ ]` PENDING. Resolve each by presenting to user with structured options, or skipping with logged justification. Don't defer to synthesis — these are structural decisions that compound when missed.
+**Resolve all Resolvable task file structures** — After reading task files, extract every Resolvable table and checklist (risk lists, scenario prompts, trade-offs) and log each. Items already resolved in conversation context are logged as `- [x]` RESOLVED (from context) with source — not re-probed. Remaining items are logged as `- [ ]` PENDING. Resolve each per the interview mode's decision authority, or skip with logged justification. Don't defer to synthesis — these are structural decisions that compound when missed.
 
 **Discoverable unknowns — search first** — Don't ask the user about facts you could discover through exploration. Only ask when: multiple plausible candidates exist, searches yield nothing, or the ambiguity is about intent not fact.
 
 **Preference unknowns — ask early** — Trade-offs, priorities, scope decisions cannot be discovered. Ask directly with concrete options and a recommended default.
 
-**Confirm before encoding** — Exploration-discovered constraints require user confirmation before becoming invariants. This does not apply to task-file quality gates and Defaults (auto-included per Domain Guidance rules).
+**Confirm before encoding** — Exploration-discovered constraints require confirmation per the interview mode before becoming invariants. This does not apply to task-file quality gates and Defaults (auto-included per Domain Guidance rules).
 
 **Encode explicit constraints** — User-stated preferences, requirements, and constraints must map to an INV or AC. Don't let them get lost in the interview log.
 
 **Probe for approach constraints** — Beyond WHAT to build, ask HOW it should be done. Tools to use or avoid? Methods required or forbidden? Automation vs manual? These become process invariants.
 
-**Probe input artifacts** — When input references external documents, ask: "Should [document] be a verification source?" If yes, encode as Global Invariant.
+**Probe input artifacts** — When input references external documents, determine whether they should be verification sources. If yes, encode as Global Invariant.
 
 **Discovery log** — Write to `/tmp/define-discovery-{timestamp}.md` immediately after each discovery. The log is the source of truth — another agent reading only the log could resume the interview.
 
@@ -394,7 +394,7 @@ The verifier returns **CONTINUE** or **COMPLETE**:
 
 Repeat until COMPLETE or user signals "enough".
 
-Do not paraphrase, filter, or editorialize the verifier's questions — present them directly. Do not add context, justification, or steering to the invocation. The verifier sees what you may have missed; let it assess independently.
+Do not add context, justification, or steering to the verifier invocation. The verifier sees what you may have missed; let it assess independently. When relaying verifier output, do not paraphrase, filter, or editorialize.
 
 ## Summary for Approval
 
