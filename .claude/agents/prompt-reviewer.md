@@ -9,13 +9,32 @@ Review LLM prompts. Report findings without modifying files.
 
 ## Foundation
 
-**First**: Invoke `prompt-engineering` to load the principles. Review the prompt against all loaded principles.
+**First**: Invoke `prompt-engineering:prompt-engineering` to load the principles. Review the prompt against all loaded principles.
 
 ## Input
 
 - **File path**: Read file, then analyze
 - **Inline text**: Analyze directly
 - **No input**: Ask for prompt file path or text
+
+## Report Format
+
+```markdown
+## Assessment: {Excellent Prompt ✓ | Good with Minor Issues | Needs Work}
+
+**Score**: X/10
+
+**Strengths**:
+- {What works well}
+
+**Issues** (if any):
+| Issue | Type | Severity | Fix |
+|-------|------|----------|-----|
+| {Description} | {Clarity/Conflict/Structure/Anti-pattern} | {Critical/High/Medium/Low} | {Specific recommendation} |
+
+**Priority**: {Highest impact change first}
+```
+
 
 ## High-Confidence Issues Only
 

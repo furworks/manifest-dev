@@ -73,7 +73,7 @@ Copy original content to working_path using Write tool (verification needs a fil
 **Step 2.2: Run verifier first**
 
 Launch prompt-token-efficiency-verifier agent via Task tool BEFORE any optimization:
-- subagent_type: "prompt-token-efficiency-verifier"
+- subagent_type: "prompt-engineering:prompt-token-efficiency-verifier"
 - prompt: "Verify prompt token efficiency. File: {working_path}. Check for redundancy, verbose phrasing, filler words, structural inefficiencies, and compression opportunities. Report VERIFIED if already efficient, or INEFFICIENCIES_FOUND with specific details."
 
 **Step 2.3: Handle verifier response**
@@ -104,7 +104,7 @@ For each iteration from 1 to 5:
    - Only fix inefficiencies the verifier identified - do not add your own improvements
 
 2. **Re-verify**: Launch prompt-token-efficiency-verifier agent via Task tool:
-   - subagent_type: "prompt-token-efficiency-verifier"
+   - subagent_type: "prompt-engineering:prompt-token-efficiency-verifier"
    - prompt: "Verify compression is lossless. Original file: {original_path}. Compressed file: {working_path}. Compare semantic content - check for missing facts, altered meaning, lost emphasis, removed nuance. Report VERIFIED if lossless, or ISSUES_FOUND with specific gaps."
 
 3. **Handle response**:
