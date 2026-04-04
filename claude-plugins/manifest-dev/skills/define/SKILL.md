@@ -101,18 +101,6 @@ Scope deliverables and verification to repo context. Cross-repo invariants get e
 
 The interview ensures five coverage goals are met: Domain Understanding, Reference Class Awareness, Failure Mode Coverage, Positive Dependency Coverage, and Process Self-Audit (skip for simple tasks). These are states of sufficient understanding, not steps to execute. Existing context — from conversation history, arguments, prior research, task files, or any other source — counts toward coverage. The interview probes gaps, not territory already covered. The active interview mode defines how gaps are probed and decisions are made. See the interview mode file for specifics.
 
-## Complexity Triage
-
-After understanding the task, calibrate interview depth:
-
-| Complexity | Indicators | Behavior |
-|------------|-----------|----------|
-| **Simple** | Single file, obvious approach, low risk | Domain understanding + quick failure scan. Other goals likely satisfied by existing context. |
-| **Standard** | Multi-file, clear domain, moderate risk | All coverage goals addressed. Failure modes and positive dependencies get explicit attention. |
-| **Complex** | Multi-deliverable, unfamiliar domain, high risk, multi-repo | Standard + Approach section included + Process self-audit mandatory. |
-
-When uncertain, default to Standard. User can signal "enough" to compress at any point.
-
 ## Interview Style
 
 Resolve interview style from `--interview` argument → default `thorough`.

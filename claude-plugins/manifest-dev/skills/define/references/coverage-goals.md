@@ -79,4 +79,4 @@ Patterns to watch:
 
 For each pattern, resolve its disposition — add as Process Guidance, encode as verifiable Invariant, accept as low risk, or note it's already covered. The active interview mode defines how patterns are presented and resolved.
 
-**Convergence test:** Complex tasks (per SKILL.md Complexity Triage) have process risks identified and resolved. Simple tasks can skip this goal entirely.
+**Convergence test:** Tasks with scope-creep risk have process risks identified and resolved. Skip when the task is straightforward enough that process sabotage is unlikely.
