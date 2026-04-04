@@ -32,6 +32,8 @@ Read before building plugins:
 - `claude-plugins/` - Individual plugins, each with `.claude-plugin/plugin.json`
 - `pyproject.toml` - Python tooling config (ruff, black, mypy)
 
+**Symlink note**: `.claude/` skills/agents are hardlinked to their `claude-plugins/manifest-dev/` counterparts for local development on environments where plugins aren't supported yet. When modifying plugin components, **always edit the `claude-plugins/` version** — changes propagate to `.claude/` via the hardlink.
+
 ### Plugin Components
 
 Each plugin can contain:
