@@ -6,6 +6,8 @@
 
 Read the manifest at the given path. Existing decisions (ACs, INVs, PGs, Approach, Trade-offs) are preserved unless directly contradicted by the change request. Make targeted changes — only items affected by the amendment are updated. Add new items, modify contradicted items, or remove items that no longer apply.
 
+**Coverage goals apply scoped to the change** — not the full manifest. Existing manifest content satisfies goals for unchanged areas.
+
 ## What Triggers Amendment
 
 The conversation context contains the reason — a user's message, a PR review comment, or an explicit change request. Read this context and determine what to change.

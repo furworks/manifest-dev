@@ -101,8 +101,6 @@ Scope deliverables and verification to repo context. Cross-repo invariants get e
 
 Five goals that must be met before convergence. Each defines WHAT must be true and a convergence test. Items resolved from any source (conversation, prior research, task files, exploration) count equally. The interview probes gaps, not territory already covered. The active interview mode defines how gaps are probed and decisions are made.
 
-**In amendment context**, coverage goals apply scoped to the change — not the full manifest. Existing manifest content satisfies goals for unchanged areas.
-
 | Goal | Convergence test |
 |------|-----------------|
 | Domain Understanding | Can you generate project-specific (not generic) failure scenarios? |
