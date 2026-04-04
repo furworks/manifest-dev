@@ -75,7 +75,7 @@ When `--amend <manifest-path>` is present: read `references/AMENDMENT_MODE.md` f
 
 ## Multi-Repo Scope
 
-When task spans multiple repositories, capture during intent:
+When task spans multiple repositories, capture during intent (starting points):
 
 - **Which repos** and their roles
 - **Cross-repo constraints** (dependencies, coordination requirements)
@@ -115,7 +115,7 @@ Five goals that must be met before convergence. Each defines WHAT must be true a
 
 Understanding comes from any source — conversation context, prior research, code exploration, documentation, user-provided arguments, task files. Don't re-discover what's already known. When understanding is insufficient, fill gaps through whatever means fits the domain — explore code, search docs, ask the user what exploration can't reveal. Scope to what's relevant, not the entire domain.
 
-**What to assess:**
+**What to assess** (starting points — adapt to the task):
 - **Existing patterns** — how similar things are currently done
 - **Structure** — components, dependencies, boundaries in the affected area
 - **Constraints** — implicit conventions, assumed invariants, existing contracts
@@ -135,7 +135,7 @@ Ground the reference class in domain understanding — "refactor of a tightly-co
 
 **What must be true:** Failure modes have been anticipated with concrete scenarios, and each has a disposition — encoded as criterion, explicitly scoped out, or mitigated by approach. No dangling scenarios. Mental model alignment checked — your understanding of "done" matches the user's expectation.
 
-**Failure dimensions** — lenses for generating scenarios when gaps exist:
+**Failure dimensions** — starting lenses for generating scenarios when gaps exist. Use these and any others relevant to the task:
 
 | Dimension | What to imagine |
 |-----------|-----------------|
@@ -163,7 +163,7 @@ The active interview mode defines how scenarios are presented and dispositions r
 
 Where failure mode coverage asks "what broke?", positive dependencies ask "what held?" This reveals assumptions you haven't examined.
 
-**What to assess:**
+**What to assess** (starting points — the task may surface others):
 - What existing infrastructure/tooling are you relying on?
 - What user behavior are you assuming?
 - What needs to stay stable that could change?
@@ -176,7 +176,7 @@ The active interview mode defines how dependencies are presented and resolved.
 
 **What must be true:** Process self-sabotage patterns — decisions that look reasonable individually but compound into failure — are identified and resolved. **Skip for simple tasks.**
 
-Patterns to watch:
+Common patterns (not exhaustive — the task may have its own):
 - Small scope additions ("just one more thing")
 - Edge cases deferred ("we'll handle that later")
 - "Temporary" solutions that become permanent
@@ -402,7 +402,7 @@ Digest the manifest into a scannable summary the user can approve at a glance. T
 
 **Voice**: Plain language. No manifest codes (D1, AC-1.1, INV-G3), no YAML blocks, no structured-document vocabulary.
 
-**Four blocks**:
+**Default structure** (adapt if the task calls for something different):
 
 - **The plan** — One-line headline of what's being done and why.
 - **What I'll build** — Bullet list of work items. Group related items naturally; don't enumerate every sub-task.
