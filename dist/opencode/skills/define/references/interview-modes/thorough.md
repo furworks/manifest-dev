@@ -19,36 +19,32 @@ The concrete scenario helps users recognize whether it applies. The options redu
 
 **Mental model alignment**: Before finalizing deliverables, present your understanding and check for mismatch: "Here's what 'done' looks like: [concrete description]. Does this match your expectation?" → Options: "Yes, that's right (Recommended)", "Mostly, but also need [X]", "No, I expected [different thing]". Mismatches are latent criteria — expectations they didn't state.
 
-**Backcasting presentation**: For each positive dependency, present to user with disposition options: "This assumes [X] remains stable. How should we handle?" → Options: "Safe assumption - log as Known Assumption (Recommended)", "Verify it holds before proceeding", "Encode as invariant", "Actually a risk - add to pre-mortem".
+**Positive dependency presentation**: For each positive dependency, present to user with disposition options: "This assumes [X] remains stable. How should we handle?" → Options: "Safe assumption - log as Known Assumption (Recommended)", "Verify it holds before proceeding", "Encode as invariant", "Actually a risk - add to failure modes".
 
-**Adversarial self-review presentation**: For each pattern identified, present to user: "This task is susceptible to [pattern]. Should we guard against it?" → Options: "Yes - add as Process Guidance (Recommended)", "Yes - add as verifiable Invariant", "Low risk for this task", "Already covered by [existing constraint]".
+**Process self-audit presentation**: For each pattern identified, present to user: "This task is susceptible to [pattern]. Should we guard against it?" → Options: "Yes - add as Process Guidance (Recommended)", "Yes - add as verifiable Invariant", "Low risk for this task", "Already covered by [existing constraint]".
 
 ## Interview Flow
 
-Protocols are sequential — each feeds the next:
+Coverage goals build on each other — domain understanding makes reference class identification specific, reference class awareness grounds failure imagination, failure coverage reveals positive dependencies to examine. But the flow is adaptive, not sequential. Assess what's already covered from context, then probe gaps in whatever order serves the task.
 
-Domain Grounding → Outside View → Pre-Mortem → Backcasting → Adversarial Self-Review (skip for simple tasks).
-
-Domain Grounding reveals context that makes Outside View specific. Outside View establishes base rates that make Pre-Mortem grounded. Pre-Mortem surfaces failures that Backcasting complements with positive dependencies.
+When existing context already provides domain understanding (e.g., from prior conversation, research, or user-provided arguments), begin probing from wherever the gaps are. Don't re-walk covered ground.
 
 ## Checkpoint Behavior
 
-Before transitioning to a new topic area or after resolving a cluster of related questions, synthesize your current understanding back to the user: "Here's what I've established so far: [summary]. Correct? Anything I'm missing?" This catches interpretation drift early and invites contribution — a misunderstanding in round 2 compounds through round 8 if never checked.
+After resolving a cluster of related questions, synthesize your current understanding back to the user before moving on: "Here's what I've established so far: [summary]. Correct? Anything I'm missing?" This catches interpretation drift early and invites contribution — a misunderstanding in round 2 compounds through round 8 if never checked.
 
 ## Finding Sharing
 
 Exploration results are presented as conclusions with options. Share what you found, then offer choices for how to encode it. "I found X — should this be a hard constraint?" with concrete options.
 
-## Log Entry Format
+## Style Shifting
 
-When logging pending scenarios, capture the specific question options that will be presented:
+If the user says "enough" or "just build it", shift to autonomous mode. Log the shift.
 
-```
-- [ ] Ask user: External API rate limits → Options: "Real risk - add to invariants (Recommended)", "No external APIs", "APIs exist, limits known and safe", "Out of scope"
-```
+## Verifier CONTINUE
 
-When presenting a logged scenario to the user: "I'm imagining this failing because [concrete scenario]. How does this apply?" → Options as above.
+Present the verifier's questions to the user, log answers to the discovery file.
 
 ## Convergence
 
-Err on more probing. Apply SKILL.md's convergence checklist strictly. Only then, if very confident further questions would yield nothing new, move to synthesis.
+Apply SKILL.md's convergence requirements strictly. Converge only when confident further probing would yield nothing new, or user signals done.

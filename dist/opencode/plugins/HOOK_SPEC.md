@@ -54,8 +54,18 @@ The plugin maintains in-memory state per session:
 - `hasEscalate`: Set when /escalate is invoked — marks escalation exit
 - `hasSelfAmendment`: Set when /escalate with "self-amendment" args — must continue to /define --amend
 - `doArgs`: Raw arguments from /do invocation
+- `hasCollabMode`: Set when /do uses `--medium` with a value other than `local` — indicates non-local collaboration where escalations are posted to an external medium
+- `consecutiveShortOutputs`: Counter for loop detection — tracks consecutive short model outputs (not currently incrementable via OpenCode events, reserved for future use)
 
 Each new /do invocation resets the state.
+
+### Stop Enforcement Decision Matrix
+The system transform follows the same decision matrix as the Claude Code stop hook:
+1. `/done` called → no enforcement (verified complete)
+2. `/escalate` (non-self-amendment) → no enforcement (properly escalated)
+3. Self-amendment `/escalate` → enforce: must `/define --amend` before stopping
+4. `/verify` + collab mode → advisory: escalation posted to medium, user will re-invoke
+5. No exit condition → enforce: must `/verify` or `/escalate`
 
 ### /understand Flow State
 - `active`: Set when /understand is invoked

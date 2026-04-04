@@ -33,6 +33,8 @@ interface DoFlowState {
   hasEscalate: boolean
   hasSelfAmendment: boolean
   doArgs: string | null
+  hasCollabMode: boolean // --medium not local (non-local collaboration)
+  consecutiveShortOutputs: number // loop detection counter
 }
 
 interface UnderstandFlowState {
@@ -54,6 +56,8 @@ function getDoState(sessionID: string): DoFlowState {
       hasEscalate: false,
       hasSelfAmendment: false,
       doArgs: null,
+      hasCollabMode: false,
+      consecutiveShortOutputs: 0,
     })
   }
   return doStates.get(sessionID)!
@@ -110,6 +114,11 @@ export const ManifestDevPlugin: Plugin = async (_ctx) => {
           state.hasEscalate = false
           state.hasSelfAmendment = false
           state.doArgs = skillArgs ?? null
+          state.consecutiveShortOutputs = 0
+          // Detect --medium flag for non-local collaboration mode
+          state.hasCollabMode = skillArgs
+            ? /--medium\s+(?!local(?:\s|$))\S+/.test(skillArgs)
+            : false
         }
 
         // Track /verify invocation
@@ -230,36 +239,59 @@ export const ManifestDevPlugin: Plugin = async (_ctx) => {
       // --- /do workflow: stop enforcement + amendment check + log reminder ---
       if (doState.active && !doState.hasDone) {
         // Stop enforcement guidance (cannot actually block — session.idle is fire-and-forget)
-        if (!doState.hasEscalate || doState.hasSelfAmendment) {
+        // Decision matrix from stop_do_hook.py:
+        // - /done: allow (verified complete) — handled by hasDone check above
+        // - /escalate (non-self-amendment): allow (properly escalated)
+        // - /escalate (self-amendment): block (must /define --amend)
+        // - /verify + collab mode: allow (escalation posted to medium)
+        // - No exit: block (must verify or escalate)
+
+        if (doState.hasSelfAmendment) {
+          // Self-Amendment escalation — must continue to /define --amend
+          output.system.push(
+            `<system-reminder>Stop blocked: Self-Amendment escalation requires ` +
+            `/define --amend before stopping. Invoke ` +
+            `/define --amend <manifest-path> to update the manifest, ` +
+            `then resume /do.</system-reminder>`
+          )
+        } else if (doState.hasEscalate) {
+          // Non-self-amendment escalation — properly escalated, allow stop
+          // No enforcement message needed
+        } else if (doState.hasCollabMode && doState.hasVerify) {
+          // Non-local medium: /verify posted escalation to the medium
+          output.system.push(
+            `<system-reminder>Escalation posted to the communication medium. ` +
+            `The user will re-invoke /do with the execution log path ` +
+            `when the external blocker clears.</system-reminder>`
+          )
+        } else {
+          // No exit condition met — enforce workflow
           output.system.push(
             `<system-reminder>WORKFLOW ENFORCEMENT: /do is active. ` +
             `You MUST NOT stop without calling /verify → /done or /escalate. ` +
             `Options: (1) Run /verify to check criteria — if all pass, /verify calls /done. ` +
             `(2) Call /escalate — for blocking issues OR user-requested pauses. ` +
-            `Short outputs will violate the workflow contract.</system-reminder>`
-          )
-        }
-
-        // Self-amendment continuation
-        if (doState.hasSelfAmendment) {
-          output.system.push(
-            `<system-reminder>Self-Amendment in progress. ` +
-            `You must invoke /define --amend before stopping.</system-reminder>`
+            `Short outputs will be blocked. Choose one.</system-reminder>`
           )
         }
 
         // Amendment check on user input (prompt_submit_hook equivalent)
         output.system.push(
           `<system-reminder>AMENDMENT CHECK: You are in an active /do workflow. ` +
-          `If the user's latest input contradicts, extends, or amends the manifest, ` +
-          `call /escalate with Self-Amendment type, then invoke /define --amend. ` +
+          `If the user's latest input contradicts, extends, or amends the manifest: ` +
+          `(1) Contradicts an existing AC, INV, or PG in the manifest, ` +
+          `(2) Extends the manifest with new requirements not currently covered, or ` +
+          `(3) Amends the scope or approach in a way that changes what "done" means — ` +
+          `call /escalate with Self-Amendment type, then invoke /define --amend <manifest-path>. ` +
+          `After /define returns, resume /do with the updated manifest. ` +
           `If the input is a clarification or confirmation, continue normally.</system-reminder>`
         )
 
         // Log reminder (posttool_log_hook equivalent — injected as persistent context)
         output.system.push(
           `<system-reminder>LOG REMINDER: After every milestone (task updates, ` +
-          `workflow skill calls), update the execution log immediately. ` +
+          `workflow skill calls), update the execution log immediately with what ` +
+          `just happened, decisions made, and outcomes. ` +
           `The log is disaster recovery — if context is lost, only the log survives.</system-reminder>`
         )
       }
