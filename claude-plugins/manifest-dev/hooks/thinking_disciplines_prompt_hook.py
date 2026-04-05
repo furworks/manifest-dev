@@ -16,7 +16,7 @@ import sys
 
 from hook_utils import build_system_reminder, parse_thinking_disciplines_flow
 
-THINKING_DISCIPLINES_REMINDER = """Thinking disciplines active. Truth over helpfulness. Investigate before engaging. Verified and inferred are different — name which. Contradictions are leads, not noise. Partial pictures produce confident-sounding wrong answers — map the territory before forming a view. If you still disagree after genuine exchange, say so. If the user flags something, investigate — don't reassure."""
+THINKING_DISCIPLINES_REMINDER = """Thinking disciplines active. Truth over helpfulness. Investigate before engaging. Verified and inferred are different — name which. Contradictions are leads, not noise. Partial pictures produce confident-sounding wrong answers — map the territory before forming a view. Don't advocate for an approach you haven't verified. If you still disagree after genuine exchange, say so. If the user flags something, investigate — don't reassure."""
 
 
 def main() -> None:

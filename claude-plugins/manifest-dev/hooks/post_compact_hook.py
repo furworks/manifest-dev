@@ -47,50 +47,51 @@ THINKING_DISCIPLINES_RECOVERY_REMINDER = """Thinking disciplines are active. Re-
 
 def main() -> None:
     """Main hook entry point."""
-    # Read hook input from stdin
     try:
         stdin_data = sys.stdin.read()
         hook_input = json.loads(stdin_data)
-    except (json.JSONDecodeError, OSError):
-        hook_input = {}
 
-    transcript_path = hook_input.get("transcript_path", "")
+        transcript_path = hook_input.get("transcript_path", "")
 
-    # If no transcript, we can't detect workflows
-    if not transcript_path:
-        sys.exit(0)
+        # If no transcript, we can't detect workflows
+        if not transcript_path:
+            sys.exit(0)
 
-    do_state = parse_do_flow(transcript_path)
-    thinking_state = parse_thinking_disciplines_flow(transcript_path)
+        do_state = parse_do_flow(transcript_path)
+        thinking_state = parse_thinking_disciplines_flow(transcript_path)
 
-    reminders: list[str] = []
+        reminders: list[str] = []
 
-    # Active /do workflow - build recovery reminder
-    if do_state.has_do and not do_state.has_done and not do_state.has_escalate:
-        if do_state.do_args:
-            reminders.append(
-                DO_WORKFLOW_RECOVERY_REMINDER.format(do_args=do_state.do_args)
-            )
-        else:
-            reminders.append(DO_WORKFLOW_RECOVERY_FALLBACK)
+        # Active /do workflow - build recovery reminder
+        if do_state.has_do and not do_state.has_done and not do_state.has_escalate:
+            if do_state.do_args:
+                reminders.append(
+                    DO_WORKFLOW_RECOVERY_REMINDER.format(do_args=do_state.do_args)
+                )
+            else:
+                reminders.append(DO_WORKFLOW_RECOVERY_FALLBACK)
 
-    # Active thinking disciplines - build re-grounding reminder
-    if thinking_state.is_active:
-        reminders.append(THINKING_DISCIPLINES_RECOVERY_REMINDER)
+        # Active thinking disciplines - build re-grounding reminder
+        if thinking_state.is_active:
+            reminders.append(THINKING_DISCIPLINES_RECOVERY_REMINDER)
 
-    if not reminders:
-        sys.exit(0)
+        if not reminders:
+            sys.exit(0)
 
-    context = build_system_reminder("\n\n".join(reminders))
+        context = build_system_reminder("\n\n".join(reminders))
 
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": context,
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": context,
+            }
         }
-    }
-    print(json.dumps(output))
-    sys.exit(0)
+        print(json.dumps(output))
+        sys.exit(0)
+
+    except Exception:
+        # Fail open — never block normal operation on error
+        sys.exit(0)
 
 
 if __name__ == "__main__":
