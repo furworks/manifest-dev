@@ -77,7 +77,6 @@ def main() -> None:
     # The user will re-invoke /do when the external blocker clears.
     if state.has_collab_mode and state.has_verify:
         output = {
-            "decision": "allow",
             "reason": "Non-local medium: escalation posted to medium",
             "systemMessage": (
                 "Escalation posted to the communication medium. "
@@ -95,7 +94,6 @@ def main() -> None:
     # If we've had 3+ consecutive short outputs, we're in a loop - allow with warning
     if consecutive_short >= 3:
         output = {
-            "decision": "allow",
             "reason": "Loop detected - allowing stop to prevent infinite loop",
             "systemMessage": (
                 "WARNING: Stop allowed to break infinite loop. "

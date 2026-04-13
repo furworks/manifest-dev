@@ -428,7 +428,7 @@ class TestMediumRoutingLifecycle:
 
         stop_result = run_stop_hook(transcript)
         assert stop_result is not None
-        assert stop_result["decision"] == "allow"
+        assert "decision" not in stop_result  # omit decision = allow
         assert "medium" in stop_result.get("systemMessage", "").lower()
 
 
@@ -505,7 +505,7 @@ class TestLoopDetectionInteraction:
 
         stop_result = run_stop_hook(transcript)
         assert stop_result is not None
-        assert stop_result["decision"] == "allow"
+        assert "decision" not in stop_result  # omit decision = allow
         assert "loop" in stop_result.get("reason", "").lower()
 
     def test_substantial_output_breaks_loop_pattern(self, tmp_path: Path):
@@ -546,7 +546,7 @@ class TestLoopDetectionInteraction:
         # Stop would be allowed (loop detected)
         stop_result = run_stop_hook(transcript)
         assert stop_result is not None
-        assert stop_result["decision"] == "allow"
+        assert "decision" not in stop_result  # omit decision = allow
 
         # But posttool_log_hook still fires if a milestone tool is used
         log_reminder = run_posttool_log("TaskUpdate", transcript)

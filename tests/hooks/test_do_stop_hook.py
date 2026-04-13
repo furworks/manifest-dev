@@ -295,7 +295,7 @@ class TestStopHookLoopDetection:
         result = run_hook("stop_do_hook.py", hook_input)
 
         assert result is not None
-        assert result["decision"] == "allow"
+        assert "decision" not in result  # omit decision = allow
         assert "loop" in result["reason"].lower()
 
     def test_blocks_with_two_short_outputs(
@@ -491,7 +491,7 @@ class TestStopHookLoopDetection:
 
         # Should allow because 3 consecutive short outputs (Skill doesn't reset counter)
         assert result is not None
-        assert result["decision"] == "allow"
+        assert "decision" not in result  # omit decision = allow
 
 
 class TestStopHookInvocationPatterns:
@@ -765,7 +765,7 @@ class TestStopHookMediumRouting:
         result = run_hook("stop_do_hook.py", hook_input)
 
         assert result is not None
-        assert result["decision"] == "allow"
+        assert "decision" not in result  # omit decision = allow
         assert "medium" in result["reason"].lower()
 
     def test_blocks_without_verify_even_with_medium(
@@ -835,7 +835,7 @@ class TestStopHookMediumRouting:
         result = run_hook("stop_do_hook.py", hook_input)
 
         assert result is not None
-        assert result["decision"] == "allow"
+        assert "decision" not in result  # omit decision = allow
 
     def test_medium_local_does_not_trigger_collab(
         self,
@@ -886,7 +886,7 @@ class TestStopHookMediumRouting:
 
         # local-dev is NOT "local" — it should be treated as collab mode
         assert result is not None
-        assert result["decision"] == "allow"
+        assert "decision" not in result  # omit decision = allow
 
 
 class TestStopHookInterruptHandling:

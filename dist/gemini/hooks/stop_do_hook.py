@@ -122,7 +122,6 @@ def main() -> None:
     if state.has_collab_mode and state.has_verify:
         _reset_retry_count()
         output = {
-            "decision": "allow",
             "reason": "Non-local medium: escalation posted to medium",
             "systemMessage": (
                 "Escalation posted to the communication medium. "
@@ -140,7 +139,6 @@ def main() -> None:
     if consecutive_short >= 3:
         _reset_retry_count()
         output = {
-            "decision": "allow",
             "reason": "Loop detected - allowing stop to prevent infinite loop",
             "systemMessage": (
                 "WARNING: Stop allowed to break infinite loop. "
