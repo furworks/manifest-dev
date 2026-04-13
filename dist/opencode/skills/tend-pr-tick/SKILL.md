@@ -1,6 +1,6 @@
 ---
 name: tend-pr-tick
-description: 'Single iteration of PR tending. Reads PR state, classifies new events, routes fixes, reports status. Called by /loop via /tend-pr setup — not invoked directly by users.'
+description: 'Single iteration of PR tending. Reads PR state, classifies new events, routes fixes, reports status. Called by /loop via /tend-pr setup. Can be invoked manually to run a single tick.'
 user-invocable: true
 ---
 
@@ -35,6 +35,8 @@ Read the PR's current state: open/closed/merged/draft, new comments since last c
 
 **Nothing new** → Remove lock. Output: `SKIP: nothing new`
 
+**First tick** (tend-pr-log has no prior iterations): Everything is unprocessed — skip the "nothing new" shortcut and run the full classification pipeline.
+
 ## Comment Classification
 
 Label source first (bot vs human — read `../tend-pr/references/known-bots.md`), then classify intent (read `../tend-pr/references/classification-examples.md`):
@@ -53,7 +55,7 @@ Compare against base branch first:
 
 ## Routing
 
-**Manifest mode:** For actionable items (review comments or CI failures), determine affected deliverable(s) — for comments, examine what files/code the comment targets; for CI failures, analyze the failure output to identify which code caused it. Match against the manifest's deliverable structure (include all potentially affected when ambiguous). Amend manifest via `/define --amend <manifest-path> --from-do`, then invoke `/do <manifest-path> <log-path> --scope <affected-deliverable-ids>`. If `/do` escalates, log the blocker and output: `STOP: escalation — <reason>`. Push changes and reply to the comment.
+**Manifest mode:** Route actionable items to affected deliverables. Identify which deliverable(s) the comment or CI failure targets (include all potentially affected when ambiguous). Amend manifest via `/define --amend <manifest-path> --from-do`, then invoke `/do <manifest-path> <log-path> --scope <affected-deliverable-ids>`. If `/do` escalates, log the blocker and output: `STOP: escalation — <reason>`. Push changes and reply to the comment.
 
 **Babysit mode:** Fix directly, push, reply.
 
@@ -75,7 +77,9 @@ Append to `/tmp/tend-pr-log-{pr-number}.md`: timestamp, actions taken, skipped i
 
 ## Merge Readiness
 
-When the PR's merge state indicates it is mergeable (all required checks pass, required approvals obtained, no unresolved threads including uncertain, no pending `/do` runs) — output: `STOP: merge-ready`
+When the PR's merge state indicates it is mergeable (all required checks pass, required approvals obtained, no unresolved threads, no pending `/do` runs) — output: `STOP: merge-ready`
+
+Unresolved uncertain threads block merge-readiness — they represent unanswered questions that could surface actionable issues.
 
 Determine merge requirements from the platform's merge state (e.g., GitHub branch protection rules), not hardcoded assumptions about what's required.
 
@@ -103,4 +107,6 @@ Every iteration MUST end with exactly one of these outputs (consumed by `/tend-p
 - **Bot comments repeat after push.** Bots re-scan after every push. Track findings by content (not comment ID) to avoid infinite fix loops. If a finding keeps recurring despite targeted fixes, treat as uncertain and flag to the user.
 - **Thread resolution is permanent.** Only resolve threads when confident. Never resolve human threads — let the reviewer do it.
 - **Rebase rewrites history.** Prefer merge-based branch updates over rebases to preserve review comment history.
+- **Reply means on the thread.** All replies to review comments go on the specific review thread — never as top-level PR comments. Top-level comments disconnect the response from the finding.
+- **"Passes locally" is not a diagnosis.** Investigate what differs between local and CI before dismissing a failure or re-triggering. "Works on my machine" is not evidence that CI is wrong.
 - **Empty diff.** If the PR has no diff (e.g., all changes reverted), output: `STOP: escalation — PR has empty diff`
