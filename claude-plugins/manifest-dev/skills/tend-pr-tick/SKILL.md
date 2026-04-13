@@ -1,7 +1,7 @@
 ---
 name: tend-pr-tick
 description: 'Single iteration of PR tending. Reads PR state, classifies new events, routes fixes, reports status. Called by /loop via /tend-pr setup — not invoked directly by users.'
-user-invocable: false
+user-invocable: true
 ---
 
 # /tend-pr-tick - Single PR Tending Iteration
